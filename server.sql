@@ -3,6 +3,8 @@ select delay,key_,count(*) from items where flags = 1 group by delay, key_ order
 
 /* show all items from specific host */
 select * from items where hostid in (select hostid from hosts where hostid in (select hostid from interface) and host like 'Zabbix server');
+select name,key_ from items where hostid in (select hostid from hosts where hostid in (select hostid from interface) and host like 'Zabbix server');
+
 
 /* select all items from specific host group */
 select * from items where hostid in (select hostid from hosts_groups where groupid in (select groupid from groups where name like 'Zabbix servers'));
