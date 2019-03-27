@@ -12,3 +12,12 @@ grep slow /var/log/zabbix/zabbix_server.log
 grep slow /var/log/zabbix/zabbix_proxy.log
 
 
+
+# debuging odbc connection which use DSN to Oracle database
+sudo -uzabbix env
+
+# set the right character set and collate to the instance
+mysql --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql --database=zabbix
+
+# set the right character set and collate to the instance if DB host is remotely
+mysql -h location.to.db.instance --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql  -h location.to.db.instance --database=zabbix
