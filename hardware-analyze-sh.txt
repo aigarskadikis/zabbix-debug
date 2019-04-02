@@ -1,0 +1,9 @@
+#!/bin/bash
+
+lscpu
+
+df -h
+
+cat /proc/meminfo
+
+vmstat

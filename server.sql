@@ -79,7 +79,7 @@ optimize table hosts_groups;
 optimize table rights;
 
 
-
+select count(*), userid from sessions group by userid order by count;
 
 
 
