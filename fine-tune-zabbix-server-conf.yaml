@@ -1,0 +1,41 @@
+
+Look graphs in one month interval
+
+- Go to Monitoring -> Grapghs:
+  - Select Group: Zabbix servers
+  - Select Host: Zabbix server
+    - Select: Zabbix data gathering process busy %
+      - if there is dots in the screen there is a possibility that timeout has been configured in the zabbix_agentd.conf
+    
+    - Select: Zabbix cache usage, % free
+      - if the history write cache is droping, this means zabbix syncer can not write metrics in database in timeout
+        - Open graph: Zabbix internal process busy % and see if the histoy syncer process is busy
+          - if it is like the recheck on database engine. What is the version for MySQL
+            - does inno_per_table is enabled
+            # vi /etc/my.cnf.d/server.cnf
+[mysqld]
+innodb_file_per_table = 1
+innodb_buffer_pool_size = 4G			# ~75% of total available memory 
+innodb_buffer_pool_instances = 4
+innodb_flush_method = O_DIRECT
+innodb_log_file_size = 256M
+optimizer_switch=index_condition_pushdown=off # for faster startup for the backend server to not pick up everything
+query_cache_type = 0
+max_connections = 1000
+innodb_flush_log_at_trx_commit = 2
+            
+            - see if basic database tunning has been implemented https://www.percona.com/blog/2014/11/14/optimizing-mysql-zabbix/
+            
+      
+
+      
+grep slow zabbix_server.log
+see what is the slow queries involved.
+
+How many users per frontend
+
+Queue size 
+
+increase pollers
+
+

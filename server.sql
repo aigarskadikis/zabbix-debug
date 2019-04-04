@@ -81,6 +81,22 @@ optimize table rights;
 
 select count(*), userid from sessions group by userid order by count;
 
+/* show all triggers per hostid */
+
+SELECT h.host, 
+       t.description, 
+       f.triggerid, 
+       t.state 
+FROM   zabbix.triggers t 
+       JOIN zabbix.functions f 
+         ON ( f.triggerid = t.triggerid ) 
+       JOIN zabbix.items i 
+         ON ( i.itemid = f.itemid ) 
+       JOIN zabbix.hosts h 
+         ON ( i.hostid = h.hostid ) 
+WHERE  h.hostid = 10084;
+
+
 
 
 
