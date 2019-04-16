@@ -21,3 +21,7 @@ mysql --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_ch
 
 # set the right character set and collate to the instance if DB host is remotely
 mysql -h location.to.db.instance --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql  -h location.to.db.instance --database=zabbix
+
+# spliting the log file into pieces
+cd
+gzip -c /<path>/strace.log | split -b 14m - strace.gz

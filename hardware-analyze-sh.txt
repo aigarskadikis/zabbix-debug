@@ -1,9 +1,18 @@
 #!/bin/bash
 
+# CPU
 lscpu
 
+# DISK
 df -h
 
+# MEMORY
 cat /proc/meminfo
 
+
 vmstat
+
+# Collect, report, or save system activity information.
+yum install sysstat
+sar -d -w 1 10
+

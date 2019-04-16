@@ -1,3 +1,9 @@
+
+
+
+SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit\G
+
+
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
 
@@ -98,5 +104,29 @@ WHERE  h.hostid = 10084;
 
 
 
+/* size of postgres tables */
+SELECT nspname || '.' || relname AS "relation",
+    pg_size_pretty(pg_total_relation_size(C.oid)) AS "total_size"
+  FROM pg_class C
+  LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
+  WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+    AND C.relkind <> 'i'
+    AND nspname !~ '^pg_toast'
+  ORDER BY pg_total_relation_size(C.oid) DESC
+  LIMIT 20;
+
+
+/* */
+select count(*) from functions f
+    right join triggers t
+    on f.triggerid=t.triggerid
+where f.triggerid is NULL;
+
+
+/* select active events */
+SELECT * FROM events JOIN triggers ON events.objectid = triggers.triggerid JOIN functions ON functions.triggerid = triggers.triggerid JOIN items ON items.itemid = functions.itemid JOIN hosts ON items.hostid = hosts.hostid WHERE events.source = 0  AND  LOWER(hosts.host) like 'Zabbix server';
+
+/* show all triggers generated from trigger prototype by pointing out trigger prototype ID */
+select t.value,from_unixtime(t.lastchange),t.description from trigger_discovery t1 join triggers t using (triggerid) where t1.parent_triggerid = 150390;
 
 

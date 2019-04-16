@@ -34,8 +34,12 @@ see what is the slow queries involved.
 
 How many users per frontend
 
-Queue size 
+Queue size. What item types gets stuck.
+To release longer running items in agent side can be converted 
 
 increase pollers
 
+RAM size for database server.
+RAM size for front-end
 
+How much load (NVPS) per proxies?
