@@ -129,4 +129,5 @@ SELECT * FROM events JOIN triggers ON events.objectid = triggers.triggerid JOIN 
 /* show all triggers generated from trigger prototype by pointing out trigger prototype ID */
 select t.value,from_unixtime(t.lastchange),t.description from trigger_discovery t1 join triggers t using (triggerid) where t1.parent_triggerid = 150390;
 
-
+/* show the frequency of discovery rules, detailed */
+select key_,delay from items where flags=1 group by key_;
