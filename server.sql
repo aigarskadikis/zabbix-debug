@@ -131,3 +131,39 @@ select t.value,from_unixtime(t.lastchange),t.description from trigger_discovery 
 
 /* show the frequency of discovery rules, detailed */
 select key_,delay from items where flags=1 group by key_;
+
+/* most frequent integers */
+select itemid,count(*) from history_uint group by itemid order by count(*) DESC LIMIT 10;
+
+
+/* most frequent float numbers */
+select itemid,count(*) from history group by itemid order by count(*) DESC LIMIT 10;
+
+/* look for last events in events table */
+ select * from events order by clock desc limit 10 ;
+ 
+/* which zabbix agent have unhealthy state */
+select name,error from hosts where available=2;
+
+/* link togeterhe hosts with hostgroups */
+SELECT h.host, t.description, f.triggerid, t.value, t.lastchange, t.state FROM zabbix.triggers t
+JOIN zabbix.functions f ON ( f.triggerid = t.triggerid )
+JOIN zabbix.items i ON ( i.itemid = f.itemid )
+JOIN zabbix.hosts h ON ( i.hostid = h.hostid )
+JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
+WHERE h.available=2 ORDER BY t.lastchange DESC;
+
+/* show the hostgroup of unhealthy zabbix agents */
+SELECT C.name, h.error FROM zabbix.hosts h
+JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
+WHERE h.available=2;
+
+
+
+
+
+
+
+ 
