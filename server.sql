@@ -160,6 +160,17 @@ JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2;
 
+/* advanced */
+SELECT h.host AS 'Host name',
+       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
+       h.error
+FROM zabbix.hosts h
+JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
+WHERE h.available=2
+group by h.host;
+
+
 /* https://community.hortonworks.com/questions/146970/how-to-merge-two-rows-having-same-values-into-sing.html */
 
 /* show host group */
