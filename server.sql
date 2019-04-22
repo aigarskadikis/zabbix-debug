@@ -155,16 +155,29 @@ JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2 ORDER BY t.lastchange DESC;
 
 /* show the hostgroup of unhealthy zabbix agents */
-SELECT h.host, C.name FROM zabbix.hosts h
+SELECT h.host, C.name, h.error FROM zabbix.hosts h
 JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2;
+
+/* https://community.hortonworks.com/questions/146970/how-to-merge-two-rows-having-same-values-into-sing.html */
 
 /* show host group */
 SELECT h.host, C.name FROM zabbix.hosts h
 JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.hostid in (10084,10391);
+
+/* advanced */
+SELECT h.host AS 'Host name',
+       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups'
+FROM zabbix.hosts h
+JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
+WHERE h.hostid IN (10084,
+                   10391)
+GROUP BY h.host;
+
 
 /* by name */
 SELECT h.host, C.name FROM zabbix.hosts h
