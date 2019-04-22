@@ -155,13 +155,23 @@ JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2 ORDER BY t.lastchange DESC;
 
 /* show the hostgroup of unhealthy zabbix agents */
-SELECT C.name, h.error FROM zabbix.hosts h
+SELECT h.host, C.name FROM zabbix.hosts h
 JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2;
 
+/* show host group */
+SELECT h.host, C.name FROM zabbix.hosts h
+JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
+WHERE h.hostid in (10084,10391);
 
-
+/* show the hostgroup of unhealthy zabbix agents */
+SELECT C.name, h.error, t.templateid FROM zabbix.hosts h
+JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
+JOIN zabbix.hosts_templates as t on (h.hostid=t.hostid)
+WHERE h.available=2;
 
 
 
