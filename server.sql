@@ -171,7 +171,7 @@ FROM zabbix.hosts h
 JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
 WHERE h.available = 2
-GROUP BY h.host;
+GROUP BY h.host,h.name,h.error;
 
 /* show template names for zabbix agent having the issue */
 SELECT h.host AS 'Host name',
@@ -186,7 +186,7 @@ WHERE hosts_templates.hostid = h.hostid
   AND hosts_templates.templateid = b.hostid
   AND interface.hostid = h.hostid
   AND h.available = 2
-GROUP BY h.host;
+GROUP BY h.host,h.name,h.error;
 
 /* quite a output */
 SELECT distinct 
@@ -205,6 +205,8 @@ and interface.hostid = a.hostid
 and a.status = 0
 group by a.hostid
 
+/* describe a events table */
+SHOW TABLE STATUS FROM `zabbix` LIKE 'events'\G;
 
 
 
