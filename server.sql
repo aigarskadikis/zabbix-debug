@@ -166,6 +166,13 @@ JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.hostid in (10084,10391);
 
+/* by name */
+SELECT h.host, C.name FROM zabbix.hosts h
+JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
+WHERE h.host in ('Zabbix server','proxy512');
+
+
 /* show the hostgroup of unhealthy zabbix agents */
 SELECT C.name, h.error, t.templateid FROM zabbix.hosts h
 JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
