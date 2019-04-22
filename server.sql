@@ -164,8 +164,9 @@ WHERE h.host in ('Zabbix server','proxy512');
 
 /* show host groups for zabbix agents having the issue */
 SELECT h.host AS 'Host name',
+       h.name AS 'Visible name',
        GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
-	   h.error as 'Error'
+       h.error AS 'Error'
 FROM zabbix.hosts h
 JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
@@ -173,15 +174,19 @@ WHERE h.available = 2
 GROUP BY h.host;
 
 /* show template names for zabbix agent having the issue */
-SELECT h.host as 'Host name',
-  GROUP_CONCAT(b.host SEPARATOR ', ') as 'Templates',
-  h.error as 'Error'
-FROM hosts_templates, hosts h, hosts b, interface
-where hosts_templates.hostid = h.hostid
-and hosts_templates.templateid = b.hostid
-and interface.hostid = h.hostid
-and h.available = 2
-group by h.host;
+SELECT h.host AS 'Host name',
+       h.name AS 'Visible name',
+       GROUP_CONCAT(b.host SEPARATOR ', ') AS 'Templates',
+       h.error AS 'Error'
+FROM hosts_templates,
+     hosts h,
+     hosts b,
+     interface
+WHERE hosts_templates.hostid = h.hostid
+  AND hosts_templates.templateid = b.hostid
+  AND interface.hostid = h.hostid
+  AND h.available = 2
+GROUP BY h.host;
 
 /* quite a output */
 SELECT distinct 
