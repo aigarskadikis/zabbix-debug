@@ -154,41 +154,6 @@ JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.available=2 ORDER BY t.lastchange DESC;
 
-/* show the hostgroup of unhealthy zabbix agents */
-SELECT h.host, C.name, h.error FROM zabbix.hosts h
-JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
-JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
-WHERE h.available=2;
-
-/* advanced */
-SELECT h.host AS 'Host name',
-       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
-       h.error
-FROM zabbix.hosts h
-JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
-JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
-WHERE h.available=2
-group by h.host;
-
-
-/* https://community.hortonworks.com/questions/146970/how-to-merge-two-rows-having-same-values-into-sing.html */
-
-/* show host group */
-SELECT h.host, C.name FROM zabbix.hosts h
-JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
-JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
-WHERE h.hostid in (10084,10391);
-
-/* advanced */
-SELECT h.host AS 'Host name',
-       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups'
-FROM zabbix.hosts h
-JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
-JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
-WHERE h.hostid IN (10084,
-                   10391)
-GROUP BY h.host;
-
 
 /* by name */
 SELECT h.host, C.name FROM zabbix.hosts h
@@ -197,12 +162,46 @@ JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.host in ('Zabbix server','proxy512');
 
 
-/* show the hostgroup of unhealthy zabbix agents */
-SELECT C.name, h.error, t.templateid FROM zabbix.hosts h
-JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
-JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
-JOIN zabbix.hosts_templates as t on (h.hostid=t.hostid)
-WHERE h.available=2;
+/* show host groups for zabbix agents having the issue */
+SELECT h.host AS 'Host name',
+       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
+	   h.error as 'Error'
+FROM zabbix.hosts h
+JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
+WHERE h.available = 2
+GROUP BY h.host;
+
+/* show template names for zabbix agent having the issue */
+SELECT h.host as 'Host name',
+  GROUP_CONCAT(b.host SEPARATOR ', ') as 'Templates',
+  h.error as 'Error'
+FROM hosts_templates, hosts h, hosts b, interface
+where hosts_templates.hostid = h.hostid
+and hosts_templates.templateid = b.hostid
+and interface.hostid = h.hostid
+and h.available = 2
+group by h.host;
+
+/* quite a output */
+SELECT distinct 
+  a.hostid as "Host ID",
+  a.host as "Host name",
+  a.name as "Visible name",
+  GROUP_CONCAT(distinct hosts_templates.templateid) as "Template IDs",
+  GROUP_CONCAT(distinct hosts_templates.templateid, " ", b.host) as "Template IDs and names",
+  GROUP_CONCAT(distinct interface.ip) as "IP Addresses",
+  GROUP_CONCAT(distinct interface.dns) as "DNS Names",
+  GROUP_CONCAT(distinct interface.port) as "Ports"
+FROM hosts_templates, hosts a, hosts b, interface
+where hosts_templates.hostid = a.hostid
+and hosts_templates.templateid = b.hostid
+and interface.hostid = a.hostid
+and a.status = 0
+group by a.hostid
+
+
+
 
 
 
