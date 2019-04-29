@@ -209,6 +209,20 @@ group by a.hostid
 SHOW TABLE STATUS FROM `zabbix` LIKE 'events'\G;
 
 
+show global variables like '%buffer_pool%';
+select itemid, count(*) from history_log where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by count(*) DESC LIMIT 10;
+select itemid, count(*) from history_text where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by count(*) DESC LIMIT 10;
+select itemid, count(*) from history_str where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by count(*) DESC LIMIT 10;
+
+
+select distinct key_ from items where type = 5;
+
+/* list all functions */
+select count(*),functionid,parameter from functions group by functionid,parameter order by count(*) DESC;
+
+
+
+
 
 
 
