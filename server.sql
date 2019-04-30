@@ -221,6 +221,10 @@ select distinct key_ from items where type = 5;
 select count(*),functionid,parameter from functions group by functionid,parameter order by count(*) DESC;
 
 
+select @@optimizer_switch\G
+# see if 'index_condition_pushdown=off'. if not the set to my.cnf
+# optimizer_switch = 'index_condition_pushdown=off'
+
 
 
 

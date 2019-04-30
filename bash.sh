@@ -25,3 +25,11 @@ mysql -h location.to.db.instance --database=zabbix -B -N -e "SHOW TABLES" | awk 
 # spliting the log file into pieces
 cd
 gzip -c /<path>/strace.log | split -b 14m - strace.gz
+
+
+watch -n1 'ps aux|grep [z]abbix_server >> zabbix_activity.log;echo "====================" >> zabbix_activity.log;sleep 1'
+
+
+# check the disk performance with this command
+sar -dp -w 1 10
+
