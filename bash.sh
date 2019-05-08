@@ -33,3 +33,18 @@ watch -n1 'ps aux|grep [z]abbix_server >> zabbix_activity.log;echo "============
 # check the disk performance with this command
 sar -dp -w 1 10
 
+
+
+# clear log
+> /var/log/zabbix/zabbix_proxy.log
+
+# increase logging for poller
+zabbix_proxy -R log_level_increase="poller"
+
+# start collection for five minutes
+tcpdump -i any udp port 161 -w pcap.pcap
+# brake the operation with CTRL+C
+
+# decrease logging for poller
+zabbix_proxy -R log_level_decrease="poller"
+
