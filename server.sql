@@ -233,4 +233,9 @@ select flags,key_ from items where hostid ='10564' and flags<>'2';
 /* determine the count of functions (maybe the heaviest hosts) used in trigger expressions */
 select count(*),i.hostid from triggers t inner join functions f on f.triggerid = t.triggerid inner join items i on f.itemid = i.itemid where i.hostid in (10543,'10536','10537','10540','10554','10555','10558','10559','10563','10564','10565','10569','10571','10573','10832') group by i.hostid;
 
+
+/* see the biggest records */
+SELECT itemid,LENGTH(value) FROM proxy_history ORDER BY LENGTH(value) DESC limit 10;
+SELECT itemid,LENGTH(value) FROM history_uint ORDER BY LENGTH(value) DESC limit 10;
+
  
