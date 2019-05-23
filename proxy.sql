@@ -1,3 +1,6 @@
+/* How many values is in the backlog */
+select max(id)-(select nextid from ids where table_name = "proxy_history" limit 1) from proxy_history;
+
 /* show the number of unsent values */
 select count(*) from proxy_history where id > (select nextid from ids where table_name = 'proxy_history');
 SELECT ((SELECT MAX(proxy_history.id) FROM proxy_history)-nextid) FROM ids WHERE field_name='history_lastid';
@@ -5,7 +8,7 @@ SELECT ((SELECT MAX(proxy_history.id) FROM proxy_history)-nextid) FROM ids WHERE
 /* list unsent values, grouped by itemid and sorted by amount of unsent data */
 select itemid,count(*) from proxy_history where id > (select nextid from ids where table_name = 'proxy_history') group by itemid order by count(*);
 
-/* frequent lld behind proxy */
+/* frequent LLD behind proxy */
 select count(*),delay from items where flags = 1 group by 2 order by 1 desc;
 
 /* On 3.0 only! to eliminate the possibility that low level discovery are causing the problem we can remove all the LLD which has been scheduled (in past). New LLD checks will be scheduled starting from no. */
