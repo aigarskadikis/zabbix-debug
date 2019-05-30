@@ -1,7 +1,9 @@
 
+show processlist;
+/* if query is all in caps this means it comes from frontend */
 
 
-SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit\G
+SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 
 
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
@@ -220,7 +222,7 @@ select distinct key_ from items where type = 5;
 /* list all functions */
 select count(*),functionid,parameter from functions group by functionid,parameter order by count(*) DESC;
 
-
+/* show frequent functions */
 select count(*),name,parameter from functions group by parameter order by count(*) DESC;
 
 

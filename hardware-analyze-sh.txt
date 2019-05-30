@@ -9,6 +9,7 @@ df -h
 # MEMORY
 cat /proc/meminfo
 
+vmware-toolbox-cmd stat balloon
 
 vmstat
 
