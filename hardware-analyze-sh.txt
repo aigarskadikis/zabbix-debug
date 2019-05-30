@@ -9,11 +9,23 @@ df -h
 # MEMORY
 cat /proc/meminfo
 
-vmware-toolbox-cmd stat balloon
 
 vmstat
 
 # Collect, report, or save system activity information.
 yum install sysstat
 sar -d -w 1 10
+
+
+
+
+vmware-toolbox-cmd stat balloon; lsmod | grep balloon; cat /sys/kernel/debug/vmmemctl
+
+
+
+# http://www.vmwarearena.com/disable-memory-balloon-in-vmware-vm/
+
+
+
+
 
