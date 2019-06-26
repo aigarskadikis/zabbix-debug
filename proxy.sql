@@ -18,4 +18,5 @@ select clock,ns from proxy_history where itemid in (select itemid from items whe
 /* show the exteral sripts used. Usefull to know befere migrating the server or proxy to different kind of OS */
 select itemid,name,key_ from items where type=10 and status=0;
 
-
+/* check current queue to send from Proxy to Server, execute from the database CLI, twice within 1-2 minutes interval: */
+SELECT ((SELECT MAX(proxy_history.id) FROM proxy_history)-nextid) FROM ids WHERE field_name='history_lastid';

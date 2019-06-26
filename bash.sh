@@ -12,6 +12,8 @@ grep slow /var/log/zabbix/zabbix_server.log
 grep slow /var/log/zabbix/zabbix_proxy.log
 
 
+for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && sleep 5; done
+
 
 # debuging odbc connection which use DSN to Oracle database
 sudo -uzabbix env
@@ -47,4 +49,11 @@ tcpdump -i any udp port 161 -w pcap.pcap
 
 # decrease logging for poller
 zabbix_proxy -R log_level_decrease="poller"
+
+# check that compression enabled for Server and Proxy
+strings $(which zabbix_server)|grep -i zlib
+strings $(which zabbix_proxy)|grep -i zlib
+
+ps auxw | grep "data sender" | awk '{print " -p " $2}'|xargs strace -s 256 -T -tt -f -o proxy.strace.out
+
 
