@@ -2,8 +2,9 @@
 show processlist;
 /* if query is all in caps this means it comes from frontend */
 
+SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
 
-SELECT @@hostname,@@version,@@datadir,@@collation_database,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
+SELECT @@hostname,@@version,@@datadir,@@collation_database,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
 
 /* if xtrabackup is used https://mariadb.com/kb/en/library/percona-xtrabackup-overview/ */ 
 SELECT @@hostname,@@version,@@datadir,@@collation_database,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_page_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
