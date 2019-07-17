@@ -17,6 +17,9 @@ SHOW PROFILE FOR QUERY 1;
 explain select * from sessions;
 SET profiling = 0;
 
+/* Let's check the amount of events your top 20 triggers have associated with them */
+select count(*),source,object,objectid from problem group by source,object,objectid order by count(*) desc limit 20;
+
 
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
