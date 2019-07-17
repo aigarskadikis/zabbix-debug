@@ -15,6 +15,10 @@ grep slow /var/log/zabbix/zabbix_proxy.log
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && sleep 5; done
 
 
+for i in `seq 1 10`; do echo $(date) >> /tmp/httpd.stats && curl -sLk https://127.0.0.1/server-status?auto >> /tmp/httpd.stats && sleep 5; done
+
+
+
 # debuging odbc connection which use DSN to Oracle database
 sudo -uzabbix env
 
