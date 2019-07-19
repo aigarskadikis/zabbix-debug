@@ -17,6 +17,15 @@ SHOW PROFILE FOR QUERY 1;
 explain select * from sessions;
 SET profiling = 0;
 
+
+
+select i.itemid, i.key_ ,i.delay,h.name from items i,hosts h where i.hostid=h.hostid and i.flags=1 and i.delay in ('10m','10s','1m','30s','5m','2m') and h.status=3;
+
+SELECT ... FROM ... WHERE ... 
+INTO OUTFILE 'textfile.csv'
+FIELDS TERMINATED BY '|'
+find / -name textfile.csv
+
 /* Let's check the amount of events your top 20 triggers have associated with them */
 select count(*),source,object,objectid from problem group by source,object,objectid order by count(*) desc limit 20;
 
