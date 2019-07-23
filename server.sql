@@ -17,7 +17,7 @@ SHOW PROFILE FOR QUERY 1;
 explain select * from sessions;
 SET profiling = 0;
 
-
+select clock,objectid,name,count(objectid) c from events where source=3 group by objectid having mod (c,2)=1;
 
 select i.itemid, i.key_ ,i.delay,h.name from items i,hosts h where i.hostid=h.hostid and i.flags=1 and i.delay in ('10m','10s','1m','30s','5m','2m') and h.status=3;
 
