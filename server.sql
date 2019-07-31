@@ -4,10 +4,18 @@ show processlist;
 
 SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
 
+SELECT @@innodb_file_per_table,@@datadir,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
+
+
 SELECT @@hostname,@@version,@@datadir,@@collation_database,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
 
 /* if xtrabackup is used https://mariadb.com/kb/en/library/percona-xtrabackup-overview/ */ 
 SELECT @@hostname,@@version,@@datadir,@@collation_database,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_page_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
+
+select @@version;
+
+/* see the last failed messages */
+select clock,error from alerts where status=2 order by clock desc limit 10;
 
 
 SET profiling = 1;
@@ -161,7 +169,9 @@ select count(*) from functions f
 where f.triggerid is NULL;
 
 
+select i.interfaceid,i.hostid,i.ip,i.bulk,h.name from interface i join hosts h on i.hostid=h.hostid
 
+select h.name,i.bulk from interface i join hosts h on i.hostid=h.hostid where i.type=2 and i.bulk=0;
 
 
 /* select active events */
