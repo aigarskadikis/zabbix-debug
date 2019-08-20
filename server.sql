@@ -18,6 +18,11 @@ select @@version;
 select clock,error from alerts where status=2 order by clock desc limit 10;
 
 
+/* command resets the trigger status. */
+/* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
+update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
+
+
 SET profiling = 1;
 select * from sessions;
 show profiles;
@@ -36,6 +41,12 @@ find / -name textfile.csv
 
 /* Let's check the amount of events your top 20 triggers have associated with them */
 select count(*),source,object,objectid from problem group by source,object,objectid order by count(*) desc limit 20;
+
+/* version 3.4. delete all source 3 events from events and problem table. It safe to do with queries, but please make sure that you have a backup.: */
+delete from events where source>0;
+delete from problem where source>0;
+
+
 
 
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
@@ -65,6 +76,10 @@ select case when type=0 then 'Zabbix Agent' when type=1 then 'SNMPv1 agent' when
 
 /* show unsupported items, transfer hostid into human readable name */
 SELECT h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1';
+
+
+select * from items limit 1\G;
+
 
 /* detect database character set and collate */
 SELECT @@character_set_database, @@collation_database\G;
@@ -110,6 +125,9 @@ select * from events where source=3 limit 1;
 delete from events where source=3 limit 10;
 delete from events where source=3 limit 100;
 delete from events where source=3 limit 1000;
+
+/* long queries */
+SELECT HOST, COMMAND, TIME, ID, ROWS_EXAMINED, INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE TIME > 60 AND COMMAND!='Sleep' AND HOST!='localhost' ORDER BY TIME DESC;
 
 
 select count(*),source from events where eventid in (1,2,3) group by source;
@@ -191,7 +209,7 @@ select itemid,count(*) from history_uint group by itemid order by count(*) DESC 
 select itemid,count(*) from history group by itemid order by count(*) DESC LIMIT 10;
 
 /* see the event titles */
-select name from events where source=3 order by clock asc limit 200;
+select name from events where source=3 order by clock asc limit 20;
 
 
 select count(*), source from events group by source;
@@ -269,6 +287,7 @@ and interface.hostid = a.hostid
 and a.status = 0
 group by a.hostid
 
+
 /* describe a events table */
 SHOW TABLE STATUS FROM `zabbix` LIKE 'events'\G;
 
@@ -305,4 +324,9 @@ select count(*),i.hostid from triggers t inner join functions f on f.triggerid =
 SELECT itemid,LENGTH(value) FROM proxy_history ORDER BY LENGTH(value) DESC limit 10;
 SELECT itemid,LENGTH(value) FROM history_uint ORDER BY LENGTH(value) DESC limit 10;
 
+
+/* "[Z3005] query failed: [1062] Duplicate entry" */
+delete from ids;
+
+ 
  

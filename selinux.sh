@@ -24,6 +24,11 @@ semanage permissive -a zabbix_script_t
 ausearch --raw | grep zabbix_script_t | audit2allow -M zabbix-script-policy
 semodule -i zabbix-script-policy.pp
 
+# add snmpd_t to permissive object type
+semanage permissive -a snmpd_t
+ausearch --raw | grep snmpd_t | audit2allow -M snmpd-policy
+semodule -i snmpd-policy.pp
+
 
 seinfo -rsystem_r -x
 
