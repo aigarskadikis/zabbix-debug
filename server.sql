@@ -27,6 +27,10 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
 
 
+/* show the variation between SNMP community names being used in environment */
+select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, count(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
+
+/* estimate how many miliseconds takes the each part in SQL query */
 SET profiling = 1;
 select * from sessions;
 show profiles;
