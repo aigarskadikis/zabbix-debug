@@ -3,6 +3,10 @@
 /* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
 
 
+/* Cannot insert new item in the host configuration */
+delete from ids where table_name='items';
+delete from ids;
+
 show processlist;
 /* if query is all in caps this means it comes from frontend */
 
