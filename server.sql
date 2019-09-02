@@ -2,6 +2,19 @@
 
 /* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
 
+/* select triggers from one host */
+SELECT DISTINCT host, t.description, f.triggerid, t.value
+FROM triggers t
+INNER JOIN functions f ON ( f.triggerid = t.triggerid )
+INNER JOIN items i ON ( i.itemid = f.itemid )
+INNER JOIN hosts ON ( i.hostid = hosts.hostid )
+WHERE (1=1)
+AND host = 'Zabbix server' 
+GROUP BY f.triggerid
+ORDER BY t.lastchange DESC;
+
+
+
 
 /* Cannot insert new item in the host configuration */
 delete from ids where table_name='items';
