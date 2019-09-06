@@ -15,6 +15,10 @@ ORDER BY t.lastchange DESC;
 
 
 
+/* show most frequently used functions */
+select name,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
+
+
 
 /* Cannot insert new item in the host configuration */
 delete from ids where table_name='items';

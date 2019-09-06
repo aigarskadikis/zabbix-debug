@@ -42,3 +42,22 @@ CREATE INDEX ON public.history_y2019m04 USING btree (itemid, clock);
 CREATE INDEX ON public.history_y2019m05 USING btree (itemid, clock);
 
 alter table history owner to zabbix;
+
+
+
+
+
+SELECT relname, last_vacuum, last_autovacuum FROM pg_stat_user_tables;
+
+SELECT 
+    schemaName
+    ,relname
+    ,n_live_tup
+    ,n_dead_tup
+    ,last_autovacuum
+FROM pg_stat_all_tables
+ORDER BY n_dead_tup
+    /(n_live_tup
+      * current_setting('autovacuum_vacuum_scale_factor')::float8
+      + current_setting('autovacuum_vacuum_threshold')::float8)
+     DESC
