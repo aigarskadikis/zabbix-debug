@@ -13,7 +13,8 @@ AND host = 'Zabbix server'
 GROUP BY f.triggerid
 ORDER BY t.lastchange DESC;
 
-
+/* discoveries les than 10 minutes */
+select key_,delay from items where flags=1 and delay not in (600,3600,0,'10m') and delay not like '%h' and delay not like '%d' order by delay;
 
 /* show most frequently used functions */
 select name,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
