@@ -41,6 +41,8 @@ watch -n1 'ps aux|grep [z]abbix_server >> zabbix_activity.log;echo "============
 # check the disk performance with this command
 sar -dp -w 1 10
 
+# what is using swap. During issue please run
+for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r
 
 
 # clear log
