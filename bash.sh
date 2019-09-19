@@ -15,6 +15,10 @@ grep slow /var/log/zabbix/zabbix_proxy.log
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && sleep 5; done
 
 
+for i in `seq 1 20`; do zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf -t system.uptime >> /tmp/uptime.by.agent.log && sleep 1; done
+
+
+
 for i in `seq 1 10`; do echo $(date) >> /tmp/httpd.stats && curl -sLk https://127.0.0.1/server-status?auto >> /tmp/httpd.stats && sleep 5; done
 
 
@@ -43,6 +47,20 @@ sar -dp -w 1 10
 
 # what is using swap. During issue please run
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r
+
+
+# look which exact module has been used by zabbix_server binary
+ldd /usr/sbin/zabbix_proxy | grep -i ipmi
+
+# on RHEL
+rpm -qf /lib64/libOpenIPMI.so.0
+
+# on debian look the package name which owns the module
+dpkg -S /full/path/to/libOpenIPMI.so.0
+# based on contend in previous command ask version of package
+dpkg -l libopenipmi0
+
+
 
 
 # clear log
