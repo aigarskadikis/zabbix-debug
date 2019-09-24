@@ -1,6 +1,5 @@
 
 
-
 # check rows to work with
 SELECT h.host,h.name,ii.type,ii.useip,ii.ip,ii.dns from hosts h join interface ii on h.hostid=ii.hostid WHERE LENGTH(ii.dns)=0; #should be the old value
 

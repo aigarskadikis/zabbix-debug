@@ -28,6 +28,12 @@ SELECT h.host,h.name,ii.type,ii.useip,ii.ip,ii.dns from hosts h join interface i
 
 
 
+/* top messages which were initiated to notify someone */
+select count(*),t.description from alerts a inner join events e on a.p_eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc limit 10;
+select count(*),t.description from alerts a inner join events e on a.p_eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc\G
+
+
+
 
 select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0;
 
