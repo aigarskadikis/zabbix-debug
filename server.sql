@@ -2,6 +2,15 @@
 
 /* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
 
+
+select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.objectid ) where t.triggerid = NULL;
+
+
+
+
+
+
+
 /* select triggers from one host */
 SELECT DISTINCT host, t.description, f.triggerid, t.value
 FROM triggers t
@@ -33,6 +42,15 @@ select count(*),t.description from alerts a inner join events e on a.p_eventid =
 select count(*),t.description from alerts a inner join events e on a.p_eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc\G
 
 
+/* identify possibly old records which belongs to nonexisting trigger */
+select objectid,name from events where source=0 and objectid not in (select triggerid from triggers)\G
+
+select count(*) from events where source=0 and objectid not in (select triggerid from triggers);
+select objectid,name from events where source=0 and objectid not in (select triggerid from triggers) order by clock\G
+
+
+/* items having probles receiving data */
+select count(*),objectid as itemid,name from events where source = 3 AND object = 4 and LENGTH(name)>0 group by name order by count(*) desc limit 10\G
 
 
 select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0;
