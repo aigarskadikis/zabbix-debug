@@ -19,6 +19,10 @@ for i in `seq 1 20`; do zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf -t syste
 
 
 
+for i in `seq 1 20`; do zabbix_agentd -R housekeeper_execute && sleep 1; done
+
+
+
 for i in `seq 1 10`; do echo $(date) >> /tmp/httpd.stats && curl -sLk https://127.0.0.1/server-status?auto >> /tmp/httpd.stats && sleep 5; done
 
 

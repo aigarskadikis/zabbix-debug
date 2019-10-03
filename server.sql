@@ -7,6 +7,18 @@ select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.object
 
 
 
+/* which users belongs to groupid */
+select u.alias from users_groups ug join users u where ug.userid=u.userid and ug.usrgrpid=7;
+
+
+
+/* show which user is onlyne by groupid */
+SELECT u.alias
+FROM users u
+INNER JOIN users_groups g ON ( u.userid = g.userid )
+INNER JOIN sessions s ON ( u.userid = s.userid )
+WHERE (g.usrgrpid=7)
+AND (s.status = 1);
 
 
 
@@ -57,7 +69,8 @@ select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 
 
 UPDATE interface ii,hosts h SET ii.useip=0 WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0 and h.host='bcm2711';
 
-
+/* see unsent alerts */
+select count(*), status from alerts group by status;
 
 
 /* Cannot insert new item in the host configuration */
