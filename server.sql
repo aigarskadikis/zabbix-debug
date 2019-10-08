@@ -11,6 +11,28 @@ select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.object
 select u.alias from users_groups ug join users u where ug.userid=u.userid and ug.usrgrpid=7;
 
 
+/* filter active triggers by severity on 3.4 */ 
+SELECT count(t.priority) AS COUNT,
+       CASE
+           WHEN t.priority=0 THEN 'Not classified'
+           WHEN t.priority=1 THEN 'Information'
+           WHEN t.priority=2 THEN 'Warning'
+           WHEN t.priority=3 THEN 'Average'
+           WHEN t.priority=4 THEN 'High'
+           WHEN t.priority=5 THEN 'Disaster'
+       END AS priority
+FROM EVENTS e
+INNER JOIN TRIGGERS t ON (e.objectid = t.triggerid)
+WHERE e.source=0
+  AND e.object=0
+  AND t.value=1
+GROUP BY t.priority
+ORDER BY count(t.priority);
+
+
+
+
+
 
 /* show which user is onlyne by groupid */
 SELECT u.alias
@@ -155,6 +177,9 @@ select itemid, hostid, name, lastlogsize from items where type=7 and value_type=
 
 /* Show how much items are created/active/disabled per type */
 select case when type=0 then 'Zabbix Agent' when type=1 then 'SNMPv1 agent' when type=2 then 'Zabbix trapper' when type=3 then 'simple check' when type=4 then 'SNMPv2 agent' when type=5 then 'Zabbix internal' when type=6 then 'SNMPv3 agent' when type=7 then 'Zabbix agent (active)' when type=8 then 'Zabbix aggregate' when type=9 then 'web item' when type=10 then 'external check' when type=11 then 'database monitor' when type=12 then 'IPMI agent' when type=13 then 'SSH agent' when type=14 then 'TELNET agent' when type=15 then 'calculated' when type=16 then 'JMX agent' when type=17 then 'SNMP trap' when type=18 then 'Dependent item' end as type,case when status=0 then 'ON' else 'OFF' end as status,count(*) from items group by type,status order by type, status desc;
+
+
+
 
 /* show unsupported items, transfer hostid into human readable name */
 SELECT h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1';
