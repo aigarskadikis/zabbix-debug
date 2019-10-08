@@ -11,7 +11,7 @@ select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.object
 select u.alias from users_groups ug join users u where ug.userid=u.userid and ug.usrgrpid=7;
 
 
-/* filter active triggers by severity on 3.4 */ 
+/* filter active triggers by severity on 3.4 with events table (a database killer) */ 
 SELECT count(t.priority) AS COUNT,
        CASE
            WHEN t.priority=0 THEN 'Not classified'
@@ -29,9 +29,20 @@ WHERE e.source=0
 GROUP BY t.priority
 ORDER BY count(t.priority);
 
-
-
-
+/* filter active triggers by severity on 3.4 with events table (NOT a database killer) */ 
+select count(t.priority),CASE
+           WHEN t.priority=0 THEN 'Not classified'
+           WHEN t.priority=1 THEN 'Information'
+           WHEN t.priority=2 THEN 'Warning'
+           WHEN t.priority=3 THEN 'Average'
+           WHEN t.priority=4 THEN 'High'
+           WHEN t.priority=5 THEN 'Disaster'
+       END AS priority
+from triggers t
+where t.value=1
+and t.flags in (0,4)
+GROUP BY t.priority
+ORDER BY count(t.priority);
 
 
 /* show which user is onlyne by groupid */
