@@ -45,6 +45,53 @@ GROUP BY t.priority
 ORDER BY count(t.priority);
 
 
+
+/* show which user is active  */
+SELECT u.alias
+FROM users u
+INNER JOIN users_groups g ON ( u.userid = g.userid )
+INNER JOIN sessions s ON ( u.userid = s.userid )
+WHERE (s.status = 0);
+
+
+SELECT u.alias
+FROM users u
+INNER JOIN users_groups g ON ( u.userid = g.userid )
+INNER JOIN sessions s ON ( u.userid = s.userid )
+WHERE (s.status = 0)
+and (s.lastaccess > NOW() - 3600);
+
+/* active users users */
+SELECT count(u.alias),
+       u.alias
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+GROUP BY u.alias;
+
+/* active users not including guests */
+SELECT count(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0)   AND (u.alias<>'guest') GROUP BY u.alias;
+
+
+/* users online in last 5 minutes */
+SELECT count(u.alias),
+       u.alias
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+  AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
+GROUP BY u.alias;
+
+/* ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 's INNER JOIN users u ON (u.userid = s.userid) where (u.alias='guest')' at line 1 */
+
+
+
+
+
+DELETE s FROM sessions s INNER JOIN users u ON (u.userid = s.userid) where u.alias='guest'; OPTIMIZE table sessions;
+
+
+
 /* show which user is onlyne by groupid */
 SELECT u.alias
 FROM users u
@@ -52,7 +99,6 @@ INNER JOIN users_groups g ON ( u.userid = g.userid )
 INNER JOIN sessions s ON ( u.userid = s.userid )
 WHERE (g.usrgrpid=7)
 AND (s.status = 1);
-
 
 
 
@@ -72,12 +118,13 @@ select key_,delay from items where flags=1 and delay not in (600,3600,0,'10m') a
 
 /* show most frequently used functions */
 select name,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
+/* on 2.4 */
+select function,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
+
+
 
 
 /* show hosts having a dns name installed */
-
-
-
 SELECT h.host,h.name,ii.type,ii.useip,ii.ip,ii.dns from hosts h join interface ii on h.hostid=ii.hostid WHERE LENGTH(ii.dns)>0 AND ii.useip=1;
 
 
@@ -205,6 +252,12 @@ SELECT @@character_set_database, @@collation_database\G;
 SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_collation != 'utf8_bin';
 /* check collation. this should report content */
 SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_collation = 'utf8_bin';
+
+
+
+mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SHOW CREATE TABLE", $1,"\\G" }' | mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix
+mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix 
+
 
 /* list all events based on Zabbix trigger ID */
 select * from events where source = 0 and objectid = <triggerid> order by clock DESC LIMIT 10;
@@ -445,6 +498,11 @@ SELECT itemid,LENGTH(value) FROM history_uint ORDER BY LENGTH(value) DESC limit 
 
 /* "[Z3005] query failed: [1062] Duplicate entry" */
 delete from ids;
+
+/* if problem related to 'insert into items' */
+select key_ from items where hostid=11818 and key_ like "%the-key-in-the-message%";
+
+
 
  
  
