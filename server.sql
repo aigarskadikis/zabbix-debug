@@ -45,6 +45,17 @@ GROUP BY t.priority
 ORDER BY count(t.priority);
 
 
+/* problems by severity */
+select count(*) from zabbix.triggers where priority=5 and value=1;
+select count(*) from zabbix.triggers where priority=4 and value=1;
+select count(*) from zabbix.triggers where priority=3 and value=1;
+select count(*) from zabbix.triggers where priority=2 and value=1;
+select count(*) from zabbix.triggers where priority=1 and value=1;
+select count(*) from zabbix.triggers where priority=0 and value=1;
+
+
+
+
 
 /* show which user is active  */
 SELECT u.alias
