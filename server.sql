@@ -6,6 +6,14 @@
 select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.objectid ) where t.triggerid = NULL;
 
 
+/* most frequent metrics */
+select itemid,count(*) from history_uint where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
+select itemid,count(*) from history where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
+select itemid,count(*) from history_str where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
+select itemid,count(*) from history_log where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
+select itemid,count(*) from history_text where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
+
+
 
 /* which users belongs to groupid */
 select u.alias from users_groups ug join users u where ug.userid=u.userid and ug.usrgrpid=7;
@@ -53,6 +61,9 @@ select count(*) from zabbix.triggers where priority=2 and value=1;
 select count(*) from zabbix.triggers where priority=1 and value=1;
 select count(*) from zabbix.triggers where priority=0 and value=1;
 
+
+/* max and average value lenght */
+select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 
 
 
@@ -174,9 +185,13 @@ SELECT h.host,h.name,ii.type,ii.useip,ii.ip,ii.dns from hosts h join interface i
 
 
 
-/* top messages which were initiated to notify someone */
+/* top messages which were initiated to notify someone (not works on 3.0) */
 select count(*),t.description from alerts a inner join events e on a.p_eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc limit 10;
 select count(*),t.description from alerts a inner join events e on a.p_eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc\G
+
+/* on 3.0 */
+select count(*),t.description from alerts a inner join events e on a.eventid = e.eventid inner join triggers t on e.objectid = t.triggerid where e.source = 0 group by t.triggerid order by count(*) desc limit 10;
+
 
 
 /* identify possibly old records which belongs to nonexisting trigger */
@@ -232,8 +247,7 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 /* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
 
-
-/* what keys has been made after discovery */
+/* what item prototype has been assigned for discovery rule */
 SELECT id.itemid,
        id.key_,
        id.lastcheck,
