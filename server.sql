@@ -233,6 +233,69 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
 
 
+/* what keys has been made after discovery */
+SELECT id.itemid,
+       id.key_,
+       id.lastcheck,
+       id.ts_delete,
+       i.name,
+       i.key_,
+       i.type,
+       i.value_type,
+       i.delay,
+       i.history,
+       i.trends,
+       i.trapper_hosts,
+       i.units,
+       i.formula,
+       i.logtimefmt,
+       i.valuemapid,
+       i.params,
+       i.ipmi_sensor,
+       i.snmp_community,
+       i.snmp_oid,
+       i.port,
+       i.snmpv3_securityname,
+       i.snmpv3_securitylevel,
+       i.snmpv3_authprotocol,
+       i.snmpv3_authpassphrase,
+       i.snmpv3_privprotocol,
+       i.snmpv3_privpassphrase,
+       i.authtype,
+       i.username,
+       i.password,
+       i.publickey,
+       i.privatekey,
+       i.description,
+       i.interfaceid,
+       i.snmpv3_contextname,
+       i.jmx_endpoint,
+       i.master_itemid,
+       i.timeout,
+       i.url,
+       i.query_fields,
+       i.posts,
+       i.status_codes,
+       i.follow_redirects,
+       i.post_type,
+       i.http_proxy,
+       i.headers,
+       i.retrieve_mode,
+       i.request_method,
+       i.output_format,
+       i.ssl_cert_file,
+       i.ssl_key_file,
+       i.ssl_key_password,
+       i.verify_peer,
+       i.verify_host,
+       id.parent_itemid,
+       i.allow_traps
+FROM item_discovery id
+JOIN items i ON id.itemid=i.itemid
+WHERE id.parent_itemid IN (103331);
+
+
+
 /* show the variation between SNMP community names being used in environment */
 select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, count(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
 
