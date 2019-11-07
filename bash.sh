@@ -12,6 +12,20 @@ grep slow /var/log/zabbix/zabbix_server.log
 grep slow /var/log/zabbix/zabbix_proxy.log
 
 
+cd /var/lib/mysql/zabbix && ls -Slhr | tail -30
+
+# total size of mysql dir
+du -sh /var/lib/mysql/
+du -sh /var/lib/mysql/zabbix/
+
+
+ls -alh /data/mysql/zabbix/history*
+ls -alh /data/mysql/zabbix/trends*
+
+
+for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
+
+
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && sleep 5; done
 
 

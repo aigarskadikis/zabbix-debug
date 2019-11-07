@@ -1,5 +1,14 @@
 
 
+
+/* on 3.4 */
+select description from triggers WHERE triggerid IN (select objectid from events where eventid=15);
+      
+
+/* */	  
+SHOW FULL COLUMNS FROM items;
+	  
+	  
 /* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
 
 
@@ -75,6 +84,8 @@ INNER JOIN users_groups g ON ( u.userid = g.userid )
 INNER JOIN sessions s ON ( u.userid = s.userid )
 WHERE (s.status = 0);
 
+/* search for metrics in history_text table where curently those are not stored as text */
+SELECT COUNT(itemid) FROM history_text WHERE itemid IN (SELECT itemid FROM items where value_type<>4);
 
 SELECT u.alias
 FROM users u
@@ -224,6 +235,8 @@ show processlist;
 /* for 5.5.64-MariaDB Comming from Base CentOS 7 repo */
 
 
+SELECT @@version,@@datadir\G
+
 SELECT @@version,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@open_files_limit,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 
 
@@ -246,6 +259,9 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 /* command resets the trigger status. */
 /* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
+
+
+
 
 /* what item prototype has been assigned for discovery rule */
 SELECT id.itemid,
