@@ -1,6 +1,7 @@
 
 
 
+
 /* on 3.4 */
 select description from triggers WHERE triggerid IN (select objectid from events where eventid=15);
       
@@ -245,7 +246,7 @@ SELECT @@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_in
 SELECT @@innodb_file_per_table,@@datadir,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 
 
-SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
+SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 
 /* if xtrabackup is used https://mariadb.com/kb/en/library/percona-xtrabackup-overview/ */ 
 SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_page_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
@@ -359,6 +360,10 @@ delete from problem where source>0;
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) desc;
+select itemid,delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
+select itemid,delay,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
+select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3 and itemid=<itemid>;
+
 
 
 select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3;
@@ -544,6 +549,16 @@ select name from events where source=3 and name like 'No Such Instance%' order b
 select count(*),name from events where source=3 and name like 'No Such Instance%';
 select count(*),name from events where source=3 and name like 'Cannot evaluate expression%';
 
+/* check how many hosts behind the proxy has unknown status */
+select name,error,proxy_hostid from hosts where available=0 and proxy_hostid in (select hostid from hosts where host='rpi4riga');
+
+
+select count(*),available from hosts where proxy_hostid in (select hostid from hosts where host='RPiProxY8b923a') group by available order by 1;
+select count(*),available from hosts where proxy_hostid in (select hostid from hosts where host='rpi4riga') group by 2 order by 1;
+/* Explanation of availability:
+0, HOST_AVAILABLE_UNKNOWN - Unknown availability (grayed out icon)
+1, HOST_AVAILABLE_TRUE - The host is available (green icon)
+2, HOST_AVAILABLE_FALSE - The host is not available (red icon) */
 
 
 
