@@ -22,6 +22,12 @@ du -sh /var/lib/mysql/zabbix/
 ls -alh /data/mysql/zabbix/history*
 ls -alh /data/mysql/zabbix/trends*
 
+# see the struggle of delivering data from proxy perspective
+grep "zbx_setproctitle.*title.*data sender" /var/log/zabbix/zabbix_proxy.log | grep "[0-9][0-9]\+\.[0-9]\+ sec"
+# it will show the sender session which finally succeeded the data delivering in a time period bigger than 9 seconds
+# we will require to see lines before the matched line
+
+
 
 for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
 
