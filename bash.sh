@@ -21,13 +21,14 @@ du -sh /var/lib/mysql/zabbix/
 
 ls -alh /data/mysql/zabbix/history*
 ls -alh /data/mysql/zabbix/trends*
+ls -alh /var/lib/mysql/zabbix/*
 
 # see the struggle of delivering data from proxy perspective
 grep "zbx_setproctitle.*title.*data sender" /var/log/zabbix/zabbix_proxy.log | grep "[0-9][0-9]\+\.[0-9]\+ sec"
 # it will show the sender session which finally succeeded the data delivering in a time period bigger than 9 seconds
 # we will require to see lines before the matched line
 
-
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbix Server stopped\|syncing history data\|syncing trend data"
 
 for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
 
@@ -63,6 +64,9 @@ mysql -h127.0.0.1 -uzabbix -pzabbix --database=zabbix -B -N -e "SHOW TABLES" | g
 
 mysql -h127.0.0.1 -uzabbix -pzabbix --database=zabbix -B -N -e "SHOW TABLES" | grep -v "^history$\|^history_uint$\|^trends$\|^trends_uint$" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | wc -l
  | mysql  -h location.to.db.instance --database=zabbix
+
+mysql --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SHOW CREATE TABLE",$1,"\\G"}' | mysql --database=zabbix >> ~/stock.3.4.schema.log
+ 
 
 
 # spliting the log file into pieces
