@@ -2,16 +2,50 @@
 
 
 /* enable loging to table */
+Please do the following sequence:
+
+# sign in database client as root. take a look on current settings
 select @@log_output, @@general_log, @@general_log_file\G
 
-SET global log_output = 'file';
+# set the global logging to table
+SET global log_output = 'table';
+
+# see now the situation has been changed comparing to original
+select @@log_output, @@general_log, @@general_log_file\G
+
+# take a note that log table currently is empty
+select count(*) from mysql.general_log;
+ 
+# enable the logging
+SET global general_log = 1;
+# THIS WILL START TO WRITE MASSIVE CONTENT!
+
+# see how the number is increasing. execute few times:
+select count(*) from mysql.general_log;
+# I hope its less than 10000 records per second!
+
+# wait 10 minutes
+
+# stop logging
 SET global general_log = 0;
 
-SET global log_output = 'table';
-SET global general_log = 1;
+# make sure number remains static
+select count(*) from mysql.general_log;
 
+# set back the log settings to file
+SET global log_output = 'file';
+
+# this must be the same as in the beginning
+select @@log_output, @@general_log, @@general_log_file\G
+
+# ======not required to execute - to observe records=======
 describe mysql.general_log;
-select * from mysql.general_log\G
+show create table mysql.general_log\G
+
+# observe records
+select * from mysql.general_log limit 10\G
+
+
 
 
 /* on 3.4 */
