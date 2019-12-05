@@ -55,7 +55,46 @@ select description from triggers WHERE triggerid IN (select objectid from events
 /* */	  
 SHOW FULL COLUMNS FROM items;
 	  
+/*	  
+0, ITEM_TYPE_ZABBIX - Zabbix agent
+1, ITEM_TYPE_SNMPV1 - SNMPv1 agent
+2, ITEM_TYPE_TRAPPER - Zabbix trapper
+3, ITEM_TYPE_SIMPLE - Simple check
+4, ITEM_TYPE_SNMPV2C - SNMPv2 agent
+5, ITEM_TYPE_INTERNAL - Zabbix internal
+6, ITEM_TYPE_SNMPV3 - SNMPv3 agent
+7, ITEM_TYPE_ZABBIX_ACTIVE - Zabbix agent (active) check
+8, ITEM_TYPE_AGGREGATE - Aggregate
+9, ITEM_TYPE_HTTPTEST - HTTP test (web monitoring scenario step)
+10, ITEM_TYPE_EXTERNAL - External check
+11, ITEM_TYPE_DB_MONITOR - Database monitor
+12, ITEM_TYPE_IPMI - IPMI agent
+13, ITEM_TYPE_SSH - SSH agent
+14, ITEM_TYPE_TELNET - TELNET agent
+15, ITEM_TYPE_CALCULATED - Calculated
+16, ITEM_TYPE_JMX - JMX agent
+17, ITEM_TYPE_SNMPTRAP - SNMP trap
+18, ITEM_TYPE_DEPENDENT - Dependent item
+*/	  
+
+
+/* show SSH agent in unsupported state */
+select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=13 and i.flags=0 and h.status not in (3) and state=1;
 	  
+/* show Simple check in unsupported state */
+select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=3 and i.flags=0 and h.status not in (3) and state=1;
+
+/* show Zabbix trapper in unsupported state */
+select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=2 and i.flags=0 and h.status not in (3) and state=1;
+
+/* show Database monitor in unsupported state */
+select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=11 and i.flags=0 and h.status not in (3) and state=1;
+
+
+
+
+
+
 /* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
 
 
