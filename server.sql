@@ -766,5 +766,9 @@ select key_ from items where hostid=11818 and key_ like "%the-key-in-the-message
 
 
 
- 
+/* DROP PROCEDURE partition_create; DROP PROCEDURE partition_drop;
+DROP PROCEDURE partition_maintenance;DROP PROCEDURE partition_maintenance_all;
+DROP PROCEDURE partition_verify; SHOW PROCEDURE STATUS; */
+
+
  
