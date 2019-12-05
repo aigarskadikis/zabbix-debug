@@ -1,6 +1,18 @@
 
 
 
+/* enable loging to table */
+select @@log_output, @@general_log, @@general_log_file\G
+
+SET global log_output = 'file';
+SET global general_log = 0;
+
+SET global log_output = 'table';
+SET global general_log = 1;
+
+describe mysql.general_log;
+select * from mysql.general_log\G
+
 
 /* on 3.4 */
 select description from triggers WHERE triggerid IN (select objectid from events where eventid=15);
@@ -147,6 +159,8 @@ AND host = 'Zabbix server'
 GROUP BY f.triggerid
 ORDER BY t.lastchange DESC;
 
+/* see hosts/templates having snmp trap items */
+select h.name,i.hostid from items i join hosts h where i.hostid = h.hostid and i.type=17;
 
 
 select DISTINCT h.name, i.key_, t.error from events e 
@@ -156,8 +170,8 @@ INNER JOIN items i ON ( i.itemid = f.itemid )
 INNER JOIN hosts h ON ( i.hostid = h.hostid )
 where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 20;
 
-
-select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 80;
+/* problems receiving information */
+select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 80\G
 
 
 select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Cannot obtain file information: [2] No such file or directory';
@@ -232,9 +246,10 @@ delete from ids;
 show processlist;
 /* if query is all in caps this means it comes from frontend */
 
+FLUSH PRIVILEGES;
 
 /* for 5.5.64-MariaDB Comming from Base CentOS 7 repo */
-
+/* https://www.digitalocean.com/community/tutorials/how-to-change-a-mysql-data-directory-to-a-new-location-on-centos-7 */
 
 SELECT @@version,@@datadir\G
 
@@ -262,8 +277,6 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 /* command resets the trigger status. */
 /* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
-
-
 
 
 /* what item prototype has been assigned for discovery rule */
@@ -360,8 +373,8 @@ delete from problem where source>0;
 
 
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
-select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) desc;
+select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
 select itemid,delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
 select itemid,delay,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
 select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3 and itemid=<itemid>;
@@ -386,9 +399,52 @@ select * from items where hostid in (select hostid from hosts where hostid in (s
 select itemid, hostid, name, lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
 
 /* Show how much items are created/active/disabled per type */
-select case when type=0 then 'Zabbix Agent' when type=1 then 'SNMPv1 agent' when type=2 then 'Zabbix trapper' when type=3 then 'simple check' when type=4 then 'SNMPv2 agent' when type=5 then 'Zabbix internal' when type=6 then 'SNMPv3 agent' when type=7 then 'Zabbix agent (active)' when type=8 then 'Zabbix aggregate' when type=9 then 'web item' when type=10 then 'external check' when type=11 then 'database monitor' when type=12 then 'IPMI agent' when type=13 then 'SSH agent' when type=14 then 'TELNET agent' when type=15 then 'calculated' when type=16 then 'JMX agent' when type=17 then 'SNMP trap' when type=18 then 'Dependent item' end as type,case when status=0 then 'ON' else 'OFF' end as status,count(*) from items group by type,status order by type, status desc;
+SELECT CASE
+           WHEN TYPE=0 THEN 'Zabbix Agent'
+           WHEN TYPE=1 THEN 'SNMPv1 agent'
+           WHEN TYPE=2 THEN 'Zabbix trapper'
+           WHEN TYPE=3 THEN 'simple check'
+           WHEN TYPE=4 THEN 'SNMPv2 agent'
+           WHEN TYPE=5 THEN 'Zabbix internal'
+           WHEN TYPE=6 THEN 'SNMPv3 agent'
+           WHEN TYPE=7 THEN 'Zabbix agent (active)'
+           WHEN TYPE=8 THEN 'Zabbix aggregate'
+           WHEN TYPE=9 THEN 'web item'
+           WHEN TYPE=10 THEN 'external check'
+           WHEN TYPE=11 THEN 'database monitor'
+           WHEN TYPE=12 THEN 'IPMI agent'
+           WHEN TYPE=13 THEN 'SSH agent'
+           WHEN TYPE=14 THEN 'TELNET agent'
+           WHEN TYPE=15 THEN 'calculated'
+           WHEN TYPE=16 THEN 'JMX agent'
+           WHEN TYPE=17 THEN 'SNMP trap'
+           WHEN TYPE=18 THEN 'Dependent item'
+           WHEN TYPE=19 THEN 'HTTP agent'
+       END AS TYPE,
+       CASE
+           WHEN status=0 THEN 'ON'
+           ELSE 'OFF'
+       END AS status,
+       count(*)
+FROM items
+GROUP BY TYPE,
+         status
+ORDER BY TYPE,
+         status DESC;
 
 
+		 
+SELECT TYPE,
+       CASE
+           WHEN status=0 THEN 'ON'
+           ELSE 'OFF'
+       END AS status,
+       count(*)
+FROM items
+GROUP BY TYPE,
+         status
+ORDER BY TYPE,
+         status DESC;
 
 
 /* show unsupported items, transfer hostid into human readable name */
