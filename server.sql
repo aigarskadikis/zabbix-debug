@@ -77,6 +77,8 @@ SHOW FULL COLUMNS FROM items;
 18, ITEM_TYPE_DEPENDENT - Dependent item
 */	  
 
+/* most unsupported items per host */
+SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' GROUP BY h.host ORDER BY 2;
 
 /* show SSH agent in unsupported state */
 select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=13 and i.flags=0 and h.status not in (3) and state=1;
@@ -91,11 +93,14 @@ select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER J
 select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=11 and i.flags=0 and h.status not in (3) and state=1;
 
 
+/* summarize database permissions */
+select host,db,user from mysql.db;
+SELECT Host,User FROM mysql.user where User="zabbix";
 
 
 
 
-/* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it */
+/* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it. If history syncer is busy there may be to much nodata or time based triggers functions */
 
 
 select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.objectid ) where t.triggerid = NULL;
