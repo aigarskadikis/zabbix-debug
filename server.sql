@@ -80,6 +80,13 @@ SHOW FULL COLUMNS FROM items;
 /* most unsupported items per host */
 SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' GROUP BY h.host ORDER BY 2;
 
+ SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' GROUP BY h.host ORDER BY 2 desc limit 15;
+
+/* only enabled hosts */
+SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' and h.status=0 GROUP BY h.host ORDER BY 2 desc limit 15; 
+SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' and h.status=0 GROUP BY h.host ORDER BY 2 desc limit 15; 
+ 
+
 /* show SSH agent in unsupported state */
 select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER JOIN hosts h where (h.hostid=i.hostid) and type=13 and i.flags=0 and h.status not in (3) and state=1;
 	  
@@ -113,6 +120,17 @@ select itemid,count(*) from history_str where clock> UNIX_TIMESTAMP(now()-INTERV
 select itemid,count(*) from history_log where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
 select itemid,count(*) from history_text where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by count(*) desc limit 10;
 
+
+/* otimize sessions table in case of lazy bastard - cannot fine tune the API script */
+select count(*) from sessions;
+delete from sessions where (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600); optimize table sessions;
+SELECT count(u.alias),
+       u.alias
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+  AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
+GROUP BY u.alias;
 
 
 /* which users belongs to groupid */
