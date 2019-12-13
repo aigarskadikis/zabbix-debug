@@ -46,7 +46,8 @@ show create table mysql.general_log\G
 select * from mysql.general_log limit 10\G
 
 
-
+/* summarize a specific discovery rule - unsuppoerted/supported ratio */
+SELECT i.state,h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.key_='vfs.fs.discovery[{HOST.NAME}]' and h.status=0 and i.state=0 limit 10;
 
 /* on 3.4 */
 select description from triggers WHERE triggerid IN (select objectid from events where eventid=15);
