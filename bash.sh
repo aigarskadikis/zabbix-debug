@@ -40,12 +40,22 @@ for i in `seq 1 20`; do zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf -t syste
 
 
 
+for i in `seq 1 20`; do zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf -t system.uptime >> /tmp/uptime.by.agent.log && sleep 1; done
+
+
+
 for i in `seq 1 20`; do zabbix_agentd -R housekeeper_execute && sleep 1; done
 
 
 
 for i in `seq 1 10`; do echo $(date) >> /tmp/httpd.stats && curl -sLk https://127.0.0.1/server-status?auto >> /tmp/httpd.stats && sleep 5; done
 
+for i in `seq 1 10`; do echo $(date) >> /tmp/pollers.busy.log && ps aux| grep ": poller #" >> /tmp/pollers.busy.log && sleep 1; done
+
+
+for i in `seq 1 10`; do echo $(date) >> /tmp/php-fpm.stats && curl -sLk http://127.0.0.1/status >> /tmp/php-fpm.stats && sleep 1; done
+
+for seq in {1..254};do echo 192.168.99.$seq >> /tmp/engineid.out && snmpget -v 3 -l authPriv -u snmpuser -x AES -X testtest -a SHA -A testtest 192.168.99.$seq <OID> >> /tmp/engineid.out ;done
 
 watch -n .2 'ps aux | grep [t]rapper'
 

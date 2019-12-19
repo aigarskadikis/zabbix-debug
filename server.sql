@@ -528,6 +528,14 @@ GROUP BY TYPE,
          status
 ORDER BY TYPE,
          status DESC;
+		 
+
+select distinct key_ from items where type = 0;
+select distinct key_ from items where type = 3;
+select distinct key_ from items where type = 4;
+
+		 
+select count(*),type from items  group by type;
 
 
 		 
@@ -794,7 +802,6 @@ select itemid, count(*) from history_text where clock>=unix_timestamp(NOW() - IN
 select itemid, count(*) from history_str where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by count(*) DESC LIMIT 10;
 
 
-select distinct key_ from items where type = 5;
 
 /* list all functions */
 select count(*),functionid,parameter from functions group by functionid,parameter order by count(*) DESC;
