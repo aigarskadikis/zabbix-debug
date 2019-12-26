@@ -52,7 +52,19 @@ SELECT i.state,h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM 
 /* on 3.4 */
 select description from triggers WHERE triggerid IN (select objectid from events where eventid=15);
       
+/* Something impossible has just happened */
+select count(*) from item_preproc where itemid not in (select itemid from items);
+delete from item_preproc where itemid not in (select itemid from items);
 
+select @@foreign_key_checks\G
+
+/* compare the oldest record in events table with the data configured in GUI */
+select min(clock) from events where source=0;
+select min(clock) from events where source=3;
+select min(clock) from events where source=2; 
+
+	  
+	  
 /* */	  
 SHOW FULL COLUMNS FROM items;
 	  
@@ -441,6 +453,7 @@ WHERE id.parent_itemid IN (103331);
 
 /* show the variation between SNMP community names being used in environment */
 select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, count(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
+
 /* filter by host */
 select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, count(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) and h.hostid=10814 group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
 
