@@ -63,7 +63,24 @@ select min(clock) from events where source=0;
 select min(clock) from events where source=3;
 select min(clock) from events where source=2; 
 
-	  
+/* postgreSQL manual housekeeper */
+delete FROM alerts where age(to_timestamp(alerts.clock)) > interval '40 days';
+delete FROM acknowledges where age(to_timestamp(acknowledges.clock)) > interval '40 days';
+delete FROM events where age(to_timestamp(events.clock)) > interval '40 days';
+delete FROM history where age(to_timestamp(history.clock)) > interval '40 days';
+delete FROM history_uint where age(to_timestamp(history_uint.clock)) > interval '40 days' ;
+delete FROM history_str  where age(to_timestamp(history_str.clock)) > interval '40 days' ;
+delete FROM history_text where age(to_timestamp(history_text.clock)) > interval '40 days' ;
+delete FROM history_log where age(to_timestamp(history_log.clock)) > interval '40 days' ;
+delete FROM trends where age(to_timestamp(trends.clock)) > interval '90 days';
+delete FROM trends_uint where age(to_timestamp(trends_uint.clock)) > interval '90 days' ;
+delete from history where itemid not in (select itemid from items where status='0');
+delete from history_uint where itemid not in (select itemid from items where status='0');
+delete from history_str where itemid not in (select itemid from items where status='0');
+delete from history_text where itemid not in (select itemid from items where status='0');
+delete from history_log where itemid not in (select itemid from items where status='0');
+delete from trends where itemid not in (select itemid from items where status='0');
+delete from trends_uint where itemid not in (select itemid from items where status='0');	  
 	  
 /* */	  
 SHOW FULL COLUMNS FROM items;
@@ -116,6 +133,7 @@ select i.state,i.itemid,i.hostid,i.key_,i.templateid,h.name from items i INNER J
 /* summarize database permissions */
 select host,db,user from mysql.db;
 SELECT Host,User FROM mysql.user where User="zabbix";
+
 
 
 
@@ -311,6 +329,8 @@ select key_,delay from items where flags=1 and delay not in (600,3600,0,'10m') a
 select name,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
 /* on 2.4 */
 select function,parameter,count(*) from functions group by 1,2 order by 3 desc limit 50;
+
+
 
 
 
@@ -601,6 +621,25 @@ show variables where Variable_name like 'innodb_file_per_table';
 
 /* Show session count opened per each user */
 SELECT sessions.userid,users.alias,count(*) FROM sessions INNER JOIN users ON sessions.userid = users.userid GROUP BY sessions.userid;
+
+
+
+SELECT u.alias,
+       r.rightid,
+       hgr.name,
+       CASE
+           WHEN r.permission=0 THEN 'DENY'
+           WHEN r.permission=2 THEN 'READ_ONLY'
+           WHEN r.permission=3 THEN 'READ_WRITE'
+       END AS permission
+FROM users u
+JOIN users_groups ug ON (u.userid = ug.userid)
+JOIN usrgrp ugrp ON (ugrp.usrgrpid = ug.usrgrpid)
+JOIN rights r ON (ugrp.usrgrpid = r.groupid)
+JOIN hstgrp hgr ON (r.id=hgr.groupid)
+WHERE u.alias='first';
+
+
 
 /* identify whether there are some entities that are spamming these events */
 select object,objectid,count(*) from events where source = 3 and object = 0 group by objectid order by count(*) desc limit 10;
