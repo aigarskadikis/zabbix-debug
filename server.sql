@@ -641,6 +641,18 @@ WHERE u.alias='first';
 
 
 
+/* show unsupported itmes in 4.4. this query does not work on 4.0, 4.2 */
+select hosts.name, item_rtdata.state, items.key_
+from item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+where item_rtdata.state=1\G
+
+
+from interface i join hosts h on i.hostid=h.hostid
+
+
 /* identify whether there are some entities that are spamming these events */
 select object,objectid,count(*) from events where source = 3 and object = 0 group by objectid order by count(*) desc limit 10;
 select object,objectid,count(*) from events where source = 3 and object = 4 group by objectid order by count(*) desc limit 10;
