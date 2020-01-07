@@ -58,6 +58,11 @@ delete from item_preproc where itemid not in (select itemid from items);
 
 select @@foreign_key_checks\G
 
+/* Problems are stuck in the Closing status 
+Click on the timestamp of each stuck problem to get the Event ID from URL and then use it to remove the record. Replace the <eventid> with relevant value. */
+DELETE FROM events WHERE source = 0 AND object = 0 AND eventid = <eventid>;
+
+
 /* compare the oldest record in events table with the data configured in GUI */
 select min(clock) from events where source=0;
 select min(clock) from events where source=3;
@@ -649,8 +654,6 @@ JOIN hosts ON (items.hostid=hosts.hostid)
 JOIN interface ON (interface.hostid=hosts.hostid)
 where item_rtdata.state=1\G
 
-
-from interface i join hosts h on i.hostid=h.hostid
 
 
 /* identify whether there are some entities that are spamming these events */
