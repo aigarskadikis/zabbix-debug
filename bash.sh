@@ -1,4 +1,14 @@
 
+
+ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec"
+
+
+
+cd /var/log/zabbix
+sed -n '/20200113:144959.744/,/20200113:145528.999/p' zabbix_server.log > /tmp/long-running-traps.log
+
+
+
 # show slow mysql updates
 grep slow.*update /var/log/zabbix/zabbix_server.log
 grep slow.*update /var/log/zabbix/zabbix_proxy.log

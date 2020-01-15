@@ -46,7 +46,7 @@ show create table mysql.general_log\G
 select * from mysql.general_log limit 10\G
 
 
-/* summarize a specific discovery rule - unsuppoerted/supported ratio */
+/* summarize a specific discovery rule - unsuppoerted/supported ratio. Does not work on 4.4 */
 SELECT i.state,h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.key_='vfs.fs.discovery[{HOST.NAME}]' and h.status=0 and i.state=0 limit 10;
 
 /* on 3.4 */
@@ -112,7 +112,7 @@ SHOW FULL COLUMNS FROM items;
 18, ITEM_TYPE_DEPENDENT - Dependent item
 */	  
 
-/* most unsupported items per host */
+/* most unsupported items per host. Does not work on 4.4 */
 SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' GROUP BY h.host ORDER BY 2;
 
  SELECT DISTINCT h.host AS 'Host name',count(i.key_) FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1' GROUP BY h.host ORDER BY 2 desc limit 15;
@@ -143,7 +143,7 @@ SELECT Host,User FROM mysql.user where User="zabbix";
 
 
 
-/* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it. If history syncer is busy there may be to much nodata or time based triggers functions */
+/* StartDBSyncers=4 by default can feed 4k NVPS. Don't increase it. If history syncer is busy there may be to much nodata or time based triggers functions. History syncer is responsible about calculating triggers */
 
 
 select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.objectid ) where t.triggerid = NULL;
@@ -361,7 +361,7 @@ select count(*) from events where source=0 and objectid not in (select triggerid
 select objectid,name from events where source=0 and objectid not in (select triggerid from triggers) order by clock\G
 
 
-/* items having probles receiving data */
+/* items having probles receiving data. Super usefull select to summarize and fix issues for data gathering */
 select count(*),objectid as itemid,name from events where source = 3 AND object = 4 and LENGTH(name)>0 group by name order by count(*) desc limit 10\G
 
 
@@ -535,6 +535,28 @@ select * from items where hostid in (select hostid from hosts where hostid in (s
 /* list the biggest log items in the database */
 select itemid, hostid, name, lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
 
+/* show possibly bigger log items on 4.4 */
+SELECT hosts.host,
+       hosts.name,
+	   items.itemid,
+       items.key_,
+       item_rtdata.lastlogsize
+FROM items
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=7
+  AND items.value_type=2
+ORDER BY item_rtdata.lastlogsize\G
+
+
+
+
+select itemid, hostid, name, lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
+
+select items.itemid, item_rtdata.lastlogsize from items join item_rtdata on (item_rtdata.itemid=items.itemid) where items.type=7 and items.value_type=2;
+
+item_rtdata
+
 /* Show how much items are created/active/disabled per type */
 SELECT CASE
            WHEN TYPE=0 THEN 'Zabbix Agent'
@@ -568,6 +590,53 @@ GROUP BY TYPE,
          status
 ORDER BY TYPE,
          status DESC;
+		 	 
+		 
+		 
+
+SELECT hosts.host,
+       hosts.name,
+       history_str.itemid,
+       items.key_,
+       count(*)
+FROM history_str
+JOIN items ON (items.itemid=history_str.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock>=1578924000
+  AND clock<=1578952800
+GROUP BY history_str.itemid
+ORDER BY count(*)\G
+
+
+
+SELECT hosts.host,
+       hosts.name,
+       history_text.itemid,
+       items.key_,
+       count(*)
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock>=1578924000
+  AND clock<=1578952800
+GROUP BY history_text.itemid
+ORDER BY count(*)\G
+		 
+
+SELECT hosts.host,
+       hosts.name,
+       history_log.itemid,
+       items.key_,
+       count(*)
+FROM history_log
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock>=1578924000
+  AND clock<=1578952800
+GROUP BY history_log.itemid
+ORDER BY count(*)\G
+		 
+		 
 		 
 
 select distinct key_ from items where type = 0;
@@ -729,6 +798,9 @@ FROM   zabbix.triggers t
          ON ( i.hostid = h.hostid ) 
 WHERE  h.hostid = 10084;
 
+
+/* LLDs behind proxy */
+select clock,ns,items.delay,items.key_ from proxy_history join items on (proxy_history.itemid=items.itemid) where items.flags=1 order by clock asc limit 10;
 
 
 /* size of postgres tables */
