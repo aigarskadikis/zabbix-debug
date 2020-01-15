@@ -733,6 +733,24 @@ select object,objectid,count(*) from events where source = 3 and object = 5 grou
 /* show the event count per source */
 select count(*), source from events group by source;
 
+
+SELECT count(*),
+       source
+FROM events
+WHERE clock>=1578924000
+  AND clock<=1578927600
+GROUP BY source;
+
+
+
+
+SELECT count(*),
+       source
+FROM events
+WHERE clock>=1578924000
+  AND clock<=1578957600
+GROUP BY source;
+
 select count(*), source, object from events group by source;
 
 /* show the the problem which are spamming the problem table the most */
@@ -950,6 +968,8 @@ select count(*),functionid,parameter from functions group by functionid,paramete
 /* show frequent functions */
 select count(*),name,parameter from functions group by parameter order by count(*) DESC;
 
+select name,count(*) from functions group by name order by name;
+
 
 select @@optimizer_switch\G
 # see if 'index_condition_pushdown=off'. if not the set to my.cnf
@@ -961,7 +981,13 @@ select key_ from items where hostid ='10564';
 select flags,key_ from items where hostid ='10564' and flags<>'2';
 
 /* determine the count of functions (maybe the heaviest hosts) used in trigger expressions */
-select count(*),i.hostid from triggers t inner join functions f on f.triggerid = t.triggerid inner join items i on f.itemid = i.itemid where i.hostid in (10543,'10536','10537','10540','10554','10555','10558','10559','10563','10564','10565','10569','10571','10573','10832') group by i.hostid;
+SELECT count(*),
+       i.hostid
+FROM triggers t
+INNER JOIN functions f ON f.triggerid = t.triggerid
+INNER JOIN items i ON f.itemid = i.itemid
+GROUP BY i.hostid;
+
 
 
 /* see the biggest records */
