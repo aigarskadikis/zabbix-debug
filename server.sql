@@ -989,6 +989,28 @@ INNER JOIN items i ON f.itemid = i.itemid
 GROUP BY i.hostid;
 
 
+/* nodata function inside templates */
+SELECT hosts.host,
+       items.key_
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE functions.name = 'nodata'
+AND hosts.status = 3
+
+
+
+SELECT DISTINCT items.key_,
+                count(*)
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE functions.name = 'nodata'
+GROUP BY items.key_;
+
+
 
 /* see the biggest records */
 SELECT itemid,LENGTH(value) FROM proxy_history ORDER BY LENGTH(value) DESC limit 10;
