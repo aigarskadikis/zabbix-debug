@@ -840,6 +840,38 @@ select count(*) from functions f
 where f.triggerid is NULL;
 
 
+/* usage of passive checks */
+SELECT DISTINCT CASE
+                    WHEN TYPE=0 THEN 'Zabbix Agent'
+                    WHEN TYPE=1 THEN 'SNMPv1 agent'
+                    WHEN TYPE=2 THEN 'Zabbix trapper'
+                    WHEN TYPE=3 THEN 'simple check'
+                    WHEN TYPE=4 THEN 'SNMPv2 agent'
+                    WHEN TYPE=5 THEN 'Zabbix internal'
+                    WHEN TYPE=6 THEN 'SNMPv3 agent'
+                    WHEN TYPE=7 THEN 'Zabbix agent (active)'
+                    WHEN TYPE=8 THEN 'Zabbix aggregate'
+                    WHEN TYPE=9 THEN 'web item'
+                    WHEN TYPE=10 THEN 'external check'
+                    WHEN TYPE=11 THEN 'database monitor'
+                    WHEN TYPE=12 THEN 'IPMI agent'
+                    WHEN TYPE=13 THEN 'SSH agent'
+                    WHEN TYPE=14 THEN 'TELNET agent'
+                    WHEN TYPE=15 THEN 'calculated'
+                    WHEN TYPE=16 THEN 'JMX agent'
+                    WHEN TYPE=17 THEN 'SNMP trap'
+                    WHEN TYPE=18 THEN 'Dependent item'
+                    WHEN TYPE=19 THEN 'HTTP agent'
+                END AS TYPE,
+                delay,
+				hostid,
+                count(*)
+FROM items
+WHERE TYPE NOT IN (2,3,5,7,8,15,17) and status=0 and flags in (1,4) and state=0 GROUP BY 1,2,3;
+
+
+
+
 select i.interfaceid,i.hostid,i.ip,i.bulk,h.name from interface i join hosts h on i.hostid=h.hostid
 
 select h.name,i.bulk from interface i join hosts h on i.hostid=h.hostid where i.type=2 and i.bulk=0;

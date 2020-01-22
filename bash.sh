@@ -33,6 +33,10 @@ ls -alh /data/mysql/zabbix/history*
 ls -alh /data/mysql/zabbix/trends*
 ls -alh /var/lib/mysql/zabbix/*
 
+
+sed 's|\xc2\xa0|ISSUEHERE|g' /etc/zabbix/web/zabbix.conf.php | grep ISSUEHERE
+
+
 # see the struggle of delivering data from proxy perspective
 grep "zbx_setproctitle.*title.*data sender" /var/log/zabbix/zabbix_proxy.log | grep "[0-9][0-9]\+\.[0-9]\+ sec"
 # it will show the sender session which finally succeeded the data delivering in a time period bigger than 9 seconds
