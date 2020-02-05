@@ -11,6 +11,8 @@ select itemid,count(*) from proxy_history where id > (select nextid from ids whe
 /* frequent LLD behind proxy */
 select count(*),delay from items where flags = 1 group by delay order by count(*) desc LIMIT 20;
 select count(*),delay from items where flags = 1 group by 2 order by 1 desc;
+/* with key */
+select count(*),delay,key_ from items where flags = 1 group by 2 order by 1 desc;
 
 /* On 3.0 only! to eliminate the possibility that low level discovery are causing the problem we can remove all the LLD which has been scheduled (in past). New LLD checks will be scheduled starting from no. */
 delete from proxy_history where itemid in (select itemid from items where flags=1);

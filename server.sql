@@ -62,6 +62,33 @@ select @@foreign_key_checks\G
 Click on the timestamp of each stuck problem to get the Event ID from URL and then use it to remove the record. Replace the <eventid> with relevant value. */
 DELETE FROM events WHERE source = 0 AND object = 0 AND eventid = <eventid>;
 
+/*
+0, ITEM_VALUE_TYPE_FLOAT - Float
+1, ITEM_VALUE_TYPE_STR - Character
+2, ITEM_VALUE_TYPE_LOG - Log
+3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
+4, ITEM_VALUE_TYPE_TEXT - Text
+*/
+
+SELECT count(*) FROM history where itemid in (select itemid from items where value_type<>0);
+SELECT count(*) FROM history_str where itemid in (select itemid from items where value_type<>1);
+SELECT count(*) FROM history_log where itemid in (select itemid from items where value_type<>2);
+SELECT count(*) FROM history_uint where itemid in (select itemid from items where value_type<>3);
+SELECT count(*) FROM history_text where itemid in (select itemid from items where value_type<>4);
+
+
+SELECT DISTINCT items.key_,hosts.host FROM history_text 
+JOIN items ON (history_text.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+where history_text.itemid in (select itemid from items where value_type<>4);
+
+
+DELETE FROM history where itemid in (select itemid from items where value_type<>0);
+DELETE FROM history_str where itemid in (select itemid from items where value_type<>1);
+DELETE FROM history_log where itemid in (select itemid from items where value_type<>2);
+DELETE FROM history_uint where itemid in (select itemid from items where value_type<>3);
+DELETE FROM history_text where itemid in (select itemid from items where value_type<>4);
+
 
 /* compare the oldest record in events table with the data configured in GUI */
 select min(clock) from events where source=0;
@@ -509,12 +536,56 @@ delete from problem where source>0;
 
 
 
+
+SELECT snmpv3_securityname AS USER,
+       CASE snmpv3_securitylevel
+           WHEN 0 THEN 'noAuthNoPriv'
+           WHEN 1 THEN 'authNoPriv'
+           WHEN 2 THEN 'authPriv'
+       END AS secLev,
+       CASE snmpv3_authprotocol
+           WHEN 0 THEN 'MD5'
+           WHEN 1 THEN 'SHA'
+       END AS authProto,
+       snmpv3_authpassphrase AS authPhrase,
+       CASE snmpv3_privprotocol
+           WHEN 0 THEN 'DES'
+           WHEN 1 THEN 'AES'
+       END AS privProto,
+       snmpv3_privpassphrase AS privPhrase,
+       CASE flags
+           WHEN 0 THEN 'normal'
+           WHEN 1 THEN 'rule'
+           WHEN 2 THEN 'prototype'
+           WHEN 4 THEN 'discovered'
+       END AS flags,
+       count(*)
+FROM items
+WHERE TYPE=6
+  AND hostid=10280
+GROUP BY 1,
+         2,
+         3,
+         4,
+         5,
+         6,
+         7;
+
+
+
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) desc;
 select delay,key_,count(*) from items where flags = 1 group by delay, key_ order by delay,count(*);
 select itemid,delay,key_,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
 select itemid,delay,count(*) from items where flags = 1 group by delay, key_ order by count(*) asc;
 select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3 and itemid=<itemid>;
+
+
+
+
+
+
+
 
 
 
@@ -863,12 +934,37 @@ SELECT DISTINCT CASE
                     WHEN TYPE=18 THEN 'Dependent item'
                     WHEN TYPE=19 THEN 'HTTP agent'
                 END AS TYPE,
-                delay,
-				hostid,
+                items.delay,
                 count(*)
 FROM items
-WHERE TYPE NOT IN (2,3,5,7,8,15,17) and status=0 and flags in (1,4) and state=0 GROUP BY 1,2,3;
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE TYPE NOT IN (2,3,5,7,8,15,17)
+  AND items.status=0
+  AND items.flags IN (1,4)
+  AND items.state=0
+  AND hosts.status=0
+GROUP BY 1,2;
 
+
+
+/* performance killer. select which items takes the most space in history table */
+SELECT DISTINCT items.key_,hosts.host, COUNT(*) FROM history 
+JOIN items ON (items.itemid=history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY history.itemid
+ORDER BY COUNT(*) DESC;
+
+SELECT DISTINCT items.key_,hosts.host, COUNT(*) FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY history_text.itemid
+ORDER BY COUNT(*) DESC
+LIMIT 5\G
+
+
+
+
+SELECT 
 
 
 

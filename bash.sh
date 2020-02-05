@@ -7,7 +7,7 @@ ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec
 cd /var/log/zabbix
 sed -n '/20200113:144959.744/,/20200113:145528.999/p' zabbix_server.log > /tmp/long-running-traps.log
 
-
+sed "s|^[0-9:.\ ]\+||" /var/log/zabbix/zabbix_server.log | sort | uniq -c | sort -n
 
 # show slow mysql updates
 grep slow.*update /var/log/zabbix/zabbix_server.log
@@ -33,7 +33,7 @@ ls -alh /data/mysql/zabbix/history*
 ls -alh /data/mysql/zabbix/trends*
 ls -alh /var/lib/mysql/zabbix/*
 
-
+# check for Non-breaking space character
 sed 's|\xc2\xa0|ISSUEHERE|g' /etc/zabbix/web/zabbix.conf.php | grep ISSUEHERE
 
 
