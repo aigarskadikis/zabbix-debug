@@ -47,7 +47,9 @@ zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbi
 for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
 
 
-for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && sleep 5; done
+for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
+
+for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.trapper && ps -ef | grep ^zabbix.*trapper.# >> /tmp/zabbix.trapper && echo "=======" >> /tmp/zabbix.trapper && sleep 1; done
 
 
 for i in `seq 1 20`; do zabbix_agentd -c /etc/zabbix/zabbix_agentd.conf -t system.uptime >> /tmp/uptime.by.agent.log && sleep 1; done
