@@ -1,6 +1,66 @@
 
 
 
+
+
+/* show template count on 3.0 */
+select count(*) from hosts where status=3;
+/* host is disabled */
+select count(*) from hosts where status=1;
+/* count of monitored hosts */
+select count(*) from hosts where status=0 and flags<>2;
+
+
+/* items running */
+SELECT count(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags IN (0,4)
+  AND items.state=0
+  AND items.status=0
+  AND hosts.status=0
+  AND hosts.flags<>2;
+
+/* items disabled */
+SELECT count(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags IN (0,4)
+  AND items.state=0
+  AND items.status=1
+  AND hosts.flags<>2;
+
+/* items not supported */
+SELECT count(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags IN (0,4)
+  AND items.state=1
+  AND items.status=0
+  AND hosts.status=0
+  AND hosts.flags<>2;
+
+/* details about triggers */
+SELECT COUNT(DISTINCT triggers.triggerid) AS cnt,
+       triggers.status,
+       triggers.value
+FROM TRIGGERS
+WHERE NOT EXISTS
+    (SELECT functions.functionid
+     FROM functions
+     JOIN items ON functions.itemid=items.itemid
+     JOIN hosts ON items.hostid=hosts.hostid
+     WHERE functions.triggerid=triggers.triggerid
+       AND (items.status<>0
+            OR hosts.status<>0))
+  AND triggers.flags IN (0,4)
+GROUP BY triggers.status,
+         triggers.value;
+
+/* In the result there will be all 4 things */
+
+
+
 /* enable loging to table */
 Please do the following sequence:
 
@@ -232,6 +292,23 @@ where t.value=1
 and t.flags in (0,4)
 GROUP BY t.priority
 ORDER BY count(t.priority);
+
+/* auditlog */
+SELECT count(*),
+       CASE
+           WHEN action=0 THEN 'AUDIT_ACTION_ADD'
+           WHEN action=1 THEN 'AUDIT_ACTION_UPDATE'
+           WHEN action=2 THEN 'AUDIT_ACTION_DELETE'
+           WHEN action=3 THEN 'AUDIT_ACTION_LOGIN'
+           WHEN action=4 THEN 'AUDIT_ACTION_LOGOUT'
+           WHEN action=5 THEN 'AUDIT_ACTION_ENABLE'
+           WHEN action=6 THEN 'AUDIT_ACTION_DISABLE'
+       END AS action
+FROM auditlog
+WHERE clock>(UNIX_TIMESTAMP("2020-01-01 00:00:00"))
+  AND clock<(UNIX_TIMESTAMP("2020-02-01 00:00:00"))
+GROUP BY action;
+
 
 
 /* problems by severity */
@@ -811,6 +888,9 @@ FROM events
 WHERE clock>=1578924000
   AND clock<=1578927600
 GROUP BY source;
+
+
+
 
 
 
