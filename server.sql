@@ -3,6 +3,35 @@
 
 
 
+
+
+
+
+
+
+SELECT task.clock,
+       task.status,
+       pr.host AS proxy,
+       hosts.host,
+	   task_remote_command.execute_on,
+       task.taskid,
+       task_remote_command.command
+FROM task
+JOIN task_remote_command ON (task.taskid=task_remote_command.taskid)
+JOIN hosts ON (hosts.hostid=task_remote_command.hostid)
+JOIN hosts pr ON (pr.hostid=task.proxy_hostid);
+
+
+
+
+JOIN task_remote_command_result ON (task.taskid=task_remote_command_result.taskid)
+
+
+
+
+
+
+
 /* show template count on 3.0 */
 select count(*) from hosts where status=3;
 /* host is disabled */
