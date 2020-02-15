@@ -1,35 +1,35 @@
 
-
-
-
-
-
-
-
-
-
-
 SELECT task.clock,
-       task.status,
+       task.taskid,
+       CASE
+           WHEN task.status=1 THEN 'new'
+           WHEN task.status=2 THEN 'in pogress'
+           WHEN task.status=3 THEN 'done'
+           WHEN task.status=4 THEN 'expired'
+       END AS status,
        pr.host AS proxy,
        hosts.host,
-	   task_remote_command.execute_on,
-       task.taskid,
+       CASE
+           WHEN task_remote_command.execute_on=0 THEN 'agent'
+           WHEN task_remote_command.execute_on=1 THEN 'server'
+           WHEN task_remote_command.execute_on=2 THEN 'proxy'
+       END AS execute_on,
+       CASE
+           WHEN task_remote_command.command_type=0 THEN 'custom script'
+           WHEN task_remote_command.command_type=1 THEN 'IPMI'
+           WHEN task_remote_command.command_type=2 THEN 'SSH'
+           WHEN task_remote_command.command_type=3 THEN 'telnet'
+           WHEN task_remote_command.command_type=4 THEN 'global script'
+       END AS command_type,
        task_remote_command.command
 FROM task
 JOIN task_remote_command ON (task.taskid=task_remote_command.taskid)
 JOIN hosts ON (hosts.hostid=task_remote_command.hostid)
-JOIN hosts pr ON (pr.hostid=task.proxy_hostid);
-
-
-
-
-JOIN task_remote_command_result ON (task.taskid=task_remote_command_result.taskid)
-
-
-
-
-
+JOIN hosts pr ON (pr.hostid=task.proxy_hostid)
+WHERE task.type=2
+AND clock>(UNIX_TIMESTAMP("2020-02-01 00:00:00"))
+AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
+;
 
 
 /* show template count on 3.0 */
