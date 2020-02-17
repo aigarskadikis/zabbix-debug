@@ -8,6 +8,8 @@ cd /var/log/zabbix
 sed -n '/20200113:144959.744/,/20200113:145528.999/p' zabbix_server.log > /tmp/long-running-traps.log
 
 sed "s|^[0-9:.\ ]\+||" /var/log/zabbix/zabbix_server.log | sort | uniq -c | sort -n
+sed "s|^[0-9:.\ ]\+||" /var/log/zabbix/zabbix_proxy.log | sort | uniq -c | sort -n
+
 
 # show slow mysql updates
 grep slow.*update /var/log/zabbix/zabbix_server.log

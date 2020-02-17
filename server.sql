@@ -61,6 +61,15 @@ GROUP BY triggers.status,
 
 
 
+
+SELECT task.taskid,hosts.host FROM task
+JOIN task_remote_command on (task.taskid=task_remote_command.taskid)
+JOIN task_remote_command_result on (task.taskid=task_remote_command_result.taskid)
+JOIN hosts on (task_remote_command.hostid=hosts.hostid)
+
+
+
+
 /* enable loging to table */
 Please do the following sequence:
 
@@ -754,6 +763,13 @@ WHERE clock>=1578924000
   AND clock<=1578952800
 GROUP BY history_str.itemid
 ORDER BY count(*)\G
+
+
+
+select hosts.host,items.key_,ts_delete from item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+where ts_delete<>0;
 
 
 
