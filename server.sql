@@ -99,6 +99,9 @@ JOIN hosts on (task_remote_command.hostid=hosts.hostid)
 
 
 
+
+
+
 /* enable loging to table */
 Please do the following sequence:
 
@@ -513,6 +516,36 @@ UPDATE interface ii,hosts h SET ii.useip=0 WHERE h.hostid=ii.hostid AND ii.useip
 
 /* see unsent alerts */
 select count(*), status from alerts group by status;
+
+
+select count(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status
+from alerts
+JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
+where media_type.type=4
+group by alerts.status;
+
+
+select count(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status
+from alerts
+group by alerts.status;
+
+
+
+0, ALERT_STATUS_NOT_SENT - Alert is not yet sent but is cached (being processed) by alert manager
+1, ALERT_STATUS_SENT - Sent
+2, ALERT_STATUS_FAILED - Sending failed
+3, ALERT_STATUS_NEW 
+
 
 
 /* Cannot insert new item in the host configuration */
@@ -1140,8 +1173,18 @@ select count(*),available from hosts where proxy_hostid in (select hostid from h
 /* look for last events in events table */
  select * from events order by clock desc limit 10 ;
  
-/* which zabbix agent have unhealthy state */
-select name,error from hosts where available=2;
+/* which hosts are monitored but have unhealthy state, unavailable */
+select name,error from hosts where available=2 and status IN (0,1);
+
+/* which zabbix agents are unavailable, showing red */
+SELECT name,error
+FROM hosts
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.available=2
+  AND hosts.status IN (0,1)
+  AND interface.type=1;
+
+
 
 /* link togeterhe hosts with hostgroups */
 SELECT h.host, t.description, f.triggerid, t.value, t.lastchange, t.state FROM zabbix.triggers t
