@@ -506,8 +506,15 @@ select count(*) from events where source=0 and objectid not in (select triggerid
 select objectid,name from events where source=0 and objectid not in (select triggerid from triggers) order by clock\G
 
 
-/* items having probles receiving data. Super usefull select to summarize and fix issues for data gathering */
-select count(*),objectid as itemid,name from events where source = 3 AND object = 4 and LENGTH(name)>0 group by name order by count(*) desc limit 10\G
+/* items having problems receiving data. Super useful select to summarize and fix issues for data gathering */
+select hosts.host,events.objectid as itemid,items.key_,events.name as error,count(events.objectid) as occurrence
+from events 
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+where events.source = 3 AND events.object = 4 and LENGTH(events.name)>0
+GROUP BY events.objectid,events.name ORDER BY count(*)\G
+
+
 
 
 select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0;
