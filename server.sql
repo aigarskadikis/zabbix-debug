@@ -32,6 +32,37 @@ AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
 ;
 
 
+/* show item prototypes, discoveries and items configured with SNMPv3 */
+SELECT snmpv3_securityname AS USER,
+       CASE snmpv3_securitylevel
+           WHEN 0 THEN 'noAuthNoPriv'
+           WHEN 1 THEN 'authNoPriv'
+           WHEN 2 THEN 'authPriv'
+       END AS secLev,
+       CASE snmpv3_authprotocol
+           WHEN 0 THEN 'MD5'
+           WHEN 1 THEN 'SHA'
+       END AS authProto,
+       snmpv3_authpassphrase AS authPhrase,
+       CASE snmpv3_privprotocol
+           WHEN 0 THEN 'DES'
+           WHEN 1 THEN 'AES'
+       END AS privProto,
+       snmpv3_privpassphrase AS privPhrase,
+       CASE flags
+           WHEN 0 THEN 'normal'
+           WHEN 1 THEN 'rule'
+           WHEN 2 THEN 'prototype'
+           WHEN 4 THEN 'discovered'
+       END AS flags,
+       count(*)
+FROM items
+WHERE TYPE=6
+  AND hostid=10380
+GROUP BY 1,2,3,4,5,6,7;
+
+
+
 /* show template count on 3.0 */
 select count(*) from hosts where status=3;
 /* host is disabled */
