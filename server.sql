@@ -58,9 +58,11 @@ SELECT snmpv3_securityname AS USER,
        count(*)
 FROM items
 WHERE TYPE=6
-  AND hostid=10380
+  AND hostid=10814
 GROUP BY 1,2,3,4,5,6,7;
 
+/* see defferent type of items */
+select count(type), type from items where hostid=10814 group by type;
 
 
 /* show template count on 3.0 */
@@ -134,7 +136,7 @@ JOIN hosts on (task_remote_command.hostid=hosts.hostid)
 
 
 /* enable loging to table */
-Please do the following sequence:
+# Please do the following sequence:
 
 # sign in database client as root. take a look on current settings
 select @@log_output, @@general_log, @@general_log_file\G
@@ -563,7 +565,14 @@ select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 
 UPDATE interface ii,hosts h SET ii.useip=0 WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0 and h.host='bcm2711';
 
 /* see unsent alerts */
-select count(*), status from alerts group by status;
+select count(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status
+from alerts
+group by alerts.status;
 
 
 select count(*),CASE alerts.status
@@ -576,24 +585,6 @@ from alerts
 JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
 where media_type.type=4
 group by alerts.status;
-
-
-select count(*),CASE alerts.status
-           WHEN 0 THEN 'NOT_SENT'
-           WHEN 1 THEN 'SENT'
-           WHEN 2 THEN 'FAILED'
-           WHEN 3 THEN 'NEW'
-       END AS status
-from alerts
-group by alerts.status;
-
-
-
-0, ALERT_STATUS_NOT_SENT - Alert is not yet sent but is cached (being processed) by alert manager
-1, ALERT_STATUS_SENT - Sent
-2, ALERT_STATUS_FAILED - Sending failed
-3, ALERT_STATUS_NEW 
-
 
 
 /* Cannot insert new item in the host configuration */
