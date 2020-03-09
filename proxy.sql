@@ -16,6 +16,46 @@ select count(*),delay,key_ from items where flags = 1 group by 2 order by 1 desc
 
 /* On 3.0 only! to eliminate the possibility that low level discovery are causing the problem we can remove all the LLD which has been scheduled (in past). New LLD checks will be scheduled starting from no. */
 delete from proxy_history where itemid in (select itemid from items where flags=1);
+
+
+delete from proxy_history where itemid in (select itemid from items where flags=1);
+
+
+select hosts.host,items.key_ from proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+where items.itemid in (select itemid from items where flags=1);
+
+
+/* frequency of LLDs */
+select count(items.key_),items.key_,hosts.host from proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+where items.itemid in (select itemid from items where flags=1)
+group by items.key_,hosts.host
+order by 1,2,3;
+
+SELECT table_name, table_rows, data_length, index_length, round(((data_length + index_length) / 1024 / 1024 / 1024),2) "Size in GB" FROM information_schema.tables WHERE table_schema = "zabbix" order by round(((data_length + index_length) / 1024 / 1024 / 1024),2) DESC LIMIT 20;
+
+select @@datadir;
+
+
+select proxy_history.clock,items.key_,items.delay from proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+where proxy_history.itemid in (select itemid from items where flags=1) order by proxy_history.clock desc;
+
+
+show create table history_uint;
+
+truncate table proxy_history; truncate table ids;
+
+
+select items.key_ from proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+where items.itemid in (select itemid from items where flags=1);
+
+
+
 select clock,ns from proxy_history where itemid in (select itemid from items where flags=1);
 
 /* show the exteral sripts used. Usefull to know befere migrating the server or proxy to different kind of OS */
