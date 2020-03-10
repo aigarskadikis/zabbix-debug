@@ -330,8 +330,12 @@ WHERE (s.status=0)
 GROUP BY u.alias;
 
 
-/* which users belongs to groupid */
-select u.alias from users_groups ug join users u where ug.userid=u.userid and ug.usrgrpid=7;
+/* which users belongs to groupid, user group */
+SELECT users.alias
+FROM users_groups
+JOIN users
+WHERE users_groups.userid=users.userid
+  AND users_groups.usrgrpid=7;
 
 
 /* filter active triggers by severity on 3.4 with events table (a database killer) */ 
@@ -400,12 +404,45 @@ select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> U
 
 
 
-/* show which user is active  */
-SELECT u.alias
-FROM users u
-INNER JOIN users_groups g ON ( u.userid = g.userid )
-INNER JOIN sessions s ON ( u.userid = s.userid )
-WHERE (s.status = 0);
+/* show which user is active users  */
+SELECT users.alias,sessions.sessionid,sessions.lastaccess
+FROM users
+INNER JOIN users_groups ON ( users.userid = users_groups.userid )
+INNER JOIN sessions ON ( users.userid = sessions.userid )
+WHERE (sessions.status = 0)
+AND sessions.lastaccess>1583830440;
+
+
+/* user group with specific rights causing trouble */
+SELECT users.alias,sessions.sessionid,sessions.lastaccess,rights.rightid
+FROM users
+JOIN users_groups ON ( users.userid = users_groups.userid )
+JOIN sessions ON ( users.userid = sessions.userid )
+JOIN usrgrp ON ( usrgrp.usrgrpid = users_groups.usrgrpid )
+JOIN rights ON ( rights.groupid = usrgrp.usrgrpid )
+WHERE (sessions.status = 0)
+AND sessions.lastaccess>1583830440;
+
+
+SELECT users.alias,
+       sessions.sessionid,
+       sessions.lastaccess,
+       rights.rightid
+FROM users
+JOIN users_groups ON (users.userid = users_groups.userid)
+JOIN sessions ON (users.userid = sessions.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
+JOIN rights ON (rights.groupid = usrgrp.usrgrpid)
+WHERE (sessions.status = 0)
+  AND rights.rightid IN (100100000000025,100100000000084)
+  AND sessions.lastaccess>1583830440;
+
+
+
+
+
+tail -f zabbix_access.log | grep -E -o "sid=[0-9a-f]+"
+
 
 /* search for metrics in history_text table where curently those are not stored as text */
 SELECT COUNT(itemid) FROM history_text WHERE itemid IN (SELECT itemid FROM items where value_type<>4);
