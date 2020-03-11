@@ -423,6 +423,7 @@ JOIN rights ON ( rights.groupid = usrgrp.usrgrpid )
 WHERE (sessions.status = 0)
 AND sessions.lastaccess>1583830440;
 
+/* tail -f zabbix_access.log | grep -E -o "sid=[0-9a-f]+" */
 
 SELECT users.alias,
        sessions.sessionid,
@@ -436,12 +437,6 @@ JOIN rights ON (rights.groupid = usrgrp.usrgrpid)
 WHERE (sessions.status = 0)
   AND rights.rightid IN (100100000000025,100100000000084)
   AND sessions.lastaccess>1583830440;
-
-
-
-
-
-tail -f zabbix_access.log | grep -E -o "sid=[0-9a-f]+"
 
 
 /* search for metrics in history_text table where curently those are not stored as text */
