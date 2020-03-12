@@ -2,6 +2,9 @@
 
 ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec"
 
+# see agent uptime
+date
+ps -eo pid,lstart,cmd | grep "[z]abbix_agentd.conf"
 
 
 cd /var/log/zabbix
