@@ -61,6 +61,9 @@ WHERE TYPE=6
   AND hostid=10814
 GROUP BY 1,2,3,4,5,6,7;
 
+
+
+
 /* see defferent type of items */
 select count(type), type from items where hostid=10814 group by type;
 
@@ -435,8 +438,8 @@ JOIN sessions ON (users.userid = sessions.userid)
 JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
 JOIN rights ON (rights.groupid = usrgrp.usrgrpid)
 WHERE (sessions.status = 0)
-  AND rights.rightid IN (100100000000025,100100000000084)
-  AND sessions.lastaccess>1583830440;
+  AND rights.rightid IN (7)
+  AND sessions.lastaccess>NOW() - 3600;
 
 
 /* search for metrics in history_text table where curently those are not stored as text */
@@ -461,6 +464,9 @@ GROUP BY u.alias;
 SELECT count(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0)   AND (u.alias<>'guest') GROUP BY u.alias;
 
 
+
+
+
 /* users online in last 5 minutes */
 SELECT count(u.alias),
        u.alias
@@ -469,6 +475,14 @@ INNER JOIN sessions s ON (u.userid = s.userid)
 WHERE (s.status=0)
   AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
 GROUP BY u.alias;
+
+/* */
+SELECT u.alias,
+       s.sessionid
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+  AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300);
 
 /* ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 's INNER JOIN users u ON (u.userid = s.userid) where (u.alias='guest')' at line 1 */
 
