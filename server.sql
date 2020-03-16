@@ -32,6 +32,13 @@ AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
 ;
 
 
+select num from trends_uint 
+WHERE clock > UNIX_TIMESTAMP('2020-01-03 00:00:00')
+  AND clock < UNIX_TIMESTAMP('2020-01-04 00:00:00')
+  AND itemid=49766;
+
+
+
 /* show item prototypes, discoveries and items configured with SNMPv3 */
 SELECT snmpv3_securityname AS USER,
        CASE snmpv3_securitylevel
@@ -501,6 +508,7 @@ INNER JOIN users_groups g ON ( u.userid = g.userid )
 INNER JOIN sessions s ON ( u.userid = s.userid )
 WHERE (g.usrgrpid=7)
 AND (s.status = 1);
+
 
 
 

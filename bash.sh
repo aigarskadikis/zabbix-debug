@@ -7,6 +7,11 @@ date
 ps -eo pid,lstart,cmd | grep "[z]abbix_agentd.conf"
 
 
+
+# sessionid in database: 4a91e77a98f6e1d9699e218f01f9523e 
+# sid in web server log:                 699e218f01f9523e
+
+
 cd /var/log/zabbix
 sed -n '/20200113:144959.744/,/20200113:145528.999/p' zabbix_server.log > /tmp/long-running-traps.log
 
