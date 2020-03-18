@@ -343,9 +343,8 @@ GROUP BY u.alias;
 /* which users belongs to groupid, user group */
 SELECT users.alias
 FROM users_groups
-JOIN users
-WHERE users_groups.userid=users.userid
-  AND users_groups.usrgrpid=7;
+JOIN users ON (users_groups.userid=users.userid)
+WHERE users_groups.usrgrpid in (7);
 
 
 /* filter active triggers by severity on 3.4 with events table (a database killer) */ 
