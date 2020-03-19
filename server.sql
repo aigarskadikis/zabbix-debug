@@ -38,6 +38,98 @@ WHERE clock > UNIX_TIMESTAMP('2020-01-03 00:00:00')
   AND itemid=49766;
 
 
+/* representing the Host groups with */
+
+SELECT h.host AS 'Host name',
+       h.name AS 'Visible name',
+       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
+       h.error AS 'Error'
+FROM zabbix.hosts h
+JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
+JOIN zabbix.hstgrp AS C ON (B.groupid=C.groupid)
+WHERE h.available = 2
+GROUP BY h.host,h.name,h.error;
+
+/* Listing template names */
+
+SELECT h.host AS 'Host name',
+       h.name AS 'Visible name',
+       GROUP_CONCAT(b.host SEPARATOR ', ') AS 'Templates',
+       h.error AS 'Error'
+FROM hosts_templates,
+     hosts h,
+     hosts b,
+     interface
+WHERE hosts_templates.hostid = h.hostid
+  AND hosts_templates.templateid = b.hostid
+  AND interface.hostid = h.hostid
+  AND h.available = 2
+GROUP BY h.host,h.name,h.error;
+  
+
+SELECT DISTINCT 
+    (SELECT min(ti.Country_id) 
+     FROM tbl_countries ti 
+     WHERE t.country_title = ti.country_title) As Country_id
+    , country_title
+FROM 
+    tbl_countries t
+  
+  
+  
+  
+
+
+/* SNMPv3 hosts */
+SELECT hosts.host,
+count(items.type) as 'Count of items'
+FROM hosts
+JOIN items ON items.hostid=hosts.hostid
+WHERE items.type in (6)
+AND hosts.status=0
+GROUP BY hosts.host,items.type
+ORDER BY hosts.host;
+
+
+/* SNMPv2 hosts */
+SELECT hosts.host,
+count(items.type) as 'Count of items'
+FROM hosts
+JOIN items ON items.hostid=hosts.hostid
+WHERE items.type in (4)
+AND hosts.status=0
+GROUP BY hosts.host,items.type
+ORDER BY hosts.host;
+
+
+/* show SNMPv1, SNMPv2, SNMPv3 items */
+SELECT hosts.host,
+CASE items.type
+           WHEN 1 THEN 'SNMPv1'
+           WHEN 4 THEN 'SNMPv2'
+           WHEN 6 THEN 'SNMPv3'
+END AS type,
+count(items.type)
+FROM hosts
+JOIN items ON items.hostid=hosts.hostid
+WHERE items.type in (1,4,6)
+AND hosts.status=0
+GROUP BY hosts.host,items.type
+ORDER BY hosts.host;
+
+
+SELECT hosts.hostid,CONCAT(count(items.type),' ',items.type)
+FROM hosts
+JOIN items ON items.hostid=hosts.hostid
+WHERE items.type in (1,4,6)
+GROUP BY hosts.hostid,items.type
+ORDER BY hosts.hostid;
+
+  
+/* This table contains list of active problems, in other words it will contain list of opened PROBLEM events. 
+PROBLEM events are trigger events with value TRIGGER_VALUE_PROBLEM and internal events with value ITEM_STATE_NOTSUPPORTED/TRIGGER_STATE_UNKNOWN  */
+select count(*),source from problem group by source;
+
 
 /* show item prototypes, discoveries and items configured with SNMPv3 */
 SELECT snmpv3_securityname AS USER,
@@ -536,6 +628,58 @@ where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 20;
 /* problems receiving information */
 select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 80\G
 
+/* show trigger evaluation problems - internal events. best query ever! */
+SELECT DISTINCT hosts.name,
+                count(hosts.name),
+                items.key_,
+                triggers.error
+FROM events
+JOIN triggers ON (events.objectid=triggers.triggerid)
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE events.source=3
+  AND events.object=0
+  AND triggers.flags IN (0,4)
+  AND triggers.state=1
+GROUP BY hosts.name,items.key_,triggers.error
+ORDER BY count(hosts.name),
+         hosts.name,
+         items.key_,
+         triggers.error\G
+		 
+		 
+/* show problems related to items. do not work on 4.4 */
+SELECT COUNT(items.key_),items.key_,items.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND LENGTH(items.error)>0
+GROUP BY items.key_,
+         items.error
+ORDER BY COUNT(items.key_);
+
+
+/* show problems related to items. works on 4.4 */
+SELECT COUNT(items.key_),
+       items.key_,
+       item_rtdata.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND LENGTH(item_rtdata.error)>0
+GROUP BY items.key_,
+         item_rtdata.error
+ORDER BY COUNT(items.key_)\G
+
+
 
 select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Cannot obtain file information: [2] No such file or directory';
 
@@ -1012,7 +1156,13 @@ select * from events where source = 0 and objectid = <triggerid> order by clock 
 show variables where Variable_name like 'innodb_file_per_table';
 
 /* Show session count opened per each user */
-SELECT sessions.userid,users.alias,count(*) FROM sessions INNER JOIN users ON sessions.userid = users.userid GROUP BY sessions.userid;
+SELECT sessions.userid,
+       users.alias,
+       count(*)
+FROM sessions
+INNER JOIN users ON sessions.userid = users.userid
+GROUP BY sessions.userid,
+         users.alias;
 
 
 
@@ -1161,7 +1311,7 @@ select count(*) from functions f
 where f.triggerid is NULL;
 
 
-/* usage of passive checks */
+/* usage of passive checks, does not work on 4.4 */
 SELECT DISTINCT CASE
                     WHEN TYPE=0 THEN 'Zabbix Agent'
                     WHEN TYPE=1 THEN 'SNMPv1 agent'
