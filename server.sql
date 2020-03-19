@@ -649,7 +649,7 @@ ORDER BY count(hosts.name),
          triggers.error\G
 		 
 		 
-/* show problems related to items. do not work on 4.4 */
+/* show problems related to items. works from 3.4 to 4.2 */
 SELECT COUNT(items.key_),items.key_,items.error
 FROM events
 JOIN items ON (items.itemid=events.objectid)
