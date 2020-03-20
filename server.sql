@@ -32,6 +32,40 @@ AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
 ;
 
 
+/* items generating the most internal events. works on 4.4 */
+SELECT COUNT(objectid),objectid,name FROM events WHERE SOURCE = 3   AND OBJECT = 4   AND objectid NOT IN     (SELECT itemid      FROM items) AND LENGTH(name)>0 GROUP BY objectid,name ORDER BY COUNT(objectid),objectid,name\G
+
+
+/* apparently these items do not exist anymore */
+SELECT COUNT(events.objectid),events.objectid,events.name
+FROM events
+WHERE events.source = 3
+  AND events.object = 4
+  AND events.objectid NOT IN (SELECT itemid FROM items)
+AND LENGTH(events.name)>0
+GROUP BY events.objectid,events.name
+ORDER BY COUNT(events.objectid),events.objectid,events.name\G
+/* remove event for unexisting items */
+DELETE FROM events
+WHERE events.source = 3
+  AND events.object = 4
+  AND events.objectid NOT IN (SELECT itemid FROM items);
+
+
+
+/* these items exist and generate events */
+SELECT COUNT(items.key_),items.key_,events.name
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+WHERE events.source = 3
+  AND events.object = 4
+  AND events.objectid IN (SELECT itemid FROM items)
+AND LENGTH(events.name)>0
+GROUP BY items.key_,events.name
+ORDER BY COUNT(items.key_),items.key_,events.name\G
+
+
+
 select num from trends_uint 
 WHERE clock > UNIX_TIMESTAMP('2020-01-03 00:00:00')
   AND clock < UNIX_TIMESTAMP('2020-01-04 00:00:00')
@@ -77,14 +111,13 @@ FROM
   
   
   
-  
 
 
 /* SNMPv3 hosts */
 SELECT hosts.host,
 count(items.type) as 'Count of items'
 FROM hosts
-JOIN items ON items.hostid=hosts.hostid
+JOIN items ON (items.hostid=hosts.hostid)
 WHERE items.type in (6)
 AND hosts.status=0
 GROUP BY hosts.host,items.type
@@ -95,7 +128,7 @@ ORDER BY hosts.host;
 SELECT hosts.host,
 count(items.type) as 'Count of items'
 FROM hosts
-JOIN items ON items.hostid=hosts.hostid
+JOIN items ON (items.hostid=hosts.hostid)
 WHERE items.type in (4)
 AND hosts.status=0
 GROUP BY hosts.host,items.type
@@ -111,7 +144,7 @@ CASE items.type
 END AS type,
 count(items.type)
 FROM hosts
-JOIN items ON items.hostid=hosts.hostid
+JOIN items ON (items.hostid=hosts.hostid)
 WHERE items.type in (1,4,6)
 AND hosts.status=0
 GROUP BY hosts.host,items.type
@@ -661,6 +694,21 @@ WHERE source=3
 GROUP BY items.key_,
          items.error
 ORDER BY COUNT(items.key_);
+
+/* show problems related to SNMP items. works from 3.4 to 4.2 */
+SELECT COUNT(items.key_),items.key_,items.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND items.type IN (1,4,6,17)
+  AND LENGTH(items.error)>0
+GROUP BY items.key_,
+         items.error
+ORDER BY COUNT(items.key_);
+
 
 
 /* show problems related to items. works on 4.4 */
