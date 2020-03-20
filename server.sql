@@ -53,13 +53,14 @@ WHERE events.source = 3
 
 
 
-/* these items exist and generate events */
-SELECT COUNT(items.key_),items.key_,events.name
+/* these items exist and generate bad events in last 1 day */
+SELECT COUNT(items.key_) as count,items.key_,events.name
 FROM events
 JOIN items ON (items.itemid=events.objectid)
 WHERE events.source = 3
   AND events.object = 4
   AND events.objectid IN (SELECT itemid FROM items)
+  AND clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY)
 AND LENGTH(events.name)>0
 GROUP BY items.key_,events.name
 ORDER BY COUNT(items.key_),items.key_,events.name\G
