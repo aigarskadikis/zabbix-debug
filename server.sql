@@ -1462,7 +1462,8 @@ WHERE available=0
   AND proxy_hostid IN (SELECT hostid FROM hosts WHERE HOST='riga');
 
 /* show hosts behind proxies */
-SELECT p.host AS proxy_name,h.host AS host_name       
+SELECT p.host AS proxy_name,
+       h.host AS host_name
 FROM hosts h
 JOIN hosts p ON h.proxy_hostid=p.hostid
 WHERE h.available = 0
