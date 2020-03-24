@@ -71,7 +71,14 @@ select num from trends_uint
 WHERE clock > UNIX_TIMESTAMP('2020-01-03 00:00:00')
   AND clock < UNIX_TIMESTAMP('2020-01-04 00:00:00')
   AND itemid=49766;
-
+  
+  
+/* show the minimal clock value for items. without partition name this is performance killer. */
+SELECT hosts.host,items.key_,FROM_UNIXTIME(MIN(clock))
+FROM history PARTITION (p202003211600)
+JOIN items ON (items.itemid=history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY hosts.host,items.key_;
 
 /* representing the Host groups with */
 
@@ -1449,7 +1456,57 @@ select count(*),name from events where source=3 and name like 'No Such Instance%
 select count(*),name from events where source=3 and name like 'Cannot evaluate expression%';
 
 /* check how many hosts behind the proxy has unknown status */
-select name,error,proxy_hostid from hosts where available=0 and proxy_hostid in (select hostid from hosts where host='rpi4riga');
+SELECT name,error,proxy_hostid
+FROM hosts
+WHERE available=0
+  AND proxy_hostid IN (SELECT hostid FROM hosts WHERE HOST='riga');
+
+/* show hosts behind proxies */
+SELECT p.host AS proxy_name,h.host AS host_name       
+FROM hosts h
+JOIN hosts p ON h.proxy_hostid=p.hostid
+WHERE h.available = 0
+ORDER BY p.host;
+
+
+/* hosts with errors */
+SELECT h.host AS host_name,
+       h.error AS host_error,
+       h.proxy_hostid AS proxy_id,
+       p.host AS proxy_name
+FROM hosts h
+JOIN hosts p ON h.proxy_hostid=p.hostid
+WHERE h.available = 0
+AND LENGTH(h.error)>0;
+
+
+SELECT h.host AS host_name,
+       h.error AS host_error,
+       h.proxy_hostid AS proxy_id,
+       p.host AS proxy_name
+FROM hosts h
+JOIN hosts p ON h.proxy_hostid=p.hostid
+WHERE LENGTH(h.error)>0;
+
+
+
+/* show proxies */
+SELECT hosts.name
+FROM hosts
+WHERE hosts.proxy_hostid IN (SELECT hostid FROM hosts);
+
+
+
+
+SELECT hosts.name,hosts.error,hosts.proxy_hostid
+FROM hosts
+WHERE hosts.available=0
+  AND hosts.proxy_hostid IN (SELECT hostid FROM hosts);
+  
+/* host is monitored by proxy */
+SELECT hosts.host FROM hosts WHERE hosts.status IN (5, 6);
+  
+  
 
 
 select count(*),available from hosts where proxy_hostid in (select hostid from hosts where host='RPiProxY8b923a') group by available order by 1;
