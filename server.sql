@@ -53,6 +53,44 @@ WHERE events.source = 3
 
 
 
+
+/* system.cpu.num[] - this ket will report integer (not float). timestamp will be store in history_uint */
+/* linux and windows host must have one comon item key. Item key must be in configured as "Zabbix agent (active)" */
+/* Freqeuncy shoud be 30s or less. better to not link any trigger */
+/* one specific case when agent time is to old */
+
+SELECT DISTINCT items.itemid,MAX(history_uint.clock)
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.key_='system.cpu.num[]'
+AND history_uint.clock < UNIX_TIMESTAMP(NOW() - INTERVAL 1 MINUTE)
+GROUP BY items.itemid
+LIMIT 2;
+
+
+
+SELECT DISTINCT hosts.host,FROM_UNIXTIME(MAX(history_uint.clock))
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.key_='agent.ping'
+GROUP BY hosts.host
+LIMIT 2;
+
+
+/* postgres */
+SELECT DISTINCT hosts.host,MAX(history_uint.clock)
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.key_='system.cpu.num[]'
+GROUP BY hosts.host
+LIMIT 2;
+
+
+
+
 /* these items exist and generate bad events in last 1 day */
 SELECT COUNT(items.key_) as count,items.key_,events.name
 FROM events
