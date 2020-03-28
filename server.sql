@@ -52,21 +52,57 @@ WHERE events.source = 3
   AND events.objectid NOT IN (SELECT itemid FROM items);
 
 
+/* which action is disablad, active */
+SELECT actionid,
+       name,
+       CASE
+           WHEN status=0 THEN 'active'
+           WHEN status=1 THEN 'disable'
+       END AS status
+FROM actions
+WHERE eventsource=0;
 
+/* which action is causing trouble */
+select count(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status,alerts.actionid
+from alerts
+group by alerts.status,alerts.actionid; 
+
+  
+  
 
 /* system.cpu.num[] - this ket will report integer (not float). timestamp will be store in history_uint */
 /* linux and windows host must have one comon item key. Item key must be in configured as "Zabbix agent (active)" */
 /* Freqeuncy shoud be 30s or less. better to not link any trigger */
 /* one specific case when agent time is to old */
 
-SELECT DISTINCT items.itemid,MAX(history_uint.clock)
+SELECT DISTINCT hosts.host,FROM_UNIXTIME(MAX(history_uint.clock))
 FROM history_uint
 JOIN items ON (items.itemid=history_uint.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.key_='system.cpu.num[]'
-AND history_uint.clock < UNIX_TIMESTAMP(NOW() - INTERVAL 1 MINUTE)
-GROUP BY items.itemid
+WHERE items.key_='agent.ping'
+GROUP BY hosts.host
 LIMIT 2;
+
+
+SELECT DISTINCT hosts.host,FROM_UNIXTIME(MAX(history_uint.clock))
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.key_='proc.num[]'
+GROUP BY hosts.host
+ORDER BY FROM_UNIXTIME(MAX(history_uint.clock));
+
+
+
+/* disable alerts */
+UPDATE alerts set status = 2, message ="manual diable" where status = 0;
+
+
 
 
 
