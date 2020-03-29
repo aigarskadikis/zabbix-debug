@@ -63,14 +63,15 @@ FROM actions
 WHERE eventsource=0;
 
 /* which action is causing trouble */
-select count(*),CASE alerts.status
+SELECT count(*),CASE alerts.status
            WHEN 0 THEN 'NOT_SENT'
            WHEN 1 THEN 'SENT'
            WHEN 2 THEN 'FAILED'
            WHEN 3 THEN 'NEW'
        END AS status,alerts.actionid
-from alerts
-group by alerts.status,alerts.actionid; 
+FROM alerts
+WHERE alerts.status=0
+GROUP BY alerts.status,alerts.actionid; 
 
   
   
