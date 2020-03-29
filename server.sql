@@ -16,6 +16,23 @@ GROUP BY discovery.key_,
          hosts.host
 ORDER BY COUNT(*)\G
 
+/* without days */
+SELECT COUNT(*),
+       hosts.host,
+       discovery.key_,
+       discovery.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+JOIN items discovery ON (discovery.itemid=item_discovery.parent_itemid)
+WHERE items.status=0
+  AND items.flags=4
+  AND discovery.delay not like '%d'
+GROUP BY discovery.key_,
+         discovery.delay,
+         hosts.host
+ORDER BY COUNT(*)\G
+
 
 
 SELECT task.clock,
