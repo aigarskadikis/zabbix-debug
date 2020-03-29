@@ -36,6 +36,11 @@ AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
 SELECT COUNT(objectid),objectid,name FROM events WHERE SOURCE = 3   AND OBJECT = 4   AND objectid NOT IN     (SELECT itemid      FROM items) AND LENGTH(name)>0 GROUP BY objectid,name ORDER BY COUNT(objectid),objectid,name\G
 
 
+/* check for possible deadlocks on the DB */
+SHOW ENGINE INNODB STATUS;
+
+
+
 /* apparently these items do not exist anymore */
 SELECT COUNT(events.objectid),events.objectid,events.name
 FROM events
