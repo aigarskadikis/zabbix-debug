@@ -1,4 +1,23 @@
 
+/* Most heaviest LLD discoveries. Heaviest in terms of how many items must be maintained */
+/* master piece */
+SELECT COUNT(*),
+       hosts.host,
+       discovery.key_,
+       discovery.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+JOIN items discovery ON (discovery.itemid=item_discovery.parent_itemid)
+WHERE items.status=0
+  AND items.flags=4
+GROUP BY discovery.key_,
+         discovery.delay,
+         hosts.host
+ORDER BY COUNT(*)\G
+
+
+
 SELECT task.clock,
        task.taskid,
        CASE
@@ -58,7 +77,6 @@ WHERE events.source = 3
 
   
 /* list items that are active(not disabled) and comes from discovery rule */
-/* this is a list to maintain */ 
 SELECT COUNT(*),item_discovery.parent_itemid from items
 JOIN hosts ON (hosts.hostid=items.hostid)
 JOIN item_discovery ON (item_discovery.itemid=items.itemid)
@@ -69,41 +87,6 @@ AND items.flags=4
 GROUP BY item_discovery.parent_itemid
 ORDER BY COUNT(*)
 \G
-
-
-SELECT COUNT(*),item_discovery.parent_itemid from items
-JOIN hosts ON (hosts.hostid=items.hostid)
-JOIN item_discovery ON (item_discovery.itemid=items.itemid)
-JOIN items parent ON (parent.itemid=item_discovery.itemid)
-WHERE hosts.host='centos7.catonrug.lan'
-AND items.status=0
-AND items.flags=2
-GROUP BY item_discovery.parent_itemid
-ORDER BY COUNT(*)
-\G
-
-
-
-/* Most heaviest LLD discoveries. Heaviest in terms of how many items must be maintained */
-SELECT COUNT(*),
-       hosts.host,
-       discovery.key_,
-       discovery.delay
-FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-JOIN item_discovery ON (item_discovery.itemid=items.itemid)
-JOIN items discovery ON (discovery.itemid=item_discovery.parent_itemid)
-WHERE items.status=0
-  AND items.flags=4
-GROUP BY discovery.key_,
-         discovery.delay,
-         hosts.host
-ORDER BY COUNT(*)\G
-
-AND hosts.host='centos7.catonrug.lan'
-
-
-
 
 /* how many item prototypes configured per discovery */
 SELECT COUNT(*),prototype.key_,prototype.delay from items
@@ -116,37 +99,6 @@ AND items.flags=2
 GROUP BY prototype.key_,prototype.delay
 ORDER BY COUNT(*)
 \G
-
-
-SELECT 
-items.key_,
-item_discovery.itemdiscoveryid,
-item_discovery.parent_itemid,
-item_discovery.key_
-FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-JOIN item_discovery ON (item_discovery.itemid=items.itemid)
-WHERE hosts.host='ubuntu18.catonrug.lan'
-AND items.status=0
-AND items.flags=2
-\G
-
-
-
-
-
-SELECT COUNT(*),prototype.key_ from items
-JOIN hosts ON (hosts.hostid=items.hostid)
-JOIN item_discovery ON (item_discovery.itemid=items.itemid)
-JOIN items prototype ON (prototype.itemid=item_discovery.parent_itemid)
-WHERE hosts.host='ubuntu18.catonrug.lan'
-AND items.status=0
-AND items.flags=4
-GROUP BY prototype.key_
-ORDER BY COUNT(*)
-\G
-
-
 
 
 /* which action is disablad, active */
