@@ -21,11 +21,23 @@ WHERE events.source=0
   AND events.clock < UNIX_TIMESTAMP('2020-03-27 18:00:00' + INTERVAL 12 HOUR)
 ;
 
-  
+
+/* how many hosts are having an agent interface with IP: 127.0.0.1 */
+SELECT hosts.host,
+       interface.useip,
+       interface.ip,
+       interface.dns,
+       interface.port
+FROM interface
+JOIN hosts ON (hosts.hostid=interface.hostid)
+WHERE interface.type=1
+  AND interface.ip='127.0.0.1';
+
+
 
 /* Most heaviest LLD discoveries. Heaviest in terms of how many items must be maintained */
 /* master piece */
-SELECT COUNT(*),
+SELECT COUNT(discovery.key_),
        hosts.host,
        discovery.key_,
        discovery.delay
@@ -38,7 +50,8 @@ WHERE items.status=0
 GROUP BY discovery.key_,
          discovery.delay,
          hosts.host
-ORDER BY COUNT(*)\G
+ORDER BY COUNT(discovery.key_)
+\G
 
 /* without days */
 SELECT COUNT(*),
