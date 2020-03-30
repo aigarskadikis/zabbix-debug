@@ -1,4 +1,28 @@
 
+
+
+/* filter out events/problems when they change state from Problem to OK or vice versa */
+SELECT hosts.host,
+       FROM_UNIXTIME(events.clock) as 'time',
+       CASE
+           WHEN events.value=0 THEN 'OK'
+           WHEN events.value=1 THEN 'PROBLEM'
+       END AS 'trigger',
+       events.name
+FROM events
+JOIN triggers ON (events.objectid=triggers.triggerid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+  AND events.object=0
+  AND events.name like '%Zabbix discoverer processes more%'
+  AND events.clock > UNIX_TIMESTAMP('2020-03-27 18:00:00')
+  AND events.clock < UNIX_TIMESTAMP('2020-03-27 18:00:00' + INTERVAL 12 HOUR)
+;
+
+  
+
 /* Most heaviest LLD discoveries. Heaviest in terms of how many items must be maintained */
 /* master piece */
 SELECT COUNT(*),
@@ -32,6 +56,9 @@ GROUP BY discovery.key_,
          discovery.delay,
          hosts.host
 ORDER BY COUNT(*)\G
+
+
+
 
 
 
