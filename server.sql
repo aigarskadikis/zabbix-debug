@@ -47,6 +47,38 @@ ORDER BY COUNT(discovery.key_);
 
 
 
+/* unsupported items. show problems related to items. works from 3.4 to 4.2 */
+SELECT COUNT(items.key_),items.key_,items.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND LENGTH(items.error)>0
+GROUP BY items.key_,
+         items.error
+ORDER BY COUNT(items.key_);
+
+
+/* unsupported items. show problems related to items. works on 4.4 */
+SELECT COUNT(items.key_),
+       items.key_,
+       item_rtdata.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND LENGTH(item_rtdata.error)>0
+GROUP BY items.key_,
+         item_rtdata.error
+ORDER BY COUNT(items.key_)\G
+
+
+
 /* only on mariadb only. does not work on mysql8 */
 mysql -sN -e 'SELECT * FROM information_schema.GLOBAL_STATUS ORDER BY VARIABLE_NAME;' > /tmp/mariadb.global.status.log
 mysql -sN -e 'SELECT * FROM information_schema.GLOBAL_VARIABLES ORDER BY VARIABLE_NAME;' > /tmp/mariadb.global.variables.log
@@ -900,7 +932,6 @@ INNER JOIN hosts h ON ( i.hostid = h.hostid )
 where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 20;
 
 /* problems receiving information */
-select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 80\G
 
 /* show trigger evaluation problems - internal events. best query ever! */
 SELECT DISTINCT hosts.name,
@@ -923,50 +954,6 @@ ORDER BY COUNT(hosts.name),
          triggers.error\G
 		 
 		 
-/* show problems related to items. works from 3.4 to 4.2 */
-SELECT COUNT(items.key_),items.key_,items.error
-FROM events
-JOIN items ON (items.itemid=events.objectid)
-WHERE source=3
-  AND object=4
-  AND items.status=0
-  AND items.flags IN (0,1,4)
-  AND LENGTH(items.error)>0
-GROUP BY items.key_,
-         items.error
-ORDER BY COUNT(items.key_);
-
-/* show problems related to SNMP items. works from 3.4 to 4.2 */
-SELECT COUNT(items.key_),items.key_,items.error
-FROM events
-JOIN items ON (items.itemid=events.objectid)
-WHERE source=3
-  AND object=4
-  AND items.status=0
-  AND items.flags IN (0,1,4)
-  AND items.type IN (1,4,6,17)
-  AND LENGTH(items.error)>0
-GROUP BY items.key_,
-         items.error
-ORDER BY COUNT(items.key_);
-
-
-
-/* show problems related to items. works on 4.4 */
-SELECT COUNT(items.key_),
-       items.key_,
-       item_rtdata.error
-FROM events
-JOIN items ON (items.itemid=events.objectid)
-JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
-WHERE source=3
-  AND object=4
-  AND items.status=0
-  AND items.flags IN (0,1,4)
-  AND LENGTH(item_rtdata.error)>0
-GROUP BY items.key_,
-         item_rtdata.error
-ORDER BY COUNT(items.key_)\G
 
 
 
