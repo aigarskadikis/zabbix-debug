@@ -896,7 +896,11 @@ WHERE (s.status=0)
 /* ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 's INNER JOIN users u ON (u.userid = s.userid) where (u.alias='guest')' at line 1 */
 
 
-DELETE s FROM sessions s INNER JOIN users u ON (u.userid = s.userid) where u.alias='guest'; OPTIMIZE table sessions;
+
+DELETE FROM sessions
+JOIN users ON (users.userid=sessions.userid)
+WHERE users.alias='Admin'; 
+OPTIMIZE TABLE sessions;
 
 
 

@@ -1,4 +1,4 @@
-/* How many values is in the backlog */
+/* How many values is in the backlog. does not work on oracle proxy becuase of LIMIT */
 select max(id)-(select nextid from ids where table_name = "proxy_history" limit 1) from proxy_history;
 
 /* show the number of unsent values */
