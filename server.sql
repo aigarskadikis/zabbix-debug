@@ -1168,7 +1168,26 @@ WHERE id.parent_itemid IN (103331);
 
 
 /* show the variation between SNMP community names being used in environment */
-select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, COUNT(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
+SELECT snmp_community,
+       snmpv3_securityname,
+       snmpv3_securitylevel,
+       snmpv3_authpassphrase,
+       snmpv3_privpassphrase,
+       snmpv3_authprotocol,
+       snmpv3_privprotocol,
+       snmpv3_contextname,
+       COUNT(*)
+FROM items i
+JOIN hosts h ON i.hostid = h.hostid
+WHERE i.type IN (1,4,6)
+GROUP BY snmp_community,
+         snmpv3_securityname,
+         snmpv3_securitylevel,
+         snmpv3_authpassphrase,
+         snmpv3_privpassphrase,
+         snmpv3_authprotocol,
+         snmpv3_privprotocol,
+         snmpv3_contextname\G;
 
 /* filter by host */
 select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, COUNT(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) and h.hostid=10814 group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
