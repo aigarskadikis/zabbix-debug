@@ -6,6 +6,13 @@ ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec
 date
 ps -eo pid,lstart,cmd | grep "[z]abbix_agentd.conf"
 
+ps www -eo cmd
+
+/* cpu and mem usage */
+ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
+
+
+iostat -c
 
 
 # sessionid in database: 4a91e77a98f6e1d9699e218f01f9523e 

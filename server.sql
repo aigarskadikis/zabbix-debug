@@ -1,5 +1,25 @@
 
 
+/* unsupported items per host. works from 3.4 - 4.2 */
+SELECT hosts.host,
+       events.objectid AS itemid,
+       items.key_,
+       events.name AS error,
+       count(events.objectid) AS occurrence
+FROM EVENTS
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source = 3
+  AND events.object = 4
+  AND LENGTH(events.name)>0
+GROUP BY hosts.host,
+         events.objectid,
+		 items.key_,
+         events.name
+ORDER BY count(*)\x\g\x
+
+
+
 /* LLD behind proxies only. for very huge instance remove the line having '%d' */
 SELECT proxy.host as 'proxy',
        hosts.host,
@@ -23,6 +43,36 @@ GROUP BY discovery.key_,
 ORDER BY COUNT(discovery.key_)
 \G
 
+
+/* SNMPconfiguration on host level. replace hostid */
+SELECT snmpv3_securityname AS USER,
+       CASE snmpv3_securitylevel
+           WHEN 0 THEN 'noAuthNoPriv'
+           WHEN 1 THEN 'authNoPriv'
+           WHEN 2 THEN 'authPriv'
+       END AS secLev,
+       CASE snmpv3_authprotocol
+           WHEN 0 THEN 'MD5'
+           WHEN 1 THEN 'SHA'
+       END AS authProto,
+       snmpv3_authpassphrase AS authPhrase,
+       CASE snmpv3_privprotocol
+           WHEN 0 THEN 'DES'
+           WHEN 1 THEN 'AES'
+       END AS privProto,
+       snmpv3_privpassphrase AS privPhrase,
+       CASE flags
+           WHEN 0 THEN 'normal'
+           WHEN 1 THEN 'rule'
+           WHEN 2 THEN 'prototype'
+           WHEN 4 THEN 'discovered'
+       END AS flags,
+       count(*)
+FROM items
+WHERE TYPE=6
+  AND hostid=10280
+GROUP BY 1,2,3,4,5,6,7;
+
 /* on PostgreSQL */
 SELECT proxy.host,
        hosts.host,
@@ -82,6 +132,7 @@ ORDER BY COUNT(items.key_)\G
 /* only on mariadb only. does not work on mysql8 */
 mysql -sN -e 'SELECT * FROM information_schema.GLOBAL_STATUS ORDER BY VARIABLE_NAME;' > /tmp/mariadb.global.status.log
 mysql -sN -e 'SELECT * FROM information_schema.GLOBAL_VARIABLES ORDER BY VARIABLE_NAME;' > /tmp/mariadb.global.variables.log
+
 
 
 
@@ -465,8 +516,7 @@ SELECT snmpv3_securityname AS USER,
        COUNT(*)
 FROM items
 WHERE TYPE=6
-  AND hostid=10814
-GROUP BY 1,2,3,4,5,6,7;
+GROUP BY 1,2,3,4,5,6,7\G
 
 
 
@@ -1188,9 +1238,30 @@ GROUP BY snmp_community,
          snmpv3_authprotocol,
          snmpv3_privprotocol,
          snmpv3_contextname\G;
+		 
 
 /* filter by host */
-select snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname, COUNT(*) from items i join hosts h on i.hostid = h.hostid where i.type in (1,4,6) and h.hostid=10814 group by snmp_community, snmpv3_securityname, snmpv3_securitylevel, snmpv3_authpassphrase, snmpv3_privpassphrase, snmpv3_authprotocol , snmpv3_privprotocol , snmpv3_contextname\G;
+SELECT snmp_community,
+       snmpv3_securityname,
+       snmpv3_securitylevel,
+       snmpv3_authpassphrase,
+       snmpv3_privpassphrase,
+       snmpv3_authprotocol,
+       snmpv3_privprotocol,
+       snmpv3_contextname,
+       COUNT(*)
+FROM items i
+JOIN hosts h ON i.hostid = h.hostid
+WHERE i.type IN (1,4,6)
+  AND h.hostid=10814
+GROUP BY snmp_community,
+         snmpv3_securityname,
+         snmpv3_securitylevel,
+         snmpv3_authpassphrase,
+         snmpv3_privpassphrase,
+         snmpv3_authprotocol,
+         snmpv3_privprotocol,
+         snmpv3_contextname\G;
 
 /* estimate how many miliseconds takes the each part in SQL query */
 SET profiling = 1;
