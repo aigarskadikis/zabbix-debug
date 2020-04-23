@@ -20,6 +20,346 @@ ORDER BY count(*)\x\g\x
 
 
 
+
+
+SELECT items.type,
+       items.key_,
+       items.delay,
+       items.status,
+       items.value_type,
+       items.flags
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.host='Zabbix server';
+
+
+
+
+
+/* deleted items */
+/* most frequent records in auditlog. works 4.4 */
+SELECT resourceid, resourcename
+FROM auditlog
+WHERE action=2
+AND resourcetype=15
+\G
+
+
+
+/* most frequent records in auditlog. works 4.4 */
+SELECT COUNT(resourcetype),
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=3 THEN 'LOGIN'
+           WHEN action=4 THEN 'LOGOUT'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END as action,
+	   CASE
+WHEN resourcetype=0 THEN 'USER'
+WHEN resourcetype=2 THEN 'ZABBIX_CONFIG'
+WHEN resourcetype=3 THEN 'MEDIA_TYPE'
+WHEN resourcetype=4 THEN 'HOST'
+WHEN resourcetype=5 THEN 'ACTION'
+WHEN resourcetype=6 THEN 'GRAPH'
+WHEN resourcetype=7 THEN 'GRAPH_ELEMENT'
+WHEN resourcetype=11 THEN 'USER_GROUP'
+WHEN resourcetype=12 THEN 'APPLICATION'
+WHEN resourcetype=13 THEN 'TRIGGER'
+WHEN resourcetype=14 THEN 'HOST_GROUP'
+WHEN resourcetype=15 THEN 'ITEM'
+WHEN resourcetype=16 THEN 'IMAGE'
+WHEN resourcetype=17 THEN 'VALUE_MAP'
+WHEN resourcetype=18 THEN 'IT_SERVICE'
+WHEN resourcetype=19 THEN 'MAP'
+WHEN resourcetype=20 THEN 'SCREEN'
+WHEN resourcetype=22 THEN 'SCENARIO'
+WHEN resourcetype=23 THEN 'DISCOVERY_RULE'
+WHEN resourcetype=24 THEN 'SLIDESHOW'
+WHEN resourcetype=25 THEN 'SCRIPT'
+WHEN resourcetype=26 THEN 'PROXY'
+WHEN resourcetype=27 THEN 'MAINTENANCE'
+WHEN resourcetype=28 THEN 'REGEXP'
+WHEN resourcetype=29 THEN 'MACRO'
+WHEN resourcetype=30 THEN 'TEMPLATE'
+WHEN resourcetype=31 THEN 'TRIGGER_PROTOTYPE'
+WHEN resourcetype=32 THEN 'ICON_MAP'
+WHEN resourcetype=33 THEN 'DASHBOARD'
+WHEN resourcetype=34 THEN 'CORRELATION'
+WHEN resourcetype=35 THEN 'GRAPH_PROTOTYPE'
+WHEN resourcetype=36 THEN 'ITEM_PROTOTYPE'
+WHEN resourcetype=37 THEN 'HOST_PROTOTYPE'
+WHEN resourcetype=38 THEN 'AUTOREGISTRATION'	   
+	   END as resourcetype
+FROM auditlog
+GROUP BY 2,3
+ORDER BY COUNT(*)
+\G
+
+
+/* hosts table has been changed */
+SELECT FROM_UNIXTIME(auditlog.clock) AS clock,
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END AS action,
+       users.alias,
+       hosts.host
+FROM auditlog
+JOIN users ON (users.userid=auditlog.userid)
+JOIN hosts ON (hosts.hostid=auditlog.resourceid)
+WHERE auditlog.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY)
+  AND hosts.status NOT IN (3)
+ORDER BY clock
+\G
+
+
+
+       auditlog_details.oldvalue,
+       auditlog_details.newvalue,
+	   auditlog.resourcename,
+	   auditlog.resourceid,
+	   auditlog.details
+
+
+
+/* new or delete */
+SELECT users.alias,hosts.host,
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=3 THEN 'LOGIN'
+           WHEN action=4 THEN 'LOGOUT'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END AS action,
+       CASE
+           WHEN resourcetype=0 THEN 'USER'
+           WHEN resourcetype=2 THEN 'ZABBIX_CONFIG'
+           WHEN resourcetype=3 THEN 'MEDIA_TYPE'
+           WHEN resourcetype=4 THEN 'HOST'
+           WHEN resourcetype=5 THEN 'ACTION'
+           WHEN resourcetype=6 THEN 'GRAPH'
+           WHEN resourcetype=7 THEN 'GRAPH_ELEMENT'
+           WHEN resourcetype=11 THEN 'USER_GROUP'
+           WHEN resourcetype=12 THEN 'APPLICATION'
+           WHEN resourcetype=13 THEN 'TRIGGER'
+           WHEN resourcetype=14 THEN 'HOST_GROUP'
+           WHEN resourcetype=15 THEN 'ITEM'
+           WHEN resourcetype=16 THEN 'IMAGE'
+           WHEN resourcetype=17 THEN 'VALUE_MAP'
+           WHEN resourcetype=18 THEN 'IT_SERVICE'
+           WHEN resourcetype=19 THEN 'MAP'
+           WHEN resourcetype=20 THEN 'SCREEN'
+           WHEN resourcetype=22 THEN 'SCENARIO'
+           WHEN resourcetype=23 THEN 'DISCOVERY_RULE'
+           WHEN resourcetype=24 THEN 'SLIDESHOW'
+           WHEN resourcetype=25 THEN 'SCRIPT'
+           WHEN resourcetype=26 THEN 'PROXY'
+           WHEN resourcetype=27 THEN 'MAINTENANCE'
+           WHEN resourcetype=28 THEN 'REGEXP'
+           WHEN resourcetype=29 THEN 'MACRO'
+           WHEN resourcetype=30 THEN 'TEMPLATE'
+           WHEN resourcetype=31 THEN 'TRIGGER_PROTOTYPE'
+           WHEN resourcetype=32 THEN 'ICON_MAP'
+           WHEN resourcetype=33 THEN 'DASHBOARD'
+           WHEN resourcetype=34 THEN 'CORRELATION'
+           WHEN resourcetype=35 THEN 'GRAPH_PROTOTYPE'
+           WHEN resourcetype=36 THEN 'ITEM_PROTOTYPE'
+           WHEN resourcetype=37 THEN 'HOST_PROTOTYPE'
+           WHEN resourcetype=38 THEN 'AUTOREGISTRATION'
+       END AS resourcetype,
+	   auditlog.resourcename,
+	   auditlog.resourceid,
+	   auditlog.details
+FROM auditlog
+JOIN users ON (users.userid=auditlog.userid)
+JOIN hosts ON (hosts.hostid=auditlog.resourceid)
+WHERE resourcetype IN (4,26,30,37)
+\G
+
+
+
+SELECT FROM_UNIXTIME(auditlog.clock) as clock,
+       users.alias,
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=3 THEN 'LOGIN'
+           WHEN action=4 THEN 'LOGOUT'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END AS action,
+       CASE
+           WHEN resourcetype=0 THEN 'USER'
+           WHEN resourcetype=2 THEN 'ZABBIX_CONFIG'
+           WHEN resourcetype=3 THEN 'MEDIA_TYPE'
+           WHEN resourcetype=4 THEN 'HOST'
+           WHEN resourcetype=5 THEN 'ACTION'
+           WHEN resourcetype=6 THEN 'GRAPH'
+           WHEN resourcetype=7 THEN 'GRAPH_ELEMENT'
+           WHEN resourcetype=11 THEN 'USER_GROUP'
+           WHEN resourcetype=12 THEN 'APPLICATION'
+           WHEN resourcetype=13 THEN 'TRIGGER'
+           WHEN resourcetype=14 THEN 'HOST_GROUP'
+           WHEN resourcetype=15 THEN 'ITEM'
+           WHEN resourcetype=16 THEN 'IMAGE'
+           WHEN resourcetype=17 THEN 'VALUE_MAP'
+           WHEN resourcetype=18 THEN 'IT_SERVICE'
+           WHEN resourcetype=19 THEN 'MAP'
+           WHEN resourcetype=20 THEN 'SCREEN'
+           WHEN resourcetype=22 THEN 'SCENARIO'
+           WHEN resourcetype=23 THEN 'DISCOVERY_RULE'
+           WHEN resourcetype=24 THEN 'SLIDESHOW'
+           WHEN resourcetype=25 THEN 'SCRIPT'
+           WHEN resourcetype=26 THEN 'PROXY'
+           WHEN resourcetype=27 THEN 'MAINTENANCE'
+           WHEN resourcetype=28 THEN 'REGEXP'
+           WHEN resourcetype=29 THEN 'MACRO'
+           WHEN resourcetype=30 THEN 'TEMPLATE'
+           WHEN resourcetype=31 THEN 'TRIGGER_PROTOTYPE'
+           WHEN resourcetype=32 THEN 'ICON_MAP'
+           WHEN resourcetype=33 THEN 'DASHBOARD'
+           WHEN resourcetype=34 THEN 'CORRELATION'
+           WHEN resourcetype=35 THEN 'GRAPH_PROTOTYPE'
+           WHEN resourcetype=36 THEN 'ITEM_PROTOTYPE'
+           WHEN resourcetype=37 THEN 'HOST_PROTOTYPE'
+           WHEN resourcetype=38 THEN 'AUTOREGISTRATION'
+       END AS resourcetype,
+	   resourceid
+FROM auditlog
+JOIN users ON (users.userid=auditlog.userid)
+WHERE action NOT IN (3,4)
+  AND clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY)
+ORDER BY clock
+;
+
+
+
+/* list everything, but not login logout */
+SELECT FROM_UNIXTIME(auditlog.clock),
+       auditlog.userid,
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=3 THEN 'LOGIN'
+           WHEN action=4 THEN 'LOGOUT'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END AS action,
+       CASE
+           WHEN resourcetype=0 THEN 'USER'
+           WHEN resourcetype=2 THEN 'ZABBIX_CONFIG'
+           WHEN resourcetype=3 THEN 'MEDIA_TYPE'
+           WHEN resourcetype=4 THEN 'HOST'
+           WHEN resourcetype=5 THEN 'ACTION'
+           WHEN resourcetype=6 THEN 'GRAPH'
+           WHEN resourcetype=7 THEN 'GRAPH_ELEMENT'
+           WHEN resourcetype=11 THEN 'USER_GROUP'
+           WHEN resourcetype=12 THEN 'APPLICATION'
+           WHEN resourcetype=13 THEN 'TRIGGER'
+           WHEN resourcetype=14 THEN 'HOST_GROUP'
+           WHEN resourcetype=15 THEN 'ITEM'
+           WHEN resourcetype=16 THEN 'IMAGE'
+           WHEN resourcetype=17 THEN 'VALUE_MAP'
+           WHEN resourcetype=18 THEN 'IT_SERVICE'
+           WHEN resourcetype=19 THEN 'MAP'
+           WHEN resourcetype=20 THEN 'SCREEN'
+           WHEN resourcetype=22 THEN 'SCENARIO'
+           WHEN resourcetype=23 THEN 'DISCOVERY_RULE'
+           WHEN resourcetype=24 THEN 'SLIDESHOW'
+           WHEN resourcetype=25 THEN 'SCRIPT'
+           WHEN resourcetype=26 THEN 'PROXY'
+           WHEN resourcetype=27 THEN 'MAINTENANCE'
+           WHEN resourcetype=28 THEN 'REGEXP'
+           WHEN resourcetype=29 THEN 'MACRO'
+           WHEN resourcetype=30 THEN 'TEMPLATE'
+           WHEN resourcetype=31 THEN 'TRIGGER_PROTOTYPE'
+           WHEN resourcetype=32 THEN 'ICON_MAP'
+           WHEN resourcetype=33 THEN 'DASHBOARD'
+           WHEN resourcetype=34 THEN 'CORRELATION'
+           WHEN resourcetype=35 THEN 'GRAPH_PROTOTYPE'
+           WHEN resourcetype=36 THEN 'ITEM_PROTOTYPE'
+           WHEN resourcetype=37 THEN 'HOST_PROTOTYPE'
+           WHEN resourcetype=38 THEN 'AUTOREGISTRATION'
+       END AS resourcetype,
+       auditlog.resourcename
+FROM auditlog
+WHERE action NOT IN (3,4)
+ORDER BY clock
+\G
+
+
+
+/* simple auditlog, list everything related to creating/deleting host or template */
+SELECT FROM_UNIXTIME(clock),hosts.host,
+       CASE
+           WHEN action=0 THEN 'ADD'
+           WHEN action=1 THEN 'UPDATE'
+           WHEN action=2 THEN 'DELETE'
+           WHEN action=3 THEN 'LOGIN'
+           WHEN action=4 THEN 'LOGOUT'
+           WHEN action=5 THEN 'ENABLE'
+           WHEN action=6 THEN 'DISABLE'
+       END as action,
+	   CASE
+WHEN resourcetype=0 THEN 'USER'
+WHEN resourcetype=2 THEN 'ZABBIX_CONFIG'
+WHEN resourcetype=3 THEN 'MEDIA_TYPE'
+WHEN resourcetype=4 THEN 'HOST'
+WHEN resourcetype=5 THEN 'ACTION'
+WHEN resourcetype=6 THEN 'GRAPH'
+WHEN resourcetype=7 THEN 'GRAPH_ELEMENT'
+WHEN resourcetype=11 THEN 'USER_GROUP'
+WHEN resourcetype=12 THEN 'APPLICATION'
+WHEN resourcetype=13 THEN 'TRIGGER'
+WHEN resourcetype=14 THEN 'HOST_GROUP'
+WHEN resourcetype=15 THEN 'ITEM'
+WHEN resourcetype=16 THEN 'IMAGE'
+WHEN resourcetype=17 THEN 'VALUE_MAP'
+WHEN resourcetype=18 THEN 'IT_SERVICE'
+WHEN resourcetype=19 THEN 'MAP'
+WHEN resourcetype=20 THEN 'SCREEN'
+WHEN resourcetype=22 THEN 'SCENARIO'
+WHEN resourcetype=23 THEN 'DISCOVERY_RULE'
+WHEN resourcetype=24 THEN 'SLIDESHOW'
+WHEN resourcetype=25 THEN 'SCRIPT'
+WHEN resourcetype=26 THEN 'PROXY'
+WHEN resourcetype=27 THEN 'MAINTENANCE'
+WHEN resourcetype=28 THEN 'REGEXP'
+WHEN resourcetype=29 THEN 'MACRO'
+WHEN resourcetype=30 THEN 'TEMPLATE'
+WHEN resourcetype=31 THEN 'TRIGGER_PROTOTYPE'
+WHEN resourcetype=32 THEN 'ICON_MAP'
+WHEN resourcetype=33 THEN 'DASHBOARD'
+WHEN resourcetype=34 THEN 'CORRELATION'
+WHEN resourcetype=35 THEN 'GRAPH_PROTOTYPE'
+WHEN resourcetype=36 THEN 'ITEM_PROTOTYPE'
+WHEN resourcetype=37 THEN 'HOST_PROTOTYPE'
+WHEN resourcetype=38 THEN 'AUTOREGISTRATION'	   
+	   END as resourcetype,
+	   auditlog.resourcename
+FROM auditlog
+JOIN hosts ON (hosts.hostid=auditlog.resourceid)
+ORDER BY clock
+\G
+
+
+
+
+SELECT clock,eventid,sendto,subject,status FROM alerts 
+ORDER BY clock;
+
+
+
 /* LLD behind proxies only. for very huge instance remove the line having '%d' */
 SELECT proxy.host as 'proxy',
        hosts.host,
@@ -45,23 +385,23 @@ ORDER BY COUNT(discovery.key_)
 
 
 /* SNMPconfiguration on host level. replace hostid */
-SELECT snmpv3_securityname AS USER,
-       CASE snmpv3_securitylevel
+SELECT items.snmpv3_securityname AS USER,
+       CASE items.snmpv3_securitylevel
            WHEN 0 THEN 'noAuthNoPriv'
            WHEN 1 THEN 'authNoPriv'
            WHEN 2 THEN 'authPriv'
        END AS secLev,
-       CASE snmpv3_authprotocol
+       CASE items.snmpv3_authprotocol
            WHEN 0 THEN 'MD5'
            WHEN 1 THEN 'SHA'
        END AS authProto,
-       snmpv3_authpassphrase AS authPhrase,
-       CASE snmpv3_privprotocol
+       items.snmpv3_authpassphrase AS authPhrase,
+       CASE items.snmpv3_privprotocol
            WHEN 0 THEN 'DES'
            WHEN 1 THEN 'AES'
        END AS privProto,
-       snmpv3_privpassphrase AS privPhrase,
-       CASE flags
+       items.snmpv3_privpassphrase AS privPhrase,
+       CASE items.flags
            WHEN 0 THEN 'normal'
            WHEN 1 THEN 'rule'
            WHEN 2 THEN 'prototype'
@@ -69,10 +409,14 @@ SELECT snmpv3_securityname AS USER,
        END AS flags,
        count(*)
 FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE TYPE=6
-  AND hostid=10280
+  AND hosts.name='MikrotikBroceni'
+   OR TYPE=6
+  AND hosts.host='MikrotikBroceni'
 GROUP BY 1,2,3,4,5,6,7;
-
+
+
 /* on PostgreSQL */
 SELECT proxy.host,
        hosts.host,
@@ -401,6 +745,57 @@ FROM history PARTITION (p202003211600)
 JOIN items ON (items.itemid=history.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 GROUP BY hosts.host,items.key_;
+
+
+
+
+
+
+/* which item takes the most space by frequency */
+SELECT count(items.key_),
+       hosts.host,
+       items.key_
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 DAY)
+GROUP BY hosts.host,
+         items.key_
+ORDER BY count(items.key_),
+         hosts.host,
+         items.key_ ASC
+\G
+
+
+
+
+/* by partition which item takes the most space by frequency */
+SELECT count(items.key_),hosts.host,items.key_
+FROM history PARTITION (p202003211600)
+JOIN items ON (items.itemid=history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY hosts.host,items.key_
+ORDER BY count(items.key_),hosts.host,items.key_ ASC
+\G
+
+
+
+
+
+SELECT max(LENGTH (value)),avg(LENGTH (value))
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 DAY);
+
+
+SELECT hosts.host,items.key_ 
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(value)>657
+LIMIT 10\G
+
+
+
 
 /* representing the Host groups with */
 SELECT h.host AS 'Host name',
@@ -1152,6 +1547,8 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 /* command resets the trigger status. */
 /* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
+
+UPDATE items SET lastlogsize=0 where itemid=123456;
 
 
 /* what item prototype has been assigned for discovery rule */

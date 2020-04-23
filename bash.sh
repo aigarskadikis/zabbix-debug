@@ -14,6 +14,8 @@ ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
 
 iostat -c
 
+nc -zv 192.168.1.15 22
+
 
 # sessionid in database: 4a91e77a98f6e1d9699e218f01f9523e 
 # sid in web server log:                 699e218f01f9523e
@@ -62,6 +64,17 @@ grep "zbx_setproctitle.*title.*data sender" /var/log/zabbix/zabbix_proxy.log | g
 zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbix Server stopped\|syncing history data\|syncing trend data"
 
 for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
+
+
+echo "$(ls -1 /proc/*/environ)" | while IFS= read -r line; do { sudo cat $line | tr '\0' '\n' | sed "s|$|;|" | tr -cd "[:print:]" | grep HOSTNAME; echo;} done
+grep -E "PPid:\s+1$" /proc/*/status
+sudo grep ^VmRSS /proc/*/status | grep -E "[0-9]{5} kB$"
+
+sudo grep ^VmRSS /proc/*/status | grep -E "[0-9]{5} kB$" | sed "s|status.*$|environ|" | xargs sudo cat
+
+
+
+for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
 
 
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
