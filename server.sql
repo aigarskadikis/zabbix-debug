@@ -411,9 +411,9 @@ SELECT items.snmpv3_securityname AS USER,
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE TYPE=6
-  AND hosts.name='MikrotikBroceni'
+  AND hosts.name='hostName'
    OR TYPE=6
-  AND hosts.host='MikrotikBroceni'
+  AND hosts.host='hostName'
 GROUP BY 1,2,3,4,5,6,7;
 
 

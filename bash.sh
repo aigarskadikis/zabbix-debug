@@ -12,6 +12,13 @@ ps www -eo cmd
 ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
 
 
+# for solaris 10
+kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/
+
+
+
+while :; do date >> ~/cpu_stat.log; kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/ >> ~/cpu_stat.log; sleep 5; done
+
 iostat -c
 
 nc -zv 192.168.1.15 22
