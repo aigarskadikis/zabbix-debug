@@ -38,10 +38,19 @@ ALTER TABLE `aste` PARTITION BY LIST(itemid) (PARTITION i150447 VALUES IN (15044
 ALTER TABLE aste ADD PARTITION (PARTITION i150448 VALUES IN (150448));
 ALTER TABLE aste ADD PARTITION (PARTITION i150446 VALUES IN (150446));
 
-SELECT itemid FROM items 
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.value_type=0
-AND hosts.status IN (0,1);
+/* list all float items which are not template items */
+SELECT itemid FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE items.value_type=0 AND hosts.status IN (0,1);
+
+/* integers */
+SELECT itemid FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE items.value_type=1 AND hosts.status IN (0,1);
+
+
+mysql zabbix -sN -e 'SELECT itemid FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE items.value_type=0 AND hosts.status IN (0,1);' \
+| awk '{print "ALTER TABLE aste ADD PARTITION (PARTITION",$1,"VALUES IN (",$1,"));"}' \
+| sed 's|(PARTITION |(PARTITION i|' \
+| mysql --database=zabbix
 
 
 show create table aste;
+
+
