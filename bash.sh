@@ -16,6 +16,11 @@ ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%cpu | head
 kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/
 
 
+while :; do echo "$(date),$(kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/ | \
+sed "s|idle|idle,|;s|wait|wait,|;s|user|user,|;s|kernel|kernel,|;s|$|,|" | \
+tr -cd "[:print:]" )" | tee -a ~/cpu_stat.csv; sleep 5; done
+
+
 
 while :; do date >> ~/cpu_stat.log; kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/ >> ~/cpu_stat.log; sleep 5; done
 
