@@ -1,12 +1,39 @@
 
 
+
+select CASE
+           WHEN state=0 THEN 'NORMAL'
+           WHEN state=1 THEN 'UNKNOWN'
+       END as state,
+	   error
+FROM triggers
+where flags IN (0,4)
+AND state=1;
+
+UPDATE items SET state=0 WHERE state=1;
+
+SELECT itemid,state FROM items where state=1;
+
+UPDATE triggers SET state=0 WHERE flags IN (0,4) AND state=1;
+
+SELECT state FROM triggers WHERE flags IN (0,4) AND state=1;
+
+
+
+
+until mysql -e "show slave status\G;" | grep -i "Slave_SQL_Running: Yes";do
+  mysql -e "stop slave; SET GLOBAL SQL_SLAVE_SKIP_COUNTER = 1; start slave;";
+  sleep 1;
+done
+
+
 /* unsupported items per host. works from 3.4 - 4.2 */
 SELECT hosts.host,
        events.objectid AS itemid,
        items.key_,
        events.name AS error,
        count(events.objectid) AS occurrence
-FROM EVENTS
+FROM events
 JOIN items ON (items.itemid=events.objectid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE events.source = 3
@@ -17,6 +44,9 @@ GROUP BY hosts.host,
 		 items.key_,
          events.name
 ORDER BY count(*)\x\g\x
+
+
+
 
 
 
@@ -299,6 +329,10 @@ ORDER BY clock
 
 
 
+
+
+
+
 /* simple auditlog, list everything related to creating/deleting host or template */
 SELECT FROM_UNIXTIME(clock),hosts.host,
        CASE
@@ -457,19 +491,25 @@ ORDER BY COUNT(items.key_);
 
 /* unsupported items. show problems related to items. works on 4.4 */
 SELECT COUNT(items.key_),
+       hosts.host,
        items.key_,
        item_rtdata.error
 FROM events
 JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
 JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
 WHERE source=3
   AND object=4
   AND items.status=0
   AND items.flags IN (0,1,4)
   AND LENGTH(item_rtdata.error)>0
-GROUP BY items.key_,
+GROUP BY hosts.host,items.key_,
          item_rtdata.error
 ORDER BY COUNT(items.key_)\G
+
+
+
+
 
 
 
@@ -1969,6 +2009,7 @@ select object,objectid,COUNT(*) from events where source = 3 and object = 4 grou
 select object,objectid,COUNT(*) from events where source = 3 and object = 5 group by objectid order by COUNT(*) desc limit 10;
 
 /* show the event count per source */
+select COUNT(*), source from events group by source;
 select COUNT(*), source from events group by source;
 
 
