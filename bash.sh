@@ -24,6 +24,11 @@ tr -cd "[:print:]" )" | tee -a ~/cpu_stat.csv; sleep 5; done
 
 while :; do date >> ~/cpu_stat.log; kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/ >> ~/cpu_stat.log; sleep 5; done
 
+
+while :; do zabbix_server -R housekeeper_execute; sleep 60; done
+
+
+
 iostat -c
 
 nc -zv 192.168.1.15 22

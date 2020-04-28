@@ -1,5 +1,8 @@
 
-# https://dev.mysql.com/doc/refman/5.7/en/partitioning-management-range-list.html
+/* https://dev.mysql.com/doc/refman/5.7/en/partitioning-management-range-list.html */
+/* there can be only 8k partitions per table ! */
+
+
 
 
 /* partitioning by itemid per float table. kickstart script */
