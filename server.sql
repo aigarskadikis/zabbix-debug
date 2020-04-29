@@ -75,6 +75,23 @@ AND resourcetype=15
 \G
 
 
+/* zabibx 3.0 trigger linkage. it will list all hosts and templates which are using 'system.uptime' item key together with trigger function 'change' */
+SELECT hosts.host,
+triggers.templateid,
+triggers.expression,
+functions.itemid,
+triggers.triggerid
+FROM triggers
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE triggers.flags IN (0)
+AND items.flags NOT IN (1)
+AND items.key_='system.uptime'
+AND functions.function IN ('change')
+;
+
+
 
 /* most frequent records in auditlog. works 4.4 */
 SELECT COUNT(resourcetype),
