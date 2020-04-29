@@ -129,6 +129,36 @@ ORDER BY COUNT(*)
 \G
 
 
+
+SELECT from_unixtime(clock),value_avg from trends
+JOIN items ON (items.itemid=trends.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.name='Metric title of CPU'
+AND hosts.host='Host name, but NOT host Visible name'
+AND trends.clock > UNIX_TIMESTAMP('2020-04-01 00:00:00')
+AND trends.clock < UNIX_TIMESTAMP('2020-05-01 00:00:00');
+
+
+SELECT from_unixtime(clock),value_avg from trends_uint
+JOIN items ON (items.itemid=trends_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.name='Metric title of CPU'
+AND hosts.host='Host name, but NOT host Visible name'
+AND trends_uint.clock > UNIX_TIMESTAMP('2020-04-01 00:00:00')
+AND trends_uint.clock < UNIX_TIMESTAMP('2020-05-01 00:00:00');
+
+
+SELECT from_unixtime(clock),value_avg/1024/1024 "MB" from trends_uint
+JOIN items ON (items.itemid=trends_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.name='Memory used for virtualbox'
+AND hosts.host='ubuntu18.catonrug.lan'
+AND trends_uint.clock > UNIX_TIMESTAMP('2020-04-01 00:00:00')
+AND trends_uint.clock < UNIX_TIMESTAMP('2020-05-01 00:00:00');
+
+Free disk space on /
+ubuntu18.catonrug.lan
+
 /* hosts table has been changed */
 SELECT FROM_UNIXTIME(auditlog.clock) AS clock,
        CASE
