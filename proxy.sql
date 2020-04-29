@@ -1,6 +1,18 @@
 /* How many values is in the backlog. does not work on oracle proxy becuase of LIMIT */
 select max(id)-(select nextid from ids where table_name = "proxy_history" limit 1) from proxy_history;
 
+
+
+
+
+select hosts.host,items.key_ from proxy_history 
+JOIN items ON (items.itemid=proxy_history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+where LENGTH(value)>30000 LIMIT 1;
+
+
+
+
 /* show the number of unsent values */
 select count(*) from proxy_history where id > (select nextid from ids where table_name = 'proxy_history');
 SELECT ((SELECT MAX(proxy_history.id) FROM proxy_history)-nextid) FROM ids WHERE field_name='history_lastid';
