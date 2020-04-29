@@ -4,6 +4,14 @@ select max(id)-(select nextid from ids where table_name = "proxy_history" limit 
 
 
 
+SELECT hosts.host,items.key_,items.lastlogsize from items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=7
+AND items.value_type=2
+
+
+
+
 
 select hosts.host,items.key_ from proxy_history 
 JOIN items ON (items.itemid=proxy_history.itemid)
