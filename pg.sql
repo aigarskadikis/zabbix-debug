@@ -1,6 +1,54 @@
 
 
 
+pg_dump \
+--dbname=DBNAME \
+--host=HOSTNAME \
+--port=PORT \
+--username=NAME \
+--file=zabbix30.pg.dump \
+--format=custom \
+--compress=9 \
+--blobs \
+--exclude-table-data=history* \
+--exclude-table-data=trends* \
+--exclude-table-data=events \
+--exclude-table-data=acknowledges \
+--exclude-table-data=alerts \
+--exclude-table-data=auditlog \
+--exclude-table-data=auditlog_details \
+--exclude-table-data=profiles \
+--exclude-table-data=service_alarms \
+--exclude-table-data=sessions \
+--exclude-table-data=problem \
+--exclude-table-data=event_recovery
+
+
+pg_dump \
+--dbname=z30 \
+--host=pg \
+--file=zabbix30.pg.dump \
+--format=custom \
+--compress=9 \
+--blobs \
+--exclude-table-data=history* \
+--exclude-table-data=trends* \
+--exclude-table-data=events \
+--exclude-table-data=acknowledges \
+--exclude-table-data=alerts \
+--exclude-table-data=auditlog \
+--exclude-table-data=auditlog_details \
+--exclude-table-data=profiles \
+--exclude-table-data=service_alarms \
+--exclude-table-data=sessions \
+--exclude-table-data=problem \
+--exclude-table-data=event_recovery
+
+
+
+
+--host=pg \
+
 \o /tmp/pgoutput.log
 
 SELECT hosts.host,
@@ -25,6 +73,7 @@ AND functions.function IN ('change')
 
 
 
+\o /tmp/pgoutput.log
 
 
 SELECT hosts.host,
@@ -40,6 +89,45 @@ WHERE triggers.flags IN (0)
 AND items.flags NOT IN (1)
 AND triggers.description like 'Zabbix agent on {HOST.NAME} is unreachable for 5 minutes'
 ;
+
+
+
+
+/* report hosts where the trigger seems to be linked in template level but actually NOT */
+
+\o /tmp/orphaned.triggers.log
+
+SELECT hosts.host,
+items.key_,
+functions.function,
+triggers.templateid,
+triggers.expression,
+functions.itemid,
+triggers.triggerid,
+triggers.description
+FROM triggers
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE triggers.flags IN (0)
+AND items.flags NOT IN (1)
+AND hosts.status IN (0,1)
+AND triggers.triggerid NOT IN ( 
+
+SELECT triggers.triggerid
+FROM triggers
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE triggers.flags IN (0)
+AND items.flags NOT IN (1)
+
+);
+
+\o
+
+\q
+
 
 
            host            | templateid | expression | itemid | triggerid
@@ -81,6 +169,54 @@ SHOW ALL;
 
 
 
+pg_dump -c -O -F plain -N partitions --username=DBUser DBName
+
+pg_dump --host=pg --format plain --verbose --file "<abstract_file_path_dump>" --table <history_<(str|text|uint|log)>_new> --inserts <database_name> --data-only
+
+
+pg_dump -d z40 -F c -b -v -f ~/new
+        --exclude-table-data '*.history_log*' 
+        --exclude-table-data '*.history_str*' 
+        --exclude-table-data '*.history_uint*' 
+        --exclude-table-data '*.history_text*' 
+        --exclude-table-data '*.trends*' 
+        --exclude-table-data '*.trends_uint*'
+
+
+pg_dump --host=pg \
+--format=custom \
+--blobs \
+--clean \
+--verbose \
+--exclude-table-data=history* \
+--exclude-table-data=trends* \
+--exclude-table-data=events \
+--exclude-table-data-data=acknowledges \
+--exclude-table-data=alerts \
+--exclude-table-data=auditlog \
+--exclude-table-data=auditlog_details \
+--exclude-table-data=profiles \
+--exclude-table-data=service_alarms \
+--exclude-table-data=sessions \
+--exclude-table-data=problem \
+--exclude-table-data=event_recovery \
+z42 > z42.sql
+
+
+
+
+
+
+
+z42 > zabbix.pg.dump.compressed
+
+
+--clean \
+--blobs \
+
+
+
+--verbose \
 
 pg_dump --host=pg --data-only --exclude-table
 
@@ -126,6 +262,25 @@ pg_dump \
 --exclude-table=event_recovery \
 z40 > data44.sql
 
+
+
+
+/* configuration backup 4.4 */
+pg_dump \
+--host=pg \
+--exclude-table=acknowledges \
+--exclude-table=alerts \
+--exclude-table=auditlog \
+--exclude-table=auditlog_details \
+--exclude-table=events \
+--exclude-table=history* \
+--exclude-table=trends* \
+--exclude-table=profiles \
+--exclude-table=service_alarms \
+--exclude-table=sessions \
+--exclude-table=problem \
+--exclude-table=event_recovery \
+z40 > data40.sql
 
 
 
