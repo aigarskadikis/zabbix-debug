@@ -1,5 +1,16 @@
 
 
+
+# timing of config cache reload
+ps -eo cmd|egrep -o "[s]ynced.configuration.*sec" 
+
+egrep "(Server|ServerPort|Hostname)=" /etc/zabbix/zabbix_proxy.conf
+
+
+
+
+
+
 ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec"
 
 # see agent uptime
@@ -168,6 +179,10 @@ dpkg -S /full/path/to/libOpenIPMI.so.0
 # based on contend in previous command ask version of package
 dpkg -l libopenipmi0
 
+until mysql -e "show slave status\G;" | grep -i "Slave_SQL_Running: Yes";do
+  mysql -e "stop slave; SET GLOBAL SQL_SLAVE_SKIP_COUNTER = 1; start slave;";
+  sleep 1;
+done
 
 
 

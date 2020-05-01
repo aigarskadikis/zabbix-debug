@@ -20,11 +20,38 @@ SELECT state FROM triggers WHERE flags IN (0,4) AND state=1;
 
 
 
+/* show hostid's behind a proxy */
+SELECT h.hostid FROM hosts h JOIN hosts p ON h.proxy_hostid=p.hostid WHERE p.host='riga';
 
-until mysql -e "show slave status\G;" | grep -i "Slave_SQL_Running: Yes";do
-  mysql -e "stop slave; SET GLOBAL SQL_SLAVE_SKIP_COUNTER = 1; start slave;";
-  sleep 1;
-done
+
+SELECT DISTINCT itemid, value from history_uint WHERE itemid IN (SELECT itemid FROM items WHERE key_='system.uptime')
+AND clock>INTERVAL(NOW()-2 HOURS);
+
+	
+
+
+SELECT items.delay,
+items.params
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE key_ LIKE '%odbc%'
+AND items.status=0
+AND items.value_type=4
+AND hosts.status IN (0,1);
+
+
+	
+	
+
+SELECT proxy.host,
+hosts.host,
+items.
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE 
+
+
 
 
 /* unsupported items per host. works from 3.4 - 4.2 */
@@ -438,6 +465,7 @@ ORDER BY clock
 
 SELECT clock,eventid,sendto,subject,status FROM alerts 
 ORDER BY clock;
+
 
 
 
@@ -2146,7 +2174,7 @@ FROM   zabbix.triggers t
 WHERE  h.hostid = 10084;
 
 
-/* LLDs behind proxy */
+/* LLDs behind proxy. must be execute on proxy database */
 select clock,ns,items.delay,items.key_ from proxy_history join items on (proxy_history.itemid=items.itemid) where items.flags=1 order by clock asc limit 10;
 
 
