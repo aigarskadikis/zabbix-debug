@@ -1,6 +1,20 @@
 
 
 
+
+pg_dump \
+--dbname=DBNAME \
+--host=HOSTNAME \
+--port=PORT \
+--username=NAME \
+--file=zabbix30.pg.schema.dump \
+--schema-only \
+--format=plain
+
+
+
+
+
 pg_dump \
 --dbname=DBNAME \
 --host=HOSTNAME \

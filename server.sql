@@ -1,6 +1,26 @@
 
 
 
+SELECT HOST,
+       CASE
+           WHEN available=0 THEN 'unknown'
+           WHEN available=1 THEN 'available'
+           WHEN available=2 THEN 'not available'
+       END AS available
+FROM hosts
+WHERE status=0 
+INTO OUTFILE '/tmp/hosts.availability.unknown.csv'
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n';
+
+
+cat << 'EOF' > secure_file_priv.cnf
+[mysqld]
+secure-file-priv=/tmp
+EOF
+
+
 select CASE
            WHEN state=0 THEN 'NORMAL'
            WHEN state=1 THEN 'UNKNOWN'
@@ -2353,7 +2373,11 @@ select COUNT(*),available from hosts where proxy_hostid in (select hostid from h
  select * from events order by clock desc limit 10 ;
  
 /* which hosts are monitored but have unhealthy state, unavailable */
-select name,error from hosts where available=2 and status IN (0,1);
+select name,error from hosts WHERE available=2 AND status IN (0,1);
+
+
+
+
 
 /* which zabbix agents are unavailable, showing red */
 SELECT name,error

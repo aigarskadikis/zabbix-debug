@@ -7,6 +7,8 @@ ps -eo cmd|egrep -o "[s]ynced.configuration.*sec"
 egrep "(Server|ServerPort|Hostname)=" /etc/zabbix/zabbix_proxy.conf
 
 
+ps -eo pid,cmd,%cpu,%mem --sort=-%mem
+for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done
 
 
 
