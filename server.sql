@@ -1,6 +1,9 @@
 
 
 
+
+
+
 SELECT HOST,
        CASE
            WHEN available=0 THEN 'unknown'

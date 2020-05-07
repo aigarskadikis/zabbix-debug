@@ -7,11 +7,18 @@ pg_dump \
 --host=HOSTNAME \
 --port=PORT \
 --username=NAME \
---file=zabbix30.pg.schema.dump \
+--file=zabbix30.schema.sql \
 --schema-only \
 --format=plain
 
 
+
+pg_dump \
+--dbname=z44 \
+--host=pg \
+--file=zabbix44.pg.schema.dump \
+--schema-only \
+--format=plain
 
 
 
