@@ -1,6 +1,102 @@
 
 
 
+/* backup zabbix 4.0 */
+
+pg_dump \
+--dbname=<database> \
+--host=<host> \
+--username=<user> \
+--file=zabbix40.pg10.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
+
+, , <database>
+
+
+pg_dump \
+--dbname=z44 \
+--host=pg \
+--port=5432 \
+--file=zabbix40.pg10.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
+
+SELECT hosts.host,
+       hosts.hostid,
+       functions.itemid AS itemid_at_host_level,
+       items.key_ AS item_key,
+       triggers.triggerid AS triggerid_at_host_level,
+       triggers.description AS trigger_title,
+       functions.function AS trigger_function,
+       template_items.itemid AS itemid_at_template_level,
+       template_triggers.triggerid AS triggerid_at_template_level,
+       template_triggers.expression AS trigger_expression,
+	   template_functions.function AS template_function,
+	   template_functions.parameter AS template_parameter,
+       template_hosts.hostid AS templateid_aka_hostid,
+       template_hosts.host AS template_name
+FROM triggers
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN triggers template_triggers ON (triggers.templateid=template_triggers.triggerid)
+JOIN functions template_functions ON (template_functions.triggerid=template_triggers.triggerid)
+JOIN items template_items ON (template_items.itemid=template_functions.itemid)
+JOIN hosts template_hosts ON (template_hosts.hostid=template_items.hostid)
+WHERE triggers.flags IN (0)
+  AND items.flags NOT IN (1)
+  AND hosts.status IN (0,1)
+  AND hosts.host='agent box 2' 
+  AND triggers.description like 'three%'
+  LIMIT 1
+  \gx
+
+  
+  \x\g\x
+
+
+  ;
+  
+   
+SELECT hosts.host,
+functions.triggerid,
+items.key_,
+string_agg(DISTINCT functions.function, ',') AS functions,
+string_agg(DISTINCT functions.parameter, ',') AS parameter
+FROM functions 
+JOIN triggers ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN triggers template_triggers ON (template_triggers.triggerid=triggers.templateid)
+WHERE hosts.host='agent box 2'
+GROUP BY 1,functions.triggerid,items.key_
+;
+
+
+  \x\g\x
+
+
+
+
+
+
+WHERE functions.triggerid=13647 
+
+
+Lack of available virtual memory on server {HOST.NAME}
+
+
 
 pg_dump \
 --dbname=DBNAME \
@@ -43,6 +139,27 @@ pg_dump \
 --exclude-table-data=sessions \
 --exclude-table-data=problem \
 --exclude-table-data=event_recovery
+
+
+/* You can use pg_dump utility from PostgreSQL. Here is an example to perform a backup without history and trends tables: */
+pg_dump \
+--dbname=<database> \
+--host=<host> \
+--username=<user> \
+--file=zabbix40.pg10.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+/* Replace <user>, <host>, <database>. The 'custom' format is already compressed. You can influence the compress ratio with an external '--compress=9' argument for maximum compression. */
+ 
+/* To restore: */
+pg_restore \
+--dbname=<database> \
+--host=<host> \
+zabbix40.pg10.dump
+/* Replace <host>, <database> */
 
 
 pg_dump \
