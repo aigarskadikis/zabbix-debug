@@ -1,7 +1,63 @@
 
 
 
+/* show hosts behind proxies, show ip addresses */
+SELECT p.host AS proxy_name,
+hosts.host AS host_name,
+CASE
+WHEN interface.type=0 THEN 'UNKNOWN'
+WHEN interface.type=1 THEN 'AGENT'
+WHEN interface.type=2 THEN 'SNMP'
+WHEN interface.type=3 THEN 'IPMI'
+WHEN interface.type=4 THEN 'JMX'
+END AS type,
+interface.ip
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.available = 0
+ORDER BY p.host
+INTO OUTFILE '/tmp/hosts.IP.address.behind.proxy.csv'
+FIELDS TERMINATED BY ','
+ENCLOSED BY '"'
+LINES TERMINATED BY '\n';
 
+;
+
+SELECT json_object('Proxy', p.host,
+'Host', hosts.host,
+'Type', interface.type,
+'IP', interface.ip)
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.available = 0
+ORDER BY p.host
+;
+
+select hostid from [hosts] FOR JSON AUTO;
+
+
+echo "[
+$(mysql zabbix -sN -e '
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(
+JSON_OBJECT(
+"Proxy", p.host,
+"Host", hosts.host,
+"Type", interface.type,
+"IP", interface.ip
+)
+SEPARATOR ", ")
+FROM hosts 
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid) 
+JOIN interface ON (interface.hostid=hosts.hostid) 
+WHERE hosts.available = 0 ORDER BY p.host')
+]" | jq .
+
+mysql zabbix -sN -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host'
+
+mysql zabbix -sN -e 'SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host;'
 
 
 SELECT HOST,
@@ -2316,11 +2372,16 @@ WHERE available=0
 
 /* show hosts behind proxies */
 SELECT p.host AS proxy_name,
-       h.host AS host_name
-FROM hosts h
-JOIN hosts p ON h.proxy_hostid=p.hostid
-WHERE h.available = 0
+       hosts.host AS host_name
+FROM hosts
+JOIN hosts p ON hosts.proxy_hostid=p.hostid
+WHERE hosts.available = 0
 ORDER BY p.host;
+
+
+
+
+
 
 
 /* hosts with errors */
