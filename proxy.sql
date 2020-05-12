@@ -1,6 +1,29 @@
 /* How many values is in the backlog. does not work on oracle proxy becuase of LIMIT */
 select max(id)-(select nextid from ids where table_name = "proxy_history" limit 1) from proxy_history;
 
+select DISTINCT items.key_,hosts.host
+FROM items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1 
+AND items.delay='1h';
+
+
+
+
+select distinct items.key_
+FROM items 
+WHERE items.flags=1 
+AND items.delay='1h';
+
+
+
+select count(items.key_),items.key_,hosts.host from proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+where items.itemid in (select itemid from items where flags=1)
+group by items.key_,hosts.host
+order by count(items.key_) ASC,2,3
+LIMIT 10;
 
 
 

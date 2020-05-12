@@ -10,7 +10,9 @@ egrep "(Server|ServerPort|Hostname)=" /etc/zabbix/zabbix_proxy.conf
 ps -eo pid,cmd,%cpu,%mem --sort=-%mem
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done
 
-
+# show listening ports
+ss -ntl
+ss --numeric --tcp --listening
 
 
 ps aux | grep ^zabbix.*synced | grep -E -o "synced configuration in [0-9\.]+ sec"
