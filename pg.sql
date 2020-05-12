@@ -176,6 +176,7 @@ zabbix40.pg10.dump
 /* Replace <host>, <database> */
 
 
+
 pg_dump \
 --dbname=z30 \
 --host=pg \
