@@ -22,6 +22,34 @@ FIELDS TERMINATED BY ','
 ENCLOSED BY '"'
 LINES TERMINATED BY '\n';
 
+
+
+SELECT COUNT(*), triggers.description
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+WHERE events.source=0
+AND events.object=0
+GROUP BY triggers.description
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+
+SELECT COUNT(*), hosts.host,triggers.description
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.functionid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+GROUP BY hosts.host,triggers.description
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+
+
 ;
 
 SELECT json_object('Proxy', p.host,
@@ -1623,6 +1651,26 @@ select COUNT(t.error), t.error from events e inner join triggers t on (e.objecti
 
 /* discoveries les than 10 minutes */
 select key_,delay from items where flags=1 and delay not in (600,3600,0,'10m') and delay not like '%h' and delay not like '%d' order by delay;
+
+/* lld discoveries for only monitored hosts */
+select COUNT(*),delay
+FROM items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1
+AND hosts.status=0
+GROUP BY delay
+;
+
+/* lld discoveries for only monitored hosts */
+select COUNT(*),delay,key_
+FROM items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1
+AND hosts.status=0
+GROUP BY delay,key_
+\G
+
+
 
 /* show most frequently used functions */
 select name,parameter,COUNT(*) from functions group by 1,2 order by 3 desc limit 50;

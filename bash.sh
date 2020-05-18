@@ -1,10 +1,25 @@
 
+cat /proc/cpuinfo
+cat /proc/meminfo
+ps aux
 
 
 # timing of config cache reload
 ps -eo cmd|egrep -o "[s]ynced.configuration.*sec" 
 
 egrep "(Server|ServerPort|Hostname)=" /etc/zabbix/zabbix_proxy.conf
+
+
+
+# Provide information about shared memory segments and semaphore arrays:
+ipcs -a > /tmp/memory.segments.txt
+# Process list:
+ps aux > /tmp/process.list.txt
+# Netstat:
+netstat -a > /tmp/netstat.txt
+
+
+tail -10000 /var/log/messages | gzip --best > /tmp/var.log.messages.gz 
 
 
 ps -eo pid,cmd,%cpu,%mem --sort=-%mem

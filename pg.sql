@@ -1,6 +1,32 @@
 
+/* create new user role 'zabbixa' */
+createuser --pwprompt zabbixa
+createuser --pwprompt zabbixs
+
+/* create database 'z40' and assign owner to be user 'zabbix' */
+dropdb z30 && createdb -O zabbixs z30
+
+/* restore schema. this is mandatory step. with '--clean' argument and fresh database it will produce a lot of errors */ 
+pg_restore \
+--dbname=z30 \
+--no-owner \
+--format=c \
+--schema-only \
+/tmp/zabbix30.pg.dump
 
 
+
+pg_restore \
+--dbname=z30 \
+--no-owner \
+--data-only \
+--format=c \
+/tmp/zabbix30.pg.dump
+
+
+--no-owner
+
+/* pg_restore: [custom archiver] could not read from input file: end of file */
 
 
 SELECT nspname || '.' || relname AS "relation",
@@ -21,6 +47,65 @@ pg_dump \
 --dbname=<database> \
 --host=<host> \
 --username=<user> \
+--file=zabbix40.pg10.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
+pg_dump \
+--dbname=z30 \
+--file=zabbix30.pg10.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
+createuser --pwprompt zabbix
+
+dropdb z40b && createdb -O zabbix z40b
+dropdb z30b && createdb -O zabbix z30b
+
+
+pg_restore \
+--dbname=z30 \
+--no-owner \
+--format=c \
+--schema-only \
+zabbix30.pg.dump
+
+pg_restore \
+--dbname=z30 \
+--no-owner \
+--data-only \
+--format=c \
+zabbix30.pg.dump
+
+
+/* pg_restore: [archiver (db)] connection to database "z30" failed: FATAL:  database "z30" does not exist */
+
+createuser --pwprompt zabbixs
+createuser --pwprompt zabbixa
+
+dropdb zabbix && createdb -O zabbixs zabbix
+
+cd /tmp
+pg_restore \
+--dbname=zabbix \
+--format=c \
+--verbose \
+zabbix30.pg.dump
+
+--no-owner \
+
+
+
+pg_dump \
+--dbname=z40 \
 --file=zabbix40.pg10.dump \
 --format=custom \
 --blobs \
