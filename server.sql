@@ -137,13 +137,11 @@ AND clock>INTERVAL(NOW()-2 HOURS);
 	
 
 
-SELECT items.delay,
-items.params
+SELECT hosts.host,items.key_
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE key_ LIKE '%odbc%'
+WHERE key_ LIKE '%web.page.get%'
 AND items.status=0
-AND items.value_type=4
 AND hosts.status IN (0,1);
 
 
