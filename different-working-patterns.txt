@@ -1,0 +1,4 @@
+{{ITEM.VALUE}.regsub("^([a-zA-Z]+)[^0-9]+([0-9]+)", " Problem ID: \1_\2 ")}
+{{ITEM.VALUE}.regsub("^([a-Z]+)[^0-9]+([0-9]+)", " Problem ID: \1_\2 ")}
+{{ITEM.VALUE}.regsub("^(\w+)[^0-9]+([0-9]+)", " Problem ID: \1_\2 ")}
+{{ITEM.VALUE}.regsub("^(\w+).*?([0-9]+)", " Problem ID: \1_\2 ")}

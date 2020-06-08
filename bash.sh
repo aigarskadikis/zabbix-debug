@@ -4,10 +4,25 @@ cat /proc/meminfo
 ps aux
 
 
+innotop -h'ip.of.db.server' -u'usename' -p'password' --count 1 -d 1 -n --mode Q > /tmp/zabbix.queries.txt
+
+
+for i in U Q O S T K L; do innotop --count 1 -d 1 -n --mode $i >> /tmp/innotop.out; sleep 5; innotop --count 1 -d 1 -n --mode $i >> /tmp/innotop.out;  done
+
+
+sudo du -a /var/lib/mysql/ | sort -n -r | head -n 20 > /tmp/var.log.mysql.biggest.files
+
+
 # timing of config cache reload
 ps -eo cmd|egrep -o "[s]ynced.configuration.*sec" 
 
 egrep "(Server|ServerPort|Hostname)=" /etc/zabbix/zabbix_proxy.conf
+
+
+for i in `seq 1 10`
+do
+echo $i >> output.txt &
+done
 
 
 
@@ -182,6 +197,8 @@ watch -n1 'ps aux|grep [z]abbix_server >> zabbix_activity.log;echo "============
 
 # check the disk performance with this command
 sar -dp -w 1 10
+
+sar -dp -w 1 10 >> /tmp/disk.activity.log
 
 # what is using swap. During issue please run
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | sort -k 2 -n -r

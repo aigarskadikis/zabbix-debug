@@ -5,6 +5,7 @@ createuser --pwprompt zabbixs
 
 /* create database 'z40' and assign owner to be user 'zabbix' */
 dropdb z30 && createdb -O zabbixs z30
+dropdb zabbix && createdb -O zabbixs zabbix
 
 /* restore schema. this is mandatory step. with '--clean' argument and fresh database it will produce a lot of errors */ 
 pg_restore \
@@ -22,6 +23,11 @@ pg_restore \
 --data-only \
 --format=c \
 /tmp/zabbix30.pg.dump
+
+pg_restore \
+--dbname=zabbix \
+zabbix30.pg.dump
+
 
 
 --no-owner
