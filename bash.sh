@@ -73,6 +73,9 @@ while :; do date >> ~/cpu_stat.log; kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\
 while :; do zabbix_server -R housekeeper_execute; sleep 60; done
 
 
+sudo -H -u zabbix bash -c 'printenv'
+sudo -H -u zabbix bash -c 'ldconfig -p'
+
 
 iostat -c
 

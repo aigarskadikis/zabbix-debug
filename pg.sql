@@ -1,4 +1,9 @@
 
+\o /tmp/functions.log
+\df+
+\o
+
+
 /* create new user role 'zabbixa' */
 createuser --pwprompt zabbixa
 createuser --pwprompt zabbixs

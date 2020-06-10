@@ -6,6 +6,12 @@ select clock,name from events WHERE source = 0 AND object = 0 AND objectid NOT I
 select from_unixtime(clock),name from events WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers);
 
 
+/* classify snmp devices into categories */
+mysql zabbix -B -N -e 'select value from history_str where itemid in (
+select itemid from items where key_="system.descr[sysDescr.0]");' | sort | uniq
+
+
+
 /* show hosts behind proxies, show ip addresses */
 SELECT p.host AS proxy_name,
 hosts.host AS host_name,
@@ -91,6 +97,9 @@ WHERE hosts.available = 0 ORDER BY p.host')
 mysql zabbix -sN -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host'
 
 mysql zabbix -sN -e 'SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host;'
+
+
+
 
 
 SELECT HOST,
@@ -729,6 +738,22 @@ WHERE events.source=0
   AND events.clock > UNIX_TIMESTAMP('2020-03-27 18:00:00')
   AND events.clock < UNIX_TIMESTAMP('2020-03-27 18:00:00' + INTERVAL 12 HOUR)
 ;
+
+
+/* show IP addresses for SNMP network devices */
+SELECT GROUP_CONCAT(interface.ip)
+FROM interface
+JOIN hosts ON (hosts.hostid=interface.hostid)
+WHERE interface.type=2
+\G
+
+
+
+mysql zabbix -B -N -e 'select value from history_str where itemid in (select itemid from items where key_="system.descr[sysDescr.0]");' | sort | uniq
+
+mysql zabbix -B -N -e 'select value from history_str where itemid in (select itemid from items where key_="system.descr[sysDescr.0]");' | sort | uniq
+
+
 
 
 /* how many hosts are having an agent interface with IP: 127.0.0.1 */
