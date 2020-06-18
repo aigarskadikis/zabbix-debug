@@ -1,4 +1,9 @@
 
+
+/* details about config */
+select hk_events_mode,hk_events_trigger,hk_events_internal,hk_events_discovery,hk_events_autoreg,hk_services_mode,hk_services,hk_audit_mode,hk_audit,hk_sessions_mode,hk_sessions,hk_history_mode,hk_history_global,hk_history,hk_trends_mode,hk_trends_global,hk_trends from config\G;
+
+
 SELECT count(*) FROM events WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers);
 
 select clock,name from events WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers);
@@ -162,12 +167,15 @@ AND hosts.status IN (0,1);
 	
 	
 
-SELECT proxy.host,
-hosts.host,
-items.
+SELECT hosts.host,
+items.url
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.type=19
+AND proxy.host='broceni'
+\G
+
 WHERE 
 
 
@@ -713,9 +721,13 @@ mysql -sN -e 'SELECT * FROM information_schema.GLOBAL_VARIABLES ORDER BY VARIABL
 
 
 
+SHOW [GLOBAL | SESSION] VARIABLES
+    [LIKE 'pattern' | WHERE expr]
 
 
-
+SHOW GLOBAL VARIABLES LIKE 'innodb_undo%';
+SELECT TABLESPACE_NAME, FILE_NAME FROM INFORMATION_SCHEMA.FILES WHERE FILE_TYPE LIKE 'UNDO LOG';
+SHOW SESSION VARIABLES;
 
 
 
