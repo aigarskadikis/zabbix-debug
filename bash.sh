@@ -6,7 +6,7 @@ ps aux
 
 time for i in `seq 1 1000`; do zabbix_get -s 127.0.0.1 -k agent.ping ; done 
 
-
+mtr --tcp --port 443 --interval 1 --report --report-cycles 3 www.zabbix.com > /tmp/file.log
 
 innotop -h'ip.of.db.server' -u'usename' -p'password' --count 1 -d 1 -n --mode Q > /tmp/zabbix.queries.txt
 
