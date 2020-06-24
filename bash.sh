@@ -178,6 +178,13 @@ watch -n .2 'ps aux | grep [t]rapper'
 # debuging odbc connection which use DSN to Oracle database
 sudo -uzabbix env
 
+# this should report empty string
+SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_collation != 'utf8_bin';
+
+# this should report content
+SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_collation = 'utf8_bin';
+
+
 # set the right character set and collate to the instance
 mysql --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql --database=zabbix
 

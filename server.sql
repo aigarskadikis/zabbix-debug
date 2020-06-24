@@ -1572,12 +1572,19 @@ WHERE (s.status = 0)
 and (s.lastaccess > NOW() - 3600);
 
 /* active users users */
-SELECT COUNT(u.alias),
-       u.alias
-FROM users u
-INNER JOIN sessions s ON (u.userid = s.userid)
-WHERE (s.status=0)
-GROUP BY u.alias;
+SELECT COUNT(*),users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+GROUP BY users.alias;
+
+
+SELECT COUNT(*),users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+GROUP BY users.alias;
+
+
 
 /* active users not including guests */
 SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0)   AND (u.alias<>'guest') GROUP BY u.alias;
@@ -1700,6 +1707,17 @@ WHERE items.flags=1
 AND hosts.status=0
 GROUP BY delay
 ;
+
+/* LLD trapper items or dependable items */
+select count(*),items.type
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1
+AND hosts.status=0
+AND delay=0
+GROUP BY items.type
+\G
+
 
 /* lld discoveries for only monitored hosts */
 select COUNT(*),delay,key_
