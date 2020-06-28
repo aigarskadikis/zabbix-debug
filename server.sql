@@ -16,6 +16,49 @@ mysql zabbix -B -N -e 'select value from history_str where itemid in (
 select itemid from items where key_="system.descr[sysDescr.0]");' | sort | uniq
 
 
+/* item storage period not in days */
+SELECT CASE
+           WHEN items.value_type=0 THEN 'float'
+           WHEN items.value_type=1 THEN 'str'
+           WHEN items.value_type=2 THEN 'loag'
+           WHEN items.value_type=3 THEN 'uint'
+           WHEN items.value_type=4 THEN 'text'
+       END AS type,
+items.itemid,items.history as threshold
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status IN (0,1)
+AND items.history not like '%d'
+AND items.history <> '0'
+;
+
+
+SELECT CASE
+           WHEN items.value_type=0 THEN 'float'
+           WHEN items.value_type=1 THEN 'str'
+           WHEN items.value_type=2 THEN 'loag'
+           WHEN items.value_type=3 THEN 'uint'
+           WHEN items.value_type=4 THEN 'text'
+       END AS type,
+items.itemid,(UNIX_TIMESTAMP(NOW())-(items.history*3600*24)) as threshold
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status IN (0,1)
+AND items.history like '%d'
+;
+
+
+
+SELECT CONCAT('DELETE FROM history_uint where itemid=',items.itemid, ' AND clock < ',(UNIX_TIMESTAMP(NOW())-(items.history*3600*24)),';')
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status IN (0,1)
+AND items.history like '%d'
+AND items.value_type = 3
+;
+
+
+
 
 /* show hosts behind proxies, show ip addresses */
 SELECT p.host AS proxy_name,
@@ -1419,10 +1462,18 @@ select e.eventid from events e INNER JOIN triggers t ON ( t.triggerid = e.object
 
 
 /* most frequent metrics */
-select itemid,COUNT(*) from history_uint where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10;
+select itemid,COUNT(*) from history_uint where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10\G
+
+
 select itemid,COUNT(*) from history where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10;
+
+
 select itemid,COUNT(*) from history_str where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10;
+
+
 select itemid,COUNT(*) from history_log where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10;
+
+
 select itemid,COUNT(*) from history_text where clock> UNIX_TIMESTAMP(now()-INTERVAL 1 day) group by itemid order by COUNT(*) desc limit 10;
 
 
