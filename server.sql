@@ -1,5 +1,11 @@
 
 
+/* Measure the size of text blocks getting inserted in text tables recently */
+select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
+select max(LENGTH (value)), avg(LENGTH (value)) from history_log where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
+select max(LENGTH (value)), avg(LENGTH (value)) from history_str where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);  
+
+
 /* details about config */
 select hk_events_mode,hk_events_trigger,hk_events_internal,hk_events_discovery,hk_events_autoreg,hk_services_mode,hk_services,hk_audit_mode,hk_audit,hk_sessions_mode,hk_sessions,hk_history_mode,hk_history_global,hk_history,hk_trends_mode,hk_trends_global,hk_trends from config\G;
 
@@ -1610,6 +1616,9 @@ JOIN rights ON (rights.groupid = usrgrp.usrgrpid)
 WHERE (sessions.status = 0)
   AND rights.rightid IN (7)
   AND sessions.lastaccess>NOW() - 3600;
+  
+  
+  
 
 
 /* search for metrics in history_text table where currently those are not stored as text */
@@ -1642,13 +1651,13 @@ SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = 
 
 
 /* users online in last 5 minutes */
-SELECT COUNT(u.alias),
-       u.alias
-FROM users u
-INNER JOIN sessions s ON (u.userid = s.userid)
-WHERE (s.status=0)
-  AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
-GROUP BY u.alias;
+SELECT COUNT(*),
+       users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()- INTERVAL 1 HOUR))
+GROUP BY users.alias;
 
 /* */
 SELECT u.alias,
@@ -1659,6 +1668,17 @@ WHERE (s.status=0)
   AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300);
 
 /* ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 's INNER JOIN users u ON (u.userid = s.userid) where (u.alias='guest')' at line 1 */
+
+
+/* in postgres */
+
+SELECT users.alias,
+       sessions.sessionid
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+WHERE sessions.status=0
+  AND sessions.lastaccess > 1593505746
+;
 
 
 

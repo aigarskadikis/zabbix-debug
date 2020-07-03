@@ -142,6 +142,17 @@ sudo grep ^VmRSS /proc/*/status | grep -E "[0-9]{5} kB$"
 sudo grep ^VmRSS /proc/*/status | grep -E "[0-9]{5} kB$" | sed "s|status.*$|environ|" | xargs sudo cat
 
 
+ps -efwww | grep "[z]abbix_server.*history syncer #.*syncing history"
+syncing history
+
+
+
+for i in `seq 1 180`; do echo $(date) >> /tmp/history.syncer.txt && ps -efwww | grep "[z]abbix_server.*history syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 1; done
+
+
+for i in `seq 1 120`; do echo $(date) >> /tmp/proxy.sender.txt && ps -efwww | grep "[z]abbix_proxy.*data sender" >> /tmp/proxy.sender.txt && echo "=======" >> /tmp/proxy.sender.txt && sleep 1; done
+
+
 
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
 
