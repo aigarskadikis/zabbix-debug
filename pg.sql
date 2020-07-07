@@ -4,6 +4,13 @@
 \o
 
 
+/* version */
+SELECT version();
+
+/* autovacum settings */
+select name, setting, source, short_desc from pg_settings where name like '%autova%';
+
+
 select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
 
 
