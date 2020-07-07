@@ -4,6 +4,10 @@
 \o
 
 
+select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
+
+
+
 /* create new user role 'zabbixa' */
 createuser --pwprompt zabbixa
 createuser --pwprompt zabbixs

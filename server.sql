@@ -6,6 +6,47 @@ select max(LENGTH (value)), avg(LENGTH (value)) from history_log where clock> UN
 select max(LENGTH (value)), avg(LENGTH (value)) from history_str where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);  
 
 
+DELETE FROM alerts WHERE clock < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 124 day));
+
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_text 
+WHERE LENGTH(value) > 3500 
+AND clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
+)
+\G
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_log 
+WHERE LENGTH(value) > 500 
+AND clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
+)
+\G
+
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_text WHERE LENGTH(value) > 3000 AND clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
+)
+\G
+
+
+
+
 /* details about config */
 select hk_events_mode,hk_events_trigger,hk_events_internal,hk_events_discovery,hk_events_autoreg,hk_services_mode,hk_services,hk_audit_mode,hk_audit,hk_sessions_mode,hk_sessions,hk_history_mode,hk_history_global,hk_history,hk_trends_mode,hk_trends_global,hk_trends from config\G;
 

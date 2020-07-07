@@ -9,6 +9,29 @@ AND items.delay='1h';
 
 
 
+SELECT COUNT(*),CASE
+WHEN items.type=0 THEN 'ZABBIX'
+WHEN items.type=2 THEN 'TRAPPER'
+WHEN items.type=3 THEN 'SIMPLE'
+WHEN items.type=5 THEN 'INTERNAL'
+WHEN items.type=7 THEN 'ZABBIX_ACTIVE'
+WHEN items.type=8 THEN 'AGGREGATE'
+WHEN items.type=9 THEN 'HTTPTEST'
+WHEN items.type=10 THEN 'EXTERNAL'
+WHEN items.type=11 THEN 'DB_MONITOR'
+WHEN items.type=12 THEN 'IPMI'
+WHEN items.type=13 THEN 'SSH'
+WHEN items.type=14 THEN 'TELNET'
+WHEN items.type=15 THEN 'CALCULATED'
+WHEN items.type=16 THEN 'JMX'
+WHEN items.type=17 THEN 'SNMPTRAP'
+WHEN items.type=18 THEN 'DEPENDENT'
+WHEN items.type=19 THEN 'HTTPAGENT'
+WHEN items.type=20 THEN 'SNMP'
+END AS type
+FROM items
+GROUP BY 2;
+
 
 select distinct items.key_
 FROM items 
@@ -81,6 +104,8 @@ order by 1,2,3;
 SELECT table_name, table_rows, data_length, index_length, round(((data_length + index_length) / 1024 / 1024 / 1024),2) "Size in GB" FROM information_schema.tables WHERE table_schema = "zabbix" order by round(((data_length + index_length) / 1024 / 1024 / 1024),2) DESC LIMIT 20;
 
 select @@datadir;
+
+
 
 
 select proxy_history.clock,items.key_,items.delay from proxy_history 
