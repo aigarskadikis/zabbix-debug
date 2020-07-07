@@ -12,7 +12,30 @@ select name, setting, source, short_desc from pg_settings where name like '%auto
 
 
 select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
+SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_all_tables
+WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC;
 
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_log 
+WHERE LENGTH(value) > 3000 
+AND clock > EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00')))
+;
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_log 
+WHERE LENGTH(value) > 3000 
+AND clock > EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')))
+;
 
 
 /* create new user role 'zabbixa' */
