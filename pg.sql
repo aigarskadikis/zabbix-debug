@@ -222,6 +222,43 @@ pg_dump \
 
 
 
+-- on 4.2
+SELECT hosts.host,
+       hosts.hostid,
+       functions.itemid AS itemid_at_host_level,
+       items.key_ AS item_key,
+       triggers.triggerid AS triggerid_at_host_level,
+       triggers.description AS trigger_title,
+       functions.name AS trigger_function,
+       template_items.itemid AS itemid_at_template_level,
+       template_triggers.triggerid AS triggerid_at_template_level,
+       template_triggers.expression AS trigger_expression,
+	   template_functions.name AS template_function,
+	   template_functions.parameter AS template_parameter,
+       template_hosts.hostid AS templateid_aka_hostid,
+       template_hosts.host AS template_name
+FROM triggers
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN triggers template_triggers ON (triggers.templateid=template_triggers.triggerid)
+JOIN functions template_functions ON (template_functions.triggerid=template_triggers.triggerid)
+JOIN items template_items ON (template_items.itemid=template_functions.itemid)
+JOIN hosts template_hosts ON (template_hosts.hostid=template_items.hostid)
+WHERE triggers.flags IN (0)
+  AND items.flags NOT IN (1)
+  AND hosts.status IN (0,1)
+  AND hosts.host=''
+  LIMIT 1
+\gx
+
+
+
+
+
+
+
+-- on 3.0
 SELECT hosts.host,
        hosts.hostid,
        functions.itemid AS itemid_at_host_level,

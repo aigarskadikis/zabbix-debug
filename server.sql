@@ -89,6 +89,8 @@ triggers.triggerid as triggerid,
 triggers.description as trigger_title,
 item_discovery.parent_itemid as item_prototype_id_in_host_level,
 item_discovery2.parent_itemid as lld_id_in_host_level,
+trigger_discovery.parent_triggerid as trigger_prototype_id_in_host_level,
+prototype_triggers.description as prototype_triggers_name_at_host_level,
 lld.name as discovery_name_in_host_level
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -98,10 +100,13 @@ JOIN item_discovery item_discovery2 ON (item_discovery2.itemid=parent_itemid_ite
 JOIN items lld ON (lld.itemid=item_discovery2.parent_itemid)
 JOIN functions ON (items.itemid=functions.itemid)
 JOIN triggers ON (functions.triggerid=triggers.triggerid)
+JOIN trigger_discovery ON (trigger_discovery.triggerid=triggers.triggerid)
+JOIN triggers prototype_triggers ON (prototype_triggers.triggerid=trigger_discovery.parent_triggerid)
 WHERE items.flags='4'
   AND hosts.status IN (0,1)
   AND hosts.host='ubuntu18.catonrug.lan'
-  AND items.itemid='165349'
+  AND triggers.triggerid='262950'
+  AND items.itemid='111526'
 \G
   
 
