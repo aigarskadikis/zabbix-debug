@@ -9,6 +9,26 @@ AND items.delay='1h';
 
 
 
+-- This will show which hosts and items which are receiving big metrics:
+SELECT hosts.host,
+       items.key_
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE LENGTH(value)>60000;
+
+
+
+SELECT hosts.host,items.key_
+FROM proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE items.itemid in (select itemid from items where flags=1);
+
+
+
+
+
 SELECT COUNT(*),CASE
 WHEN items.type=0 THEN 'ZABBIX'
 WHEN items.type=2 THEN 'TRAPPER'
@@ -59,10 +79,6 @@ AND items.value_type=2
 
 
 
-select hosts.host,items.key_ from proxy_history 
-JOIN items ON (items.itemid=proxy_history.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-where LENGTH(value)>30000 LIMIT 1;
 
 
 

@@ -4,10 +4,56 @@
 \o
 
 
+SELECT EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
+
+
+
+SELECT COUNT(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status,
+	   actions.name
+FROM alerts
+JOIN actions ON (alerts.actionid=actions.actionid)
+WHERE alerts.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'))
+GROUP BY alerts.status,actions.name;
+
+
+
 /* version */
 SELECT version();
 
-/* autovacum settings */
+
+
+-- set an output to an external file
+\o /tmp/output.txt
+
+-- show hypertables of log table
+SELECT * FROM chunk_relation_size_pretty('history_log');
+-- nothing will be printend on screen. that is ok
+
+-- show hypertables of trend integer table
+SELECT * FROM chunk_relation_size_pretty('trends_uint');
+-- nothing will be printend on screen. that is ok
+
+-- show the biggest tables/hypertables
+SELECT nspname || '.' || relname AS "relation",
+    pg_size_pretty(pg_total_relation_size(C.oid)) AS "total_size"
+  FROM pg_class C
+  LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
+  WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+    AND C.relkind <> 'i'
+    AND nspname !~ '^pg_toast'
+  ORDER BY pg_total_relation_size(C.oid) DESC;
+-- nothing will be printend on screen
+
+\q
+
+
+
+-- autovacum settings
 select name, setting, source, short_desc from pg_settings where name like '%autova%';
 
 
