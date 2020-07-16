@@ -8,12 +8,56 @@ FROM hosts
 JOIN items ON (items.hostid=hosts.hostid)
 JOIN history
 
+SELECT FROM_UNIXTIME(clock),
+       CASE severity
+           WHEN 0 THEN 'NOT_CLASSIFIED'
+           WHEN 1 THEN 'INFORMATION'
+           WHEN 2 THEN 'WARNING'
+           WHEN 3 THEN 'AVERAGE'
+           WHEN 4 THEN 'HIGH'
+           WHEN 5 THEN 'DISASTER'
+       END AS severity,
+	   CASE acknowledged
+           WHEN 0 THEN 'NO'
+           WHEN 1 THEN 'YES'
+       END AS acknowledged,
+	   CASE value
+           WHEN 0 THEN 'OK'
+           WHEN 1 THEN 'PROBLEM '
+       END AS trigger_status,
+       name
+FROM events
+WHERE source=0
+  AND object=0
+  AND objectid=129176
+ORDER BY clock DESC
+LIMIT 10
+\G
+;
 
 
 /* Measure the size of text blocks getting inserted in text tables recently */
 select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 select max(LENGTH (value)), avg(LENGTH (value)) from history_log where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 select max(LENGTH (value)), avg(LENGTH (value)) from history_str where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);  
+
+
+
+SELECT FROM_UNIXTIME(auditlog.clock),
+auditlog.auditid,
+users.alias,
+auditlog.action
+FROM auditlog 
+JOIN users ON (users.userid=auditlog.userid)
+WHERE auditlog.resourceid=129176;
+
+
+
+
+
+
+
+
 
 
 DELETE FROM alerts WHERE clock < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 124 day));
@@ -482,6 +526,12 @@ AND items.flags NOT IN (1)
 AND items.key_='system.uptime'
 AND functions.function IN ('change')
 ;
+
+
+
+
+
+
 
 
 
