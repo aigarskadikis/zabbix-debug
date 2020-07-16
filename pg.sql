@@ -8,6 +8,46 @@ SELECT EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
 
 
 
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_text WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
+
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_text WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'));
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'));
+
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_str WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_text.value) > 30000
+AND history_text.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'))
+;
+
+SELECT hosts.name AS host, items.name AS item
+FROM history_log
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_log.value) > 1000
+AND history_log.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'))
+;
+
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (
+SELECT itemid FROM history_log 
+WHERE LENGTH(value) > 1000
+AND clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'))
+)
+;
+
+
+
 SELECT COUNT(*),CASE alerts.status
            WHEN 0 THEN 'NOT_SENT'
            WHEN 1 THEN 'SENT'
