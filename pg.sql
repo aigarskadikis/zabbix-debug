@@ -17,6 +17,40 @@ SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_log WHERE clock > EXTR
 SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_str WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
 
 
+SELECT hosts.name AS host, items.name AS item
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_text.value) > 1
+AND history_text.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '2 DAY'))
+;
+
+
+
+SELECT COUNT(*), hosts.name AS host, items.name AS item
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_text.value) > 1
+AND history_text.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '2 DAY'))
+GROUP BY 2,3
+ORDER BY 1 DESC
+;
+
+
+SELECT COUNT(*), hosts.name AS host, items.name AS item
+FROM history_log
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_log.value) > 1000
+AND history_log.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '2 DAY'))
+GROUP BY 2,3
+ORDER BY 1 DESC
+; 
+
+
+
+
 
 SELECT hosts.name AS host, items.name AS item
 FROM history_text

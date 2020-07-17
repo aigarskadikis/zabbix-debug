@@ -53,8 +53,18 @@ WHERE auditlog.resourceid=129176;
 
 
 
+SELECT FROM_UNIXTIME(clock) AS time,name AS event FROM events 
+WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers) 
+ORDER BY clock DESC LIMIT 50\G
 
 
+SELECT FROM_UNIXTIME(clock) AS time,name AS event FROM events 
+WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers) 
+ORDER BY clock ASC LIMIT 1\G
+
+
+SET SESSION SQL_LOG_BIN=0;
+DELETE FROM events WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT triggerid FROM triggers);
 
 
 
