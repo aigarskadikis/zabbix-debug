@@ -1,4 +1,60 @@
 
+-- check if you have many correlation related event entries, which we could potentially clean up
+select count(eventid),count(c_eventid) from event_recovery;
+
+
+
+-- how many trigger events has been generated per host and item
+SELECT COUNT(*), hosts.host,items.key_,triggers.triggerid,triggers.description
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.functionid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+GROUP BY 2,3,4,5
+ORDER BY COUNT(*) ASC
+\G
+
+
+-- delete internal events
+delete from events where source in (1,2,3) limit 1000000; 
+
+
+-- produce incorrect info on host prototypes!
+SELECT FROM_UNIXTIME(events.clock), events.name, events.objectid, triggers.description
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.functionid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+ORDER BY events.clock ASC
+\G
+
+
+SELECT COUNT(*) as count,hosts.host,items.key_,triggers.triggerid,triggers.description
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.functionid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+AND events.name LIKE '%unsupported items now'
+GROUP BY 2,3,4,5
+ORDER BY COUNT(hosts.host) ASC
+;
+\G
+
+
+-- events generated per one trigger
+select FROM_UNIXTIME(clock),name,objectid from events where source=0 and object=0 and objectid=724990;
+
+
+FROM_UNIXTIME(clock),name,objectid from events where source=0 and object=0 and name like '%unsupported items now';
 
 
 
@@ -343,22 +399,7 @@ LIMIT 10;
 
 
 
-SELECT COUNT(*), hosts.host,triggers.description
-FROM events
-JOIN triggers ON (triggers.triggerid=events.objectid)
-JOIN functions ON (functions.functionid=triggers.triggerid)
-JOIN items ON (items.itemid=functions.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE events.source=0
-AND events.object=0
-GROUP BY hosts.host,triggers.description
-ORDER BY COUNT(*) DESC
-LIMIT 10;
 
-
-
-
-;
 
 SELECT json_object('Proxy', p.host,
 'Host', hosts.host,
@@ -2677,7 +2718,6 @@ select status, COUNT(*) from alerts where status in ('0','1','3') group by statu
 
 delete from events where source=3 limit 10000;
 
-delete from events where source in (1,2,3) limit 1000000; 
 
 
 SELECT FROM events WHERE source=0 and object=0 and clock <= UNIX_TIMESTAMP(NOW() - INTERVAL 2 DAY) ORDER BY 'eventid' limit 1000;

@@ -130,12 +130,16 @@ SELECT nspname || '.' || relname AS "relation",
 -- autovacum settings
 select name, setting, source, short_desc from pg_settings where name like '%autova%';
 
-
-select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
+-- when the last time the table received a vacuum
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
 WHERE n_dead_tup > 0
 ORDER BY n_dead_tup DESC;
+
+
+select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
+
+
 
 SELECT hosts.name AS host, items.name AS item
 FROM items
