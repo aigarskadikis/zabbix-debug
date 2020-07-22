@@ -4,6 +4,17 @@ select count(eventid),count(c_eventid) from event_recovery;
 
 
 
+SELECT COUNT(*),name FROM events 
+WHERE source = 0 
+AND object = 0 
+AND objectid NOT IN (
+SELECT triggerid FROM triggers
+)
+GROUP BY name
+ORDER BY COUNT(*) ASC
+;
+
+
 -- how many trigger events has been generated per host and item
 SELECT COUNT(*), hosts.host,items.key_,triggers.triggerid,triggers.description
 FROM events
@@ -580,6 +591,53 @@ AND functions.function IN ('change')
 
 
 
+SELECT FROM_UNIXTIME(clock),
+       CASE action
+           WHEN 0 THEN 'ADD'
+           WHEN 1 THEN 'UPDATE'
+           WHEN 2 THEN 'DELETE'
+           WHEN 3 THEN 'LOGIN'
+           WHEN 4 THEN 'LOGOUT'
+           WHEN 5 THEN 'ENABLE'
+           WHEN 6 THEN 'DISABLE'
+       END AS action,
+       CASE resourcetype
+           WHEN 0 THEN 'USER'
+           WHEN 2 THEN 'ZABBIX_CONFIG'
+           WHEN 3 THEN 'MEDIA_TYPE'
+           WHEN 4 THEN 'HOST'
+           WHEN 5 THEN 'ACTION'
+           WHEN 6 THEN 'GRAPH'
+           WHEN 7 THEN 'GRAPH_ELEMENT'
+           WHEN 11 THEN 'USER_GROUP'
+           WHEN 12 THEN 'APPLICATION'
+           WHEN 13 THEN 'TRIGGER'
+           WHEN 14 THEN 'HOST_GROUP'
+           WHEN 15 THEN 'ITEM'
+           WHEN 16 THEN 'IMAGE'
+           WHEN 17 THEN 'VALUE_MAP'
+           WHEN 18 THEN 'IT_SERVICE'
+           WHEN 19 THEN 'MAP'
+           WHEN 20 THEN 'SCREEN'
+           WHEN 22 THEN 'SCENARIO'
+           WHEN 23 THEN 'DISCOVERY_RULE'
+           WHEN 24 THEN 'SLIDESHOW'
+           WHEN 25 THEN 'SCRIPT'
+           WHEN 26 THEN 'PROXY'
+           WHEN 27 THEN 'MAINTENANCE'
+           WHEN 28 THEN 'REGEXP'
+           WHEN 29 THEN 'MACRO'
+           WHEN 30 THEN 'TEMPLATE'
+           WHEN 31 THEN 'TRIGGER_PROTOTYPE'
+           WHEN 32 THEN 'ICON_MAP'
+           WHEN 33 THEN 'DASHBOARD'
+           WHEN 34 THEN 'CORRELATION'
+           WHEN 35 THEN 'GRAPH_PROTOTYPE'
+           WHEN 36 THEN 'ITEM_PROTOTYPE'
+           WHEN 37 THEN 'HOST_PROTOTYPE'
+           WHEN 38 THEN 'AUTOREGISTRATION'
+       END AS resourcetype
+FROM auditlog ;
 
 
 
