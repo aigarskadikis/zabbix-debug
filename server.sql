@@ -2,6 +2,65 @@
 -- check if you have many correlation related event entries, which we could potentially clean up
 select count(eventid),count(c_eventid) from event_recovery;
 
+--filter out "Poller" checks
+SELECT CASE items.type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 7 THEN 'Zabbix agent (active) check'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'HTTP test (web monitoring scenario step)'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+END as type,
+COUNT(*) as count
+FROM items
+WHERE items.type NOT IN (2,7,9,16,17,18)
+GROUP BY items.type
+ORDER BY COUNT(*) DESC;
+--type 9 performed by http poller
+--type 16 by java poller
+--type 18 dependent item - preprocessing manager gives the check to workers
+
+
+--list all permissions for the user type "User" or "Zabbix Admin". This sample is suitable when a customer does not to expose the titles:
+SELECT users.userid,
+       users_groups.usrgrpid as user_group_id,
+       rights.rightid,
+       hstgrp.groupid as host_group_id,
+       CASE rights.permission
+           WHEN 0 THEN 'DENY'
+           WHEN 2 THEN 'READ_ONLY'
+           WHEN 3 THEN 'READ_WRITE'
+       END AS permission
+FROM users
+JOIN users_groups ON (users.userid = users_groups.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
+JOIN rights ON (usrgrp.usrgrpid = rights.groupid)
+JOIN hstgrp ON (rights.id=hstgrp.groupid)
+WHERE users.userid='1'
+;
+
+
+--show most frequently used functions
+SELECT name,parameter,COUNT(*)
+FROM functions
+GROUP BY 1,2
+ORDER BY 3 DESC
+LIMIT 50;
+
+--show most frequently used functions. 2.4
+select function,parameter,COUNT(*) from functions group by 1,2 order by 3 desc limit 50;
 
 
 SELECT COUNT(*),name FROM events 
@@ -116,6 +175,7 @@ users.alias,
 auditlog.action
 FROM auditlog 
 JOIN users ON (users.userid=auditlog.userid)
+;
 WHERE auditlog.resourceid=129176;
 
 
@@ -330,6 +390,14 @@ select from_unixtime(clock),name from events WHERE source = 0 AND object = 0 AND
 /* classify snmp devices into categories */
 mysql zabbix -B -N -e 'select value from history_str where itemid in (
 select itemid from items where key_="system.descr[sysDescr.0]");' | sort | uniq
+
+SELECT COUNT(*) FROM items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE key_ like 'sslcert.json%'
+AND hosts.status=0
+;
+
+
 
 
 /* item storage period not in days */
@@ -1638,7 +1706,7 @@ WHERE items.flags IN (0,4)
 SELECT COUNT(DISTINCT triggers.triggerid) AS cnt,
        triggers.status,
        triggers.value
-FROM TRIGGERS
+FROM triggers
 WHERE NOT EXISTS
     (SELECT functions.functionid
      FROM functions
@@ -1866,6 +1934,14 @@ SELECT users.alias
 FROM users_groups
 JOIN users ON (users_groups.userid=users.userid)
 WHERE users_groups.usrgrpid in (7);
+
+
+--how many user groups are there. how many users belong to each user group
+SELECT usrgrpid as user_group,GROUP_CONCAT(userid) as users
+FROM users_groups
+GROUP BY usrgrpid;
+
+
 
 
 /* filter active triggers by severity on 3.4 with events table (a database killer) */ 
@@ -2167,10 +2243,7 @@ GROUP BY delay,key_
 
 
 
-/* show most frequently used functions */
-select name,parameter,COUNT(*) from functions group by 1,2 order by 3 desc limit 50;
-/* on 2.4 */
-select function,parameter,COUNT(*) from functions group by 1,2 order by 3 desc limit 50;
+
 
 
 
@@ -2693,6 +2766,11 @@ WHERE u.alias='first';
 
 
 
+
+
+
+
+
 /* show unsupported itmes in 4.4. this query does not work on 4.0, 4.2 */
 select hosts.name, item_rtdata.state, items.key_
 from item_rtdata
@@ -2831,30 +2909,26 @@ where f.triggerid is NULL;
 
 
 /* usage of passive checks, does not work on 4.4 */
-SELECT DISTINCT CASE
-                    WHEN TYPE=0 THEN 'Zabbix Agent'
-                    WHEN TYPE=1 THEN 'SNMPv1 agent'
-                    WHEN TYPE=2 THEN 'Zabbix trapper'
-                    WHEN TYPE=3 THEN 'simple check'
-                    WHEN TYPE=4 THEN 'SNMPv2 agent'
-                    WHEN TYPE=5 THEN 'Zabbix internal'
-                    WHEN TYPE=6 THEN 'SNMPv3 agent'
-                    WHEN TYPE=7 THEN 'Zabbix agent (active)'
-                    WHEN TYPE=8 THEN 'Zabbix aggregate'
-                    WHEN TYPE=9 THEN 'web item'
-                    WHEN TYPE=10 THEN 'external check'
-                    WHEN TYPE=11 THEN 'database monitor'
-                    WHEN TYPE=12 THEN 'IPMI agent'
-                    WHEN TYPE=13 THEN 'SSH agent'
-                    WHEN TYPE=14 THEN 'TELNET agent'
-                    WHEN TYPE=15 THEN 'calculated'
-                    WHEN TYPE=16 THEN 'JMX agent'
-                    WHEN TYPE=17 THEN 'SNMP trap'
-                    WHEN TYPE=18 THEN 'Dependent item'
-                    WHEN TYPE=19 THEN 'HTTP agent'
+SELECT DISTINCT CASE items.type
+                    WHEN 0 THEN 'Zabbix Agent'
+                    WHEN 1 THEN 'SNMPv1 agent'
+                    WHEN 3 THEN 'simple check'
+                    WHEN 4 THEN 'SNMPv2 agent'
+                    WHEN 5 THEN 'Zabbix internal'
+                    WHEN 6 THEN 'SNMPv3 agent'
+                    WHEN 8 THEN 'Zabbix aggregate'
+                    WHEN 9 THEN 'web item'
+                    WHEN 10 THEN 'external check'
+                    WHEN 11 THEN 'database monitor'
+                    WHEN 12 THEN 'IPMI agent'
+                    WHEN 13 THEN 'SSH agent'
+                    WHEN 14 THEN 'TELNET agent'
+                    WHEN 15 THEN 'calculated'
+                    WHEN 16 THEN 'JMX agent'
+                    WHEN 19 THEN 'HTTP agent'
                 END AS TYPE,
                 items.delay,
-                COUNT(*)
+COUNT(*)
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE TYPE NOT IN (2,3,5,7,8,15,17)
@@ -2863,6 +2937,39 @@ WHERE TYPE NOT IN (2,3,5,7,8,15,17)
   AND items.state=0
   AND hosts.status=0
 GROUP BY 1,2;
+
+
+/* usage of passive checks, work on 4.4 */
+SELECT DISTINCT CASE items.type
+                    WHEN 0 THEN 'Zabbix Agent'
+                    WHEN 1 THEN 'SNMPv1 agent'
+                    WHEN 3 THEN 'simple check'
+                    WHEN 4 THEN 'SNMPv2 agent'
+                    WHEN 5 THEN 'Zabbix internal'
+                    WHEN 6 THEN 'SNMPv3 agent'
+                    WHEN 8 THEN 'Zabbix aggregate'
+                    WHEN 9 THEN 'web item'
+                    WHEN 10 THEN 'external check'
+                    WHEN 11 THEN 'database monitor'
+                    WHEN 12 THEN 'IPMI agent'
+                    WHEN 13 THEN 'SSH agent'
+                    WHEN 14 THEN 'TELNET agent'
+                    WHEN 15 THEN 'calculated'
+                    WHEN 16 THEN 'JMX agent'
+                    WHEN 19 THEN 'HTTP agent'
+                END as tipins,
+                items.delay,
+COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items ON (items.itemid=item_rtdata.itemid)
+WHERE items.type NOT IN (2,3,5,7,8,15,17)
+  AND items.status=0
+  AND items.flags IN (1,4)
+  AND item_rtdata.state=0
+  AND hosts.status=0
+GROUP BY 1,2;
+
 
 
 

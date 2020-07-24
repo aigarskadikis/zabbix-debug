@@ -4,6 +4,10 @@ cat /proc/meminfo
 ps aux
 
 
+ps -efwww|grep -E -o '^zabbix.*\/zabbix_proxy: [a-z -]+'|sed 's|^.*: ||g'|sort|uniq
+
+
+
 time for i in `seq 1 1000`; do zabbix_get -s 127.0.0.1 -k agent.ping ; done 
 
 mtr --tcp --port 443 --interval 1 --report --report-cycles 3 www.zabbix.com > /tmp/file.log
