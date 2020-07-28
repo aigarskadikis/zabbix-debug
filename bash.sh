@@ -1,4 +1,31 @@
 
+
+
+# debug for zabbix proxy data sender
+grep "$(ps auxw | grep "^zabbix.*data sender" | awk '{print $2}'):" /var/log/zabbix/zabbix_proxy.log > /tmp/proxy.data.sender.log
+
+
+
+sed -n '/PATTERN1/,/PATTERN2/p' file
+
+awk '/PATTERN1/{f=1}/PATTERN2/{f=0;print}f' file
+
+awk '/:20200728:21.*/,/:20200728:21.*/{next} 1' /var/log/zabbix/zabbix_proxy.log
+
+awk '/:20200728:20.*/{f=1}/:20200728:21.*/{f=0;print}f' /var/log/zabbix/zabbix_proxy.log > /tmp/proxy.from.2000.till.2200.log
+
+
+
+:20200728:21
+
+ps auxw | grep "data sender" | awk '{print " -p " $2}'|xargs strace -s 256 -T -tt -f -o proxy.strace.out
+
+
+# snapshot of process list
+for i in `seq 1 6`; do echo $(date) >> /tmp/process.list.txt && ps -efwww >> /tmp/process.list.txt && echo "=======" >> /tmp/process.list.txt && sleep 1; done
+
+
+
 cat /proc/cpuinfo
 cat /proc/meminfo
 ps aux
@@ -11,6 +38,8 @@ ps -efwww|grep -E -o '^zabbix.*\/zabbix_proxy: [a-z -]+'|sed 's|^.*: ||g'|sort|u
 time for i in `seq 1 1000`; do zabbix_get -s 127.0.0.1 -k agent.ping ; done 
 
 mtr --tcp --port 443 --interval 1 --report --report-cycles 3 www.zabbix.com > /tmp/file.log
+
+watch -n1 -c 'innotop -h"ip.of.db.server" -u"usename" -p"password" --count 1 -d 1 -n --mode Q'
 
 innotop -h'ip.of.db.server' -u'usename' -p'password' --count 1 -d 1 -n --mode Q > /tmp/zabbix.queries.txt
 
@@ -154,6 +183,10 @@ syncing history
 for i in `seq 1 180`; do echo $(date) >> /tmp/history.syncer.txt && ps -efwww | grep "[z]abbix_server.*history syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 1; done
 
 
+
+
+
+
 for i in `seq 1 120`; do echo $(date) >> /tmp/proxy.sender.txt && ps -efwww | grep "[z]abbix_proxy.*data sender" >> /tmp/proxy.sender.txt && echo "=======" >> /tmp/proxy.sender.txt && sleep 1; done
 
 
@@ -268,6 +301,5 @@ zabbix_proxy -R log_level_decrease="poller"
 strings $(which zabbix_server)|grep -i zlib
 strings $(which zabbix_proxy)|grep -i zlib
 
-ps auxw | grep "data sender" | awk '{print " -p " $2}'|xargs strace -s 256 -T -tt -f -o proxy.strace.out
 
 

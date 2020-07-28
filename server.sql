@@ -1,4 +1,39 @@
 
+
+
+-- Zabbix server generates slow "select clock,ns,value from history_uint..." queries in case of missing data for the items	
+SET GLOBAL optimizer_switch='index_condition_pushdown=off';
+
+update triggers set manual_close=1 where manual_close=0 and flags = 4;
+
+--enable "Manual close"
+UPDATE triggers SET manual_close=1 WHERE triggerid=726241;
+
+UPDATE triggers set manual_close=0 where triggerid=421994;
+
+
+
+
+--detect if event correlation is used
+SELECT * FROM event_recovery
+WHERE eventid NOT IN (
+SELECT eventid FROM events
+) OR r_eventid NOT IN (
+SELECT eventid FROM events);
+
+
+SELECT * FROM problem
+WHERE eventid NOT IN (
+SELECT eventid FROM events
+) OR r_eventid NOT IN (
+SELECT eventid FROM events);
+
+
+--no recovery time for problem. problem still open
+select count(*) from problem where r_clock=0;
+
+
+
 -- check if you have many correlation related event entries, which we could potentially clean up
 select count(eventid),count(c_eventid) from event_recovery;
 
@@ -30,7 +65,7 @@ GROUP BY items.type
 ORDER BY COUNT(*) DESC;
 --type 9 performed by http poller
 --type 16 by java poller
---type 18 dependent item - preprocessing manager gives the check to workers
+--type 18 dependent item - not an active check, neither a passive
 
 
 --list all permissions for the user type "User" or "Zabbix Admin". This sample is suitable when a customer does not to expose the titles:
@@ -2092,7 +2127,7 @@ GROUP BY users.alias;
 SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0)   AND (u.alias<>'guest') GROUP BY u.alias;
 
 
-/* users online in last 5 minutes */
+--users online in last 5 minutes
 SELECT COUNT(*),
        users.alias
 FROM users
@@ -2122,6 +2157,8 @@ WHERE sessions.status=0
   AND sessions.lastaccess > 1593505746
 ;
 
+
+SELECT COUNT(*) FROM sessions;
 
 
 DELETE FROM sessions
@@ -2365,6 +2402,29 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
 
 UPDATE items SET lastlogsize=0 where itemid=123456;
+
+
+SELECT COUNT(*),templateid 
+FROM triggers 
+WHERE value=1 
+AND flags IN (0,4) 
+GROUP BY templateid 
+ORDER BY 1;
+
+
+SELECT COUNT(*),t.description 
+FROM triggers
+JOIN triggers t ON (t.triggerid=triggers.templateid)
+WHERE triggers.value=1 
+AND triggers.flags IN (0,4) 
+GROUP BY triggers.templateid 
+ORDER BY 1 ASC;
+
+
+
+SELECT triggerid FROM triggers WHERE value=1 AND flags IN (0,4);
+--close triggers on 4.0
+UPDATE triggers SET value=0 WHERE flags IN (0,4);
 
 
 /* what item prototype has been assigned for discovery rule */

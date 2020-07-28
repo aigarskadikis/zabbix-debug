@@ -5,6 +5,7 @@
 
 
 
+DELETE FROM events WHERE source=0 and object=0 and clock <= EXTRACT(EPOCH FROM (timestamp '2020-07-24 00:00:00' - INTERVAL '1 MONTH ')) ORDER BY 'eventid' limit 100000;
 
 
 
