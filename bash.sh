@@ -12,6 +12,9 @@ awk '/PATTERN1/{f=1}/PATTERN2/{f=0;print}f' file
 
 awk '/:20200728:21.*/,/:20200728:21.*/{next} 1' /var/log/zabbix/zabbix_proxy.log
 
+awk '/:20200730:12.*/,/:20200730:12.*/{next} 1' /var/log/zabbix/zabbix_server.log > /tmp/log.log
+
+
 awk '/:20200728:20.*/{f=1}/:20200728:21.*/{f=0;print}f' /var/log/zabbix/zabbix_proxy.log > /tmp/proxy.from.2000.till.2200.log
 
 

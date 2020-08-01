@@ -12,6 +12,47 @@ UPDATE triggers SET manual_close=1 WHERE triggerid=726241;
 UPDATE triggers set manual_close=0 where triggerid=421994;
 
 
+--colect data from events
+mysqldump \
+--flush-logs \
+--single-transaction \
+--no-create-info zabbix events \
+--where='source=3 AND clock >= UNIX_TIMESTAMP("2020-07-30 10:00:00") AND clock < UNIX_TIMESTAMP("2020-07-30 11:00:00")';
+
+--show active disabled items on proxy
+SELECT 
+CASE type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 1 THEN 'SNMPv1 agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 4 THEN 'SNMPv2 agent'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 6 THEN 'SNMPv3 agent'
+WHEN 7 THEN 'Zabbix agent (active)'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'web monitoring scenario'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+END AS "type",
+COUNT(*),
+CASE status 
+WHEN 0 THEN 'active' 
+WHEN 1 THEN 'disabled' 
+END AS "status"
+FROM items
+GROUP BY type,status
+ORDER BY type DESC;
+
 
 
 --detect if event correlation is used
@@ -1359,7 +1400,9 @@ AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
 
 
 /* items generating the most internal events. works on 4.4 */
-SELECT COUNT(objectid),objectid,name FROM events WHERE SOURCE = 3   AND OBJECT = 4   AND objectid NOT IN     (SELECT itemid      FROM items) AND LENGTH(name)>0 GROUP BY objectid,name ORDER BY COUNT(objectid),objectid,name\G
+SELECT COUNT(objectid),objectid,name FROM events WHERE SOURCE = 3   AND OBJECT = 4   AND objectid NOT IN     (SELECT itemid      FROM items) AND LENGTH(name)>0 GROUP BY objectid,name ORDER BY COUNT(objectid),objectid,name;
+
+\G
 
 
 /* check for possible deadlocks on the DB */
@@ -1953,8 +1996,13 @@ select itemid,COUNT(*) from history_text where clock> UNIX_TIMESTAMP(now()-INTER
 
 
 /* optimize sessions table in case of lazy bastard - cannot fine tune the API script */
-select COUNT(*) from sessions;
-delete from sessions where (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600); optimize table sessions;
+SELECT COUNT(*) FROM sessions;
+
+
+DELETE FROM sessions WHERE (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600);
+OPTIMIZE TABLE sessions;
+
+
 SELECT COUNT(u.alias),
        u.alias
 FROM users u
@@ -2767,7 +2815,7 @@ ORDER BY TYPE,
 
 
 /* show unsupported items, transfer hostid into human readable name */
-SELECT h.host AS 'Host name',i.name AS 'ITEM name',i.key_ AS 'KEY' FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1';
+SELECT h.host AS Host_name,i.name AS ITEM_name,i.key_ FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1';
 
 
 select * from items limit 1\G;
@@ -2856,8 +2904,7 @@ select object,objectid,COUNT(*) from events where source = 3 and object = 4 grou
 select object,objectid,COUNT(*) from events where source = 3 and object = 5 group by objectid order by COUNT(*) desc limit 10;
 
 /* show the event count per source */
-select COUNT(*), source from events group by source;
-select COUNT(*), source from events group by source;
+SELECT COUNT(*),source FROM events GROUP BY source;
 
 
 SELECT COUNT(*),

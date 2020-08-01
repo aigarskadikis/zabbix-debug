@@ -9,6 +9,22 @@ DELETE FROM events WHERE source=0 and object=0 and clock <= EXTRACT(EPOCH FROM (
 
 
 
+
+-- posthres >= 9.2
+SELECT pid, age(clock_timestamp(), query_start), usename, query 
+FROM pg_stat_activity 
+WHERE query != '<IDLE>' AND query NOT ILIKE '%pg_stat_activity%' 
+ORDER BY query_start desc;
+
+-- before 9.2
+SELECT procpid, age(clock_timestamp(), query_start), usename, current_query 
+FROM pg_stat_activity 
+WHERE current_query != '<IDLE>' AND current_query NOT ILIKE '%pg_stat_activity%' 
+ORDER BY query_start desc;
+
+
+
+
 SELECT to_char(date(to_timestamp(auditlog.clock)),'YYYY-MM-DD'),
 auditlog.auditid,
 users.alias,
