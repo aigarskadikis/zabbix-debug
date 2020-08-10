@@ -1,4 +1,25 @@
 
+# which process in system is using swap
+for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done
+
+
+
+for i in `seq 1 5`; do zabbix_close_all_events_by_triggerid.sh 179697 100 $(date +%s) close; done
+
+
+n -b -k 8,8
+
+top -b -n 10 -d 0.2 -p 1 | tail -1 | awk '{print $9}'
+Where:
+
+-b: Batch-mode;
+-n 2: Number-of-iterations;
+-d 0.2: Delay-time(in second, here is 200ms);
+-p <PID>: Monitor-PIDs
+tail -1: the last row
+awk ' {print $9}
+': the 9-th column(the cpu usage number
+
 
 
 # debug for zabbix proxy data sender

@@ -4,6 +4,26 @@
 \o
 
 
+SELECT * FROM problem
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-03 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-05 00:00:00'))
+AND name LIKE ('Trigger name%'); 
+
+
+--delete events. ordering by eventid (and not the clock) required because recovery event will always be after problem event
+--it's not allways the case when a host is behind a proxy with nodata trigger, and proxy goes offline..
+DELETE FROM events
+WHERE eventid IN (
+SELECT eventid FROM events
+WHERE source=0
+AND object=0
+AND objectid=179697
+AND clock <= EXTRACT(EPOCH FROM (TIMESTAMP '2020-08-10 00:00:00' - INTERVAL '1 MONTH ')) ORDER BY eventid ASC LIMIT 10000
+);
+
+
+
+
 
 DELETE FROM events WHERE source=0 and object=0 and clock <= EXTRACT(EPOCH FROM (timestamp '2020-07-24 00:00:00' - INTERVAL '1 MONTH ')) ORDER BY 'eventid' limit 100000;
 

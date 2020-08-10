@@ -1,6 +1,68 @@
 
 
 
+--what happens after event acknowledgement. 4.0
+SELECT 
+acknowledges.eventid,
+triggers.triggerid,
+CASE task.status
+WHEN 1 THEN 'new task ready for execution'
+WHEN 2 THEN 'task being already executed'
+WHEN 3 THEN 'finished task'
+WHEN 4 THEN 'expired task'
+END AS "status",
+task.type,
+task_close_problem.taskid 
+FROM task_close_problem
+JOIN acknowledges ON (acknowledges.acknowledgeid=task_close_problem.acknowledgeid)
+JOIN task ON (task.taskid=task_close_problem.taskid)
+JOIN events ON (events.eventid=acknowledges.eventid)
+JOIN triggers ON (triggers.triggerid=events.objectid)
+;
+
+
+--group tasks
+SELECT COUNT(*),
+triggers.triggerid,
+CASE task.status
+WHEN 1 THEN 'new task ready for execution'
+WHEN 2 THEN 'task being already executed'
+WHEN 3 THEN 'finished task'
+WHEN 4 THEN 'expired task'
+END AS "status",
+task.type
+FROM task_close_problem
+JOIN acknowledges ON (acknowledges.acknowledgeid=task_close_problem.acknowledgeid)
+JOIN task ON (task.taskid=task_close_problem.taskid)
+JOIN events ON (events.eventid=acknowledges.eventid)
+JOIN triggers ON (triggers.triggerid=events.objectid)
+GROUP BY 2,3,4
+ORDER BY 2
+;
+
+
+
+
+
+
+
+
+
+
+SELECT FROM_UNIXTIME(clock),name
+FROM events
+WHERE LENGTH(name)>0
+AND source=0
+AND object=0
+AND value=0
+AND name LIKE ('Agent%')
+AND clock >= UNIX_TIMESTAMP("2020-06-01 00:00:00")
+AND clock < UNIX_TIMESTAMP("2020-07-01 00:00:00")
+ORDER BY clock ASC
+;
+
+
+
 -- Zabbix server generates slow "select clock,ns,value from history_uint..." queries in case of missing data for the items	
 SET GLOBAL optimizer_switch='index_condition_pushdown=off';
 
@@ -1249,6 +1311,25 @@ WHERE source=3
 GROUP BY hosts.host,items.key_,
          item_rtdata.error
 ORDER BY COUNT(items.key_)\G
+
+-- for one host on 4.4
+SELECT FROM_UNIXTIME(clock) as 'clock',
+       hosts.host,
+       items.key_ as 'key',
+       item_rtdata.error
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE source=3
+  AND object=4
+  AND items.status=0
+  AND items.flags IN (0,1,4)
+  AND LENGTH(item_rtdata.error)>0
+  AND hosts.hostid=11893
+ORDER BY clock ASC
+\G
+
 
 
 
