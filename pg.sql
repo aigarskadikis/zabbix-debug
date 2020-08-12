@@ -14,16 +14,18 @@ item_discovery.parent_itemid as item_prototype_id_in_host_level,
 trigger_discovery.parent_triggerid as trigger_prototype_id_in_host_level,
 prototype_triggers.description as prototype_triggers_name_at_host_level,
 lld.name as discovery_name_in_host_level,
-lld.itemid as discovery_id_in_host_level
+lld.itemid as discovery_id_in_host_level,
+lld.templateid as discovery_id_in_template_level,
+template_responsible.hostid as template_id,
+template_responsible.host as template_name
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 JOIN item_discovery ON (item_discovery.itemid=items.itemid)
 JOIN items parent_itemid_items ON (parent_itemid_items.itemid=item_discovery.parent_itemid)
 JOIN item_discovery lld_id ON (lld_id.itemid=parent_itemid_items.itemid)
 JOIN items lld ON (lld.itemid=lld_id.parent_itemid)
-
-
-
+JOIN items template_id_responsible ON (template_id_responsible.itemid=lld.itemid)
+JOIN hosts template_responsible ON (template_responsible.hostid=template_responsible.hostid)
 JOIN functions ON (items.itemid=functions.itemid)
 JOIN triggers ON (functions.triggerid=triggers.triggerid)
 JOIN trigger_discovery ON (trigger_discovery.triggerid=triggers.triggerid)
