@@ -1,11 +1,25 @@
 
 
+--show all items and also discovered items + template name item key, name. Zabbix 4.0
+select i.hostid,i.itemid,i.name as ItemName,i.key as ItemKey,id.parent_itemid as LLDItemID,ii.key as LLDItemKey,ii.name as LLDItemName,idd.parent_itemid as LLDRuleID,iddd.name as LLDRuleName,case when iiih.name is not null then iiih.name else dii.name end as TemplateName from items i left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts iiih on iiih.hostid=iii.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iddd on idd.parent_itemid=iddd.itemid left join items di on i.templateid=di.itemid left join hosts dii on di.hostid=dii.hostid where i.hostid=10084 and i.flags in (0,4) limit 50;
 
+--only discovered items. Zabbix 4.0
+select i.name as 'Item name',iiii.name as 'Discovery rule',i.key_,h.host as Hostname, hh.host as Template from items i inner join hosts h on i.hostid = h.hostid left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts hh on iii.hostid=hh.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iiii on idd.parent_itemid=iiii.itemid where i.flags = 4 and h.host = "Zabbix server"
 
 
 
 --show incomming agent autoregistration
 SELECT FROM_UNIXTIME(events.clock),
+autoreg_host.host 
+FROM events 
+JOIN autoreg_host ON (autoreg_host.autoreg_hostid=events.objectid)
+WHERE source=2 AND object=3
+AND autoreg_host.host=''
+ORDER BY events.clock ASC
+;
+
+
+SELECT events.clock,
 autoreg_host.host 
 FROM events 
 JOIN autoreg_host ON (autoreg_host.autoreg_hostid=events.objectid)
