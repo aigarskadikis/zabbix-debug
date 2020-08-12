@@ -4,6 +4,33 @@ for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print "
 
 
 
+# test memory leak '--suppressions=/root/minimal.supp'
+
+
+echo "ewogICA8bXlzcWw+CiAgIE1lbWNoZWNrOkxlYWsKICAgbWF0Y2gtbGVhay1raW5kczogcG9zc2libGUKICAgLi4uCiAgIG9iajovdXNyLypsaWIqL215c3FsLyoKfQp7CiAgIDxjcnlwdG8+CiAgIE1lbWNoZWNrOkxlYWsKICAgbWF0Y2gtbGVhay1raW5kczogcG9zc2libGUKICAgLi4uCiAgIG9iajovdXNyLypsaWIqLypsaWJjcnlwdG8qCn0K" | base64 --decode > /tmp/ignore.mysql.libcrypto.supp
+valgrind --suppressions=/tmp/ignore.mysql.libcrypto.supp \
+--leak-check=full \
+--trace-children=yes \
+--track-origins=yes \
+--max-stackframe=5000000 \
+--read-var-info=yes \
+--leak-resolution=high \
+--log-file=/tmp/valgrind.zabbix_proxy.log \
+/usr/sbin/zabbix_proxy -c /etc/zabbix/zabbix_proxy.conf --foreground
+
+
+valgrind --suppressions=/root/minimal.supp \
+--leak-check=full \
+--trace-children=yes \
+--track-origins=yes \
+--max-stackframe=5000000 \
+--read-var-info=yes \
+--leak-resolution=high \
+--log-file=/tmp/valgrind.zabbix_server.log \
+/usr/sbin/zabbix_server -c /etc/zabbix/zabbix_server.conf --foreground
+
+
+
 for i in `seq 1 5`; do zabbix_close_all_events_by_triggerid.sh 179697 100 $(date +%s) close; done
 
 

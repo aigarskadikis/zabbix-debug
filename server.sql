@@ -1,6 +1,21 @@
 
 
 
+
+
+
+--show incomming agent autoregistration
+SELECT FROM_UNIXTIME(events.clock),
+autoreg_host.host 
+FROM events 
+JOIN autoreg_host ON (autoreg_host.autoreg_hostid=events.objectid)
+WHERE source=2 AND object=3
+AND autoreg_host.host=''
+ORDER BY events.clock ASC
+;
+
+
+
 --what happens after event acknowledgement. 4.0
 SELECT 
 acknowledges.eventid,
@@ -450,13 +465,15 @@ JOIN triggers ON (functions.triggerid=triggers.triggerid)
 JOIN trigger_discovery ON (trigger_discovery.triggerid=triggers.triggerid)
 JOIN triggers prototype_triggers ON (prototype_triggers.triggerid=trigger_discovery.parent_triggerid)
 WHERE items.flags='4'
+  AND hosts.host='AKADIKIS-840-G2'
   AND hosts.status IN (0,1)
-  AND hosts.host='ubuntu18.catonrug.lan'
-  AND triggers.triggerid='262950'
-  AND items.itemid='111526'
+LIMIT 2 
 ;
 \G
   
+  AND hosts.host='ubuntu18.catonrug.lan'
+  AND triggers.triggerid='262950'
+  AND items.itemid='111526'
 
 
 
