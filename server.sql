@@ -1,5 +1,63 @@
 
 
+--delete hosts with dublicate names
+DELETE h1 FROM hosts h1
+INNER JOIN hosts h2 
+WHERE h1.hostid < h2.hostid AND h1.host = h2.host;
+
+
+--check if some dublicates left
+SELECT host,COUNT(host) FROM hosts GROUP BY host HAVING  COUNT(host) > 1;
+
+
+--show which LLD is disable or a template item
+SELECT COUNT(*) as count,
+items.key_,items.delay,
+CASE items.status
+WHEN 0 THEN 'Active'
+WHEN 1 THEN 'Disabled'
+END as status,
+CASE hosts.status
+WHEN 0 THEN 'host is monitored'
+WHEN 1 THEN 'host is not monitored'
+WHEN 3 THEN 'template setting'
+END AS type
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1 
+AND hosts.status=0 
+GROUP BY 2,3,4,5
+\G
+
+
+
+--To disable all the actions you should execute
+update actions set status=1;
+
+--To see the current status of actions you can use
+select name, status from actions;
+--where 0 means enabled, and 1 - disabled.
+
+
+--look if any dublicate host names are in the instance
+SELECT COUNT(*) AS count,
+hosts.host AS name,
+CASE interface.type
+WHEN 0 THEN 'UNKNOWN'
+WHEN 1 THEN 'AGENT'
+WHEN 2 THEN 'SNMP'
+WHEN 3 THEN 'IPMI'
+WHEN 4 THEN 'JMX'
+END AS type,
+interface.ip
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+GROUP BY hosts.host,interface.type,interface.ip
+ORDER BY COUNT(*) ASC
+\G
+
+
 --show all items and also discovered items + template name item key, name. Zabbix 4.0
 select i.hostid,i.itemid,i.name as ItemName,i.key_ as ItemKey,id.parent_itemid as LLDItemID,ii.key_ as LLDItemKey,ii.name as LLDItemName,idd.parent_itemid as LLDRuleID,iddd.name as LLDRuleName,case when iiih.name is not null then iiih.name else dii.name end as TemplateName from items i left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts iiih on iiih.hostid=iii.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iddd on idd.parent_itemid=iddd.itemid left join items di on i.templateid=di.itemid left join hosts dii on di.hostid=dii.hostid where i.hostid=10084 and i.flags in (0,4) limit 50;
 
@@ -1619,8 +1677,9 @@ GROUP BY alerts.status,actions.name;
 
 
  
-/* disable alerts */
-UPDATE alerts set status = 2, message ="manual diable" where status = 0;
+/* mark unsent alerts as sent, remove the queue */
+update alerts set status = 1,message = 'Disabled by Admin' where status = 0;
+
 
 /* system.cpu.num[] - this key will report integer (not float). timestamp will be store in history_uint */
 /* linux and windows host must have one comon item key. Item key must be in configured as "Zabbix agent (active)" */
@@ -3082,6 +3141,10 @@ select COUNT(*),source from events where eventid in (1,2,3) group by source;
 
 select status, COUNT(*) from escalations group by status;
 
+--remove all escalations
+truncate table escalations;
+
+
 select status, COUNT(*) from alerts where status in ('0','1','3') group by status;
 
 
@@ -3272,6 +3335,9 @@ JOIN hosts p ON hosts.proxy_hostid=p.hostid
 WHERE hosts.available = 0
 ORDER BY p.host;
 
+
+SELECT p.host AS proxy_name,hosts.host AS host_name
+FROM hosts JOIN hosts p ON hosts.proxy_hostid=p.hostid;
 
 
 

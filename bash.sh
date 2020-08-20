@@ -2,7 +2,8 @@
 # which process in system is using swap
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done
 
-
+# check if master processes are running
+ps aux|grep conf$
 
 # test memory leak '--suppressions=/root/minimal.supp'
 
