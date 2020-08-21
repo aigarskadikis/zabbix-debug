@@ -1,4 +1,9 @@
 
+
+
+for i in `seq 1 10`; do echo $(date) >> /tmp/proc.txt && ps auxww >> /tmp/proc.txt && echo "=======" >> /tmp/proc.txt && sleep 1; done
+
+
 # which process in system is using swap
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done
 
@@ -243,7 +248,6 @@ for i in `seq 1 120`; do echo $(date) >> /tmp/proxy.sender.txt && ps -efwww | gr
 
 
 
-for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
 
 
 for i in `seq 1 10`; do echo $(date) >> /tmp/zabbix.proc && ps aux | grep zabbix >> /tmp/zabbix.proc && echo "=======" && sleep 1; done
