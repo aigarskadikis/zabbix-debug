@@ -1,0 +1,39 @@
+                name                 |  setting  | source  |                                        short_desc                                         
+-------------------------------------+-----------+---------+-------------------------------------------------------------------------------------------
+ autovacuum                          | on        | default | Starts the autovacuum subprocess.
+ autovacuum_analyze_scale_factor     | 0.1       | default | Number of tuple inserts, updates, or deletes prior to analyze as a fraction of reltuples.
+ autovacuum_analyze_threshold        | 50        | default | Minimum number of tuple inserts, updates, or deletes prior to analyze.
+ autovacuum_freeze_max_age           | 200000000 | default | Age at which to autovacuum a table to prevent transaction ID wraparound.
+ autovacuum_max_workers              | 3         | default | Sets the maximum number of simultaneously running autovacuum worker processes.
+ autovacuum_multixact_freeze_max_age | 400000000 | default | Multixact age at which to autovacuum a table to prevent multixact wraparound.
+ autovacuum_naptime                  | 60        | default | Time to sleep between autovacuum runs.
+ autovacuum_vacuum_cost_delay        | 20        | default | Vacuum cost delay in milliseconds, for autovacuum.
+ autovacuum_vacuum_cost_limit        | -1        | default | Vacuum cost amount available before napping, for autovacuum.
+ autovacuum_vacuum_scale_factor      | 0.2       | default | Number of tuple updates or deletes prior to vacuum as a fraction of reltuples.
+ autovacuum_vacuum_threshold         | 50        | default | Minimum number of tuple updates or deletes prior to vacuum.
+ autovacuum_work_mem                 | -1        | default | Sets the maximum memory to be used by each autovacuum worker process.
+ log_autovacuum_min_duration         | -1        | default | Sets the minimum execution time above which autovacuum actions will be logged.
+(13 rows)
+
+
+In PgSQL on every change of data database engine generates tuple, tuple can be live or dead (removed data, updated, etc.). In configuration file you can set cost for the auto vacuum operation. Cost is something ephemeral, like i can lock rows for a longer time with performance degradation. But value in the config itself is not a time. You can see default values from him in the txt. So cost 20 is rather small.
+
+So you can use for example like this: vacuum_cost_page_hit = 1
+vacuum_cost_page_miss = 10
+vacuum_cost_page_dirty = 20
+autovacuum_vacuum_threshold = 50
+autovacuum_vacuum_scale_factor = 0.01
+autovacuum_vacuum_cost_delay = 20ms
+autovacuum_vacuum_cost_limit = 3000
+autovacuum_max_workers = 6
+
+
+
+example when autovacuum is not able to handle clean of dead tuples
+==================================================================
+ schemaname |          relname           | n_live_tup | n_dead_tup |        last_autovacuum        
+------------+----------------------------+------------+------------+-------------------------------
+ public     | history_uint               | 1228819782 |  577423316 | 2020-08-13 04:55:11.54239-07
+
+
+
