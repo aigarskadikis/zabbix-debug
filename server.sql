@@ -10,6 +10,23 @@ WHERE h1.hostid < h2.hostid AND h1.host = h2.host;
 SELECT host,COUNT(host) FROM hosts GROUP BY host HAVING  COUNT(host) > 1;
 
 
+We workaround the issue by moving all disable hosts from this proxy to another dummy proxy.
+
+--list all disabled hosts, proxy
+SELECT GROUP_CONCAT(hosts.hostid)
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.status = 1
+and p.host='proxy.name'; 
+
+--move hosts to different proxy
+UPDATE hosts SET proxy_hostid=1234 WHERE hostid IN (
+
+) 
+
+
+
 --show which LLD is disable or a template item
 SELECT COUNT(*) as count,
 items.key_,items.delay,

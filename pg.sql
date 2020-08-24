@@ -38,6 +38,24 @@ LIMIT 2
 ;
 
 
+--size of biggest tables, hypertables, 
+SELECT *, pg_size_pretty(total_bytes) AS total
+    , pg_size_pretty(index_bytes) AS index
+    , pg_size_pretty(toast_bytes) AS toast
+    , pg_size_pretty(table_bytes) AS table
+  FROM (
+  SELECT *, total_bytes-index_bytes-coalesce(toast_bytes,0) AS table_bytes FROM (
+      SELECT c.oid,nspname AS table_schema, relname AS table_name
+              , c.reltuples AS row_estimate
+              , pg_total_relation_size(c.oid) AS total_bytes
+              , pg_indexes_size(c.oid) AS index_bytes
+              , pg_total_relation_size(reltoastrelid) AS toast_bytes
+          FROM pg_class c
+          LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE relkind = 'r'
+  ) a
+) a;
+
 
 SELECT * FROM problem
 WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-03 00:00:00'))
@@ -260,6 +278,9 @@ SELECT nspname || '.' || relname AS "relation",
 
 -- autovacum settings
 select name, setting, source, short_desc from pg_settings where name like '%autova%';
+
+
+
 
 -- when the last time the table received a vacuum
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
