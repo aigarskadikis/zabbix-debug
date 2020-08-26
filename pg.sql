@@ -1,4 +1,40 @@
 
+--curent timestamp 
+SELECT EXTRACT(EPOCH FROM (NOW() - INTERVAL '5 MINUTES'));
+
+--seek for dublicate records
+SELECT COUNT(*),userid
+FROM users 
+GROUP BY userid 
+ORDER BY COUNT(*) ASC;
+
+SELECT COUNT(*),userid
+FROM users 
+GROUP BY userid 
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+--show active connections
+\o /tmp/active.connections.log
+SELECT * FROM pg_stat_activity;
+\o
+
+--Show how many users are having active sessions at the recent moment,sesitive
+SELECT COUNT(*),
+       users.userid,
+	   users.type,
+	   users.refresh,
+	   users.rows_per_page,
+	   users.autologout
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > EXTRACT(EPOCH FROM (NOW() - INTERVAL '5 MINUTES')))
+GROUP BY users.userid,users.type,users.refresh,users.rows_per_page,users.autologout
+ORDER BY COUNT(*) ASC; 
+
+
 \o /tmp/functions.log
 \df+
 \o
@@ -153,7 +189,7 @@ JOIN users ON (users.userid=auditlog.userid)
 
 
 
-SELECT EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 HOUR'));
+
 
 
 
@@ -836,6 +872,7 @@ pg_dump --host=pg --data-only --exclude-table
 
 --exclude-schema
 
+pg_dump --schema-only --exclude-table=history* --exclude-table=trends* z50 > schema.sql 
 
 
 pg_dump --host=pg --schema-only --exclude-table=history* --exclude-table=trends* --exclude-table=events z40 > out40.sql

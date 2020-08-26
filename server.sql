@@ -10,6 +10,16 @@ WHERE h1.hostid < h2.hostid AND h1.host = h2.host;
 SELECT host,COUNT(host) FROM hosts GROUP BY host HAVING  COUNT(host) > 1;
 
 
+--How to disable triggers:
+create table triggers_tmp (triggerid bigint(20), status int(11));
+insert into triggers_tmp (triggerid, status) select triggerid, status from triggers;
+update triggers set status = 1;
+
+--Enable back:
+UPDATE triggers t INNER JOIN triggers_tmp tt ON tt.triggerid=t.triggerid SET t.status = tt.status;
+
+
+
 We workaround the issue by moving all disable hosts from this proxy to another dummy proxy.
 
 --list all disabled hosts, proxy
@@ -273,6 +283,18 @@ ORDER BY COUNT(*) DESC;
 --type 9 performed by http poller
 --type 16 by java poller
 --type 18 dependent item - not an active check, neither a passive
+
+
+--determine if user is using LDAP
+SELECT users.userid,users.alias,usrgrp.gui_access
+FROM users
+JOIN users_groups ON (users_groups.userid=users.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid=users_groups.usrgrpid)
+WHERE LOWER(users.alias)=LOWER('admin')
+;
+WHERE usrgrp.usrgrpid=0;
+
+
 
 
 --list all permissions for the user type "User" or "Zabbix Admin". This sample is suitable when a customer does not to expose the titles:
@@ -1589,11 +1611,14 @@ SELECT task.clock,
            WHEN task_remote_command.command_type=3 THEN 'telnet'
            WHEN task_remote_command.command_type=4 THEN 'global script'
        END AS command_type,
-       task_remote_command.command
+       task_remote_command.command,
+	   task.ttl
 FROM task
 JOIN task_remote_command ON (task.taskid=task_remote_command.taskid)
 JOIN hosts ON (hosts.hostid=task_remote_command.hostid)
 JOIN hosts pr ON (pr.hostid=task.proxy_hostid)
+ORDER BY task.clock ASC;
+;
 WHERE task.type=2
 AND clock>(UNIX_TIMESTAMP("2020-02-01 00:00:00"))
 AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
