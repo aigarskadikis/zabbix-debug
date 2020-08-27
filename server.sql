@@ -1,5 +1,11 @@
 
 
+
+--new records in the actions and escalations tables?
+select count(*),actionid,status from escalations group by actionid,status order by count(*);
+select count(*),actionid,status from actions group by actionid,status order by count(*);
+
+
 --delete hosts with dublicate names
 DELETE h1 FROM hosts h1
 INNER JOIN hosts h2 
@@ -353,7 +359,12 @@ ORDER BY COUNT(*) ASC
 
 
 -- delete internal events
-delete from events where source in (1,2,3) limit 1000000; 
+delete from events where source in (1,2,3) limit 1000000;
+delete from events where source in (1,2,3) limit 100000;
+delete from events where source in (1,2,3) limit 10000;
+delete from events where source in (1,2,3) limit 100000;
+delete from events where source in (1,2,3) limit 1000000;
+delete from events where source in (1,2,3) limit 10000000;
 
 
 -- produce incorrect info on host prototypes!
@@ -2411,6 +2422,8 @@ WHERE (sessions.status=0)
   AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()- INTERVAL 1 HOUR))
 GROUP BY users.alias;
 
+
+
 /* */
 SELECT u.alias,
        s.sessionid
@@ -2418,6 +2431,27 @@ FROM users u
 INNER JOIN sessions s ON (u.userid = s.userid)
 WHERE (s.status=0)
   AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300);
+  
+  
+  SELECT users.alias,
+       sessions.sessionid
+FROM users 
+INNER JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)\G
+
+
+SELECT users.alias,
+       SUBSTRING(sessions.sessionid,17,16) as "sid in access.log"
+FROM users 
+INNER JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)\G
+
+--# cd /var/log/httpd
+--# cd /var/log/nginx
+--# cd /var/opt/rh/rh-nginx116/log/nginx
+-- cat access.log | grep b69cea5a0889f3cb | grep -Eo "dashboardid=[0-9]+"
 
 /* ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 's INNER JOIN users u ON (u.userid = s.userid) where (u.alias='guest')' at line 1 */
 
