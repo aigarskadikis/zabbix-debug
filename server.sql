@@ -2447,6 +2447,16 @@ FROM users
 INNER JOIN sessions ON (users.userid = sessions.userid)
 WHERE (sessions.status=0)
   AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)\G
+  
+--postgres
+SELECT users.alias,
+       SUBSTRING(sessions.sessionid,17,16) as "sid in access.log"
+FROM users 
+INNER JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > EXTRACT(EPOCH FROM (NOW() - INTERVAL '5 MINUTES')));
+  
+
 
 --# cd /var/log/httpd
 --# cd /var/log/nginx
