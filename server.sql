@@ -1,7 +1,9 @@
 
+--MySQL engine 5.6 and even 5.7 are not so good as MySQL 8.0/Percona 8.0, also InnoDB cluster from MySQL CE 8.0 has good performance and reliability (InnoDB cluster with MySQL router).
+--Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
+--Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
-
---new records in the actions and escalations tables?
+--new records in the actions and escalations tables
 select count(*),actionid,status from escalations group by actionid,status order by count(*);
 select count(*),actionid,status from actions group by actionid,status order by count(*);
 
