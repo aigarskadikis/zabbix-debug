@@ -8,6 +8,49 @@ select count(*),actionid,status from escalations group by actionid,status order 
 select count(*),actionid,status from actions group by actionid,status order by count(*);
 
 
+/* items having problems receiving data. Super useful select to summarize and fix issues for data gathering. works on 4.0, 4.4 */
+--At the end of the list, it will show the most spamming items and the responsible host
+SELECT hosts.host,
+       events.objectid AS itemid,
+       items.key_,
+       events.name AS error,
+       COUNT(events.objectid) AS occurrence
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source = 3
+  AND events.object = 4
+  AND LENGTH(events.name)>0
+  AND events.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 28 DAY)
+GROUP BY hosts.host,events.objectid,items.key_,events.name
+ORDER BY COUNT(*) DESC
+LIMIT 10
+\G 
+
+
+/* show trigger evaluation problems - internal events. best query ever! golden query */
+SELECT DISTINCT hosts.name,
+                COUNT(hosts.name),
+                items.key_,
+                triggers.error
+FROM events
+JOIN triggers ON (events.objectid=triggers.triggerid)
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE events.source=3
+  AND events.object=0
+  AND triggers.flags IN (0,4)
+  AND triggers.state=1
+GROUP BY hosts.name,items.key_,triggers.error
+ORDER BY COUNT(hosts.name),
+         hosts.name,
+         items.key_,
+         triggers.error
+\G
+
+
+
 --how many events are generated lately
 SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-21 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-22 00:00:00") GROUP BY source;
 SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-22 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-23 00:00:00") GROUP BY source;
@@ -2536,25 +2579,7 @@ where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 20;
 
 /* problems receiving information */
 
-/* show trigger evaluation problems - internal events. best query ever! */
-SELECT DISTINCT hosts.name,
-                COUNT(hosts.name),
-                items.key_,
-                triggers.error
-FROM events
-JOIN triggers ON (events.objectid=triggers.triggerid)
-JOIN functions ON (functions.triggerid = triggers.triggerid)
-JOIN items ON (items.itemid = functions.itemid)
-JOIN hosts ON (items.hostid = hosts.hostid)
-WHERE events.source=3
-  AND events.object=0
-  AND triggers.flags IN (0,4)
-  AND triggers.state=1
-GROUP BY hosts.name,items.key_,triggers.error
-ORDER BY COUNT(hosts.name),
-         hosts.name,
-         items.key_,
-         triggers.error\G
+
 		 
 		 
 
@@ -2643,23 +2668,7 @@ select COUNT(*) from events where source=0 and objectid not in (select triggerid
 select objectid,name from events where source=0 and objectid not in (select triggerid from triggers) order by clock\G
 
 
-/* items having problems receiving data. Super useful select to summarize and fix issues for data gathering. works on 4.0, 4.4 */
-SELECT hosts.host,
-       events.objectid AS itemid,
-       items.key_,
-       events.name AS error,
-       COUNT(events.objectid) AS occurrence
-FROM EVENTS
-JOIN items ON (items.itemid=events.objectid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE events.source = 3
-  AND events.object = 4
-  AND LENGTH(events.name)>0
-GROUP BY hosts.host,
-         events.objectid,
-		 items.key_,
-         events.name
-ORDER BY COUNT(*)\x\g\x
+\x\g\x
 
 
 
