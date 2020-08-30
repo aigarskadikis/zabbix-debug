@@ -8,6 +8,20 @@ select count(*),actionid,status from escalations group by actionid,status order 
 select count(*),actionid,status from actions group by actionid,status order by count(*);
 
 
+--how many events are generated lately
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-21 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-22 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-22 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-23 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-23 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-24 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-24 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-25 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-25 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-26 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-26 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-27 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-27 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-28 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-28 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-29 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-29 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-30 00:00:00") GROUP BY source;
+SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-30 00:00:00") AND clock < UNIX_TIMESTAMP("2020-08-31 00:00:00") GROUP BY source;
+
+
+
 --delete hosts with dublicate names
 DELETE h1 FROM hosts h1
 INNER JOIN hosts h2 
