@@ -34,6 +34,17 @@ AND proxy.host='broceni';
 " | mysql -N zabbix | sort | uniq
 
 
+jq '.data[].itemid' /tmp/queue.json | xargs -i echo "
+SELECT hosts.host, items.type
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid='{}'
+AND proxy.host='broceni';
+" | mysql -N zabbix | sort | uniq
+
+
+
 
 zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999999"}'
 
