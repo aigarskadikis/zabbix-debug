@@ -3,6 +3,78 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+
+
+--list all disabled hosts, proxy
+SELECT GROUP_CONCAT(hosts.hostid)
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.status = 1
+and p.host='proxy.name';
+
+
+--grab session key from any "Zabbix Super Admin"
+
+SELECT sessionid
+FROM sessions
+WHERE userid IN (
+SELECT userid FROM users WHERE type=3
+)
+AND status=0
+LIMIT 1;
+
+grep -oP 'itemid\":\K\d+' /tmp/queue.json | xargs -i echo "
+SELECT hosts.host, items.type
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid='{}'
+AND proxy.host='broceni';
+" | mysql -N zabbix | sort | uniq
+
+
+
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999999"}'
+
+select alias from users where type=3
+
+
+
+
+SELECT hosts.host,items.key_,LENGTH(history_text.value)
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
+AND LENGTH(history_text.value)>6000;
+
+SELECT hosts.host,items.key_,LENGTH(history_log.value)
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
+AND LENGTH(history_log.value)>500;
+
+
+--postgrese
+select itemid,count(*) from history_log where clock >= extract(epoch from now() - interval '10 hour') group by itemid order by count DESC LIMIT 10;
+
+
+
+SELECT @@hostname,
+@@version,
+@@datadir,
+@@innodb_file_per_table,
+@@innodb_buffer_pool_size,
+@@innodb_buffer_pool_instances,
+@@innodb_flush_method,
+@@innodb_log_file_size,
+@@max_connections,
+@@innodb_flush_log_at_trx_commit,
+@@optimizer_switch\G
+
+
 --new records in the actions and escalations tables
 select count(*),actionid,status from escalations group by actionid,status order by count(*);
 select count(*),actionid,status from actions group by actionid,status order by count(*);
@@ -85,15 +157,9 @@ UPDATE triggers t INNER JOIN triggers_tmp tt ON tt.triggerid=t.triggerid SET t.s
 
 
 
-We workaround the issue by moving all disable hosts from this proxy to another dummy proxy.
+-- We workaround the issue by moving all disable hosts from this proxy to another dummy proxy.
 
---list all disabled hosts, proxy
-SELECT GROUP_CONCAT(hosts.hostid)
-FROM hosts
-JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
-JOIN interface ON (interface.hostid=hosts.hostid)
-WHERE hosts.status = 1
-and p.host='proxy.name'; 
+
 
 --move hosts to different proxy
 UPDATE hosts SET proxy_hostid=1234 WHERE hostid IN (
@@ -218,11 +284,6 @@ JOIN triggers ON (triggers.triggerid=events.objectid)
 GROUP BY 2,3,4
 ORDER BY 2
 ;
-
-
-
-
-
 
 
 
@@ -500,6 +561,8 @@ LIMIT 10
 select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 select max(LENGTH (value)), avg(LENGTH (value)) from history_log where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 select max(LENGTH (value)), avg(LENGTH (value)) from history_str where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);  
+
+
 
 
 
@@ -2713,6 +2776,11 @@ FLUSH PRIVILEGES;
 /* https://www.digitalocean.com/community/tutorials/how-to-change-a-mysql-data-directory-to-a-new-location-on-centos-7 */
 
 SELECT @@version,@@datadir\G
+
+SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
+
+
+SELECT @@version,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_flush_method,@@innodb_log_file_size,@@open_files_limit,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 
 SELECT @@version,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@open_files_limit,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
 

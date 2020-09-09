@@ -10,8 +10,10 @@ AND items.delay='1h';
 
 
 -- This will show which hosts and items which are receiving big metrics:
-SELECT hosts.host,
-       items.key_
+SELECT clock,
+hosts.host,
+items.key_,
+LENGTH(value)
 FROM proxy_history
 JOIN items ON (items.itemid = proxy_history.itemid)
 JOIN hosts ON (hosts.hostid = items.hostid)
