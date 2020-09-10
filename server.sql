@@ -3,7 +3,21 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
-
+--show dublicate agent interfaces behind proxy. This will not show agents connected directly to master server
+SELECT 
+proxy.host,
+hosts.host,
+GROUP_CONCAT(interface.interfaceid) as 'interfaces'
+FROM interface
+JOIN hosts ON (hosts.hostid=interface.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE interface.type=1
+GROUP BY proxy.host,hosts.host
+HAVING COUNT(interface.interfaceid)>1
+;
+  
+  
+  
 
 --list all disabled hosts, proxy
 SELECT GROUP_CONCAT(hosts.hostid)
@@ -1676,16 +1690,7 @@ mysql zabbix -B -N -e 'select value from history_str where itemid in (select ite
 
 
 
-/* how many hosts are having an agent interface with IP: 127.0.0.1 */
-SELECT hosts.host,
-       interface.useip,
-       interface.ip,
-       interface.dns,
-       interface.port
-FROM interface
-JOIN hosts ON (hosts.hostid=interface.hostid)
-WHERE interface.type=1
-  AND interface.ip='127.0.0.1';
+
 
 
 
