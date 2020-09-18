@@ -1,6 +1,33 @@
 
 
 
+# Disk performance:
+sar -dp -w 1 10 >> /tmp/disk.activity.txt
+
+# Usage of swap:
+for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done >> /tmp/swap.usage.txt
+
+# CPU info:
+cat /proc/cpuinfo >> /tmp/cpu.info.txt
+
+# Memory:
+cat /proc/meminfo >> /tmp/mem.info.txt
+
+# Process list:
+ps auxww >> /tmp/process.list.txt 
+
+
+# Inside the server where service 'zabbix-server' is running please take a few snapshots of process list. It will take 2 minutes to complete:
+for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 5; done 
+
+
+for i in `seq 1 20`; do echo $(date) >> /tmp/proxy.processes.txt && ps auxww >> /tmp/proxy.processes.txt && echo "=======" >> /tmp/proxy.processes.txt && sleep 5; done 
+
+for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 5; done 
+
+
+
+
 for i in `seq 1 10`; do echo $(date) >> /tmp/proc.txt && ps auxww >> /tmp/proc.txt && echo "=======" >> /tmp/proc.txt && sleep 1; done
 
 
@@ -11,6 +38,11 @@ for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print "
 ps aux|grep conf$
 
 # test memory leak '--suppressions=/root/minimal.supp'
+
+for i in `seq 1 20`; do echo $(date) >> /tmp/java.poller.txt && ps auxww|grep [j]ava.poller.# >> /tmp/java.poller.txt && echo "=======" >> /tmp/java.poller.txt && sleep 5; done
+
+cat /tmp/java.poller.txt
+
 
 
 echo "ewogICA8bXlzcWw+CiAgIE1lbWNoZWNrOkxlYWsKICAgbWF0Y2gtbGVhay1raW5kczogcG9zc2libGUKICAgLi4uCiAgIG9iajovdXNyLypsaWIqL215c3FsLyoKfQp7CiAgIDxjcnlwdG8+CiAgIE1lbWNoZWNrOkxlYWsKICAgbWF0Y2gtbGVhay1raW5kczogcG9zc2libGUKICAgLi4uCiAgIG9iajovdXNyLypsaWIqLypsaWJjcnlwdG8qCn0K" | base64 --decode > /tmp/ignore.mysql.libcrypto.supp

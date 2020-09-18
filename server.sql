@@ -3,6 +3,66 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+
+
+--list all enabled items per host on 4.0, 4.2:
+SELECT type,state,key_,error FROM items WHERE status=0 AND hostid=46505681\G
+
+CREATE USER "healthlist"@"10.133.253.43" IDENTIFIED BY "zabbix";
+ALTER USER "healthlist"@"10.133.253.43" IDENTIFIED WITH mysql_native_password BY "zabbix";
+
+
+GRANT SELECT, UPDATE, DELETE, INSERT, CREATE, DROP, ALTER, INDEX, REFERENCES ON zabbix.* TO "healthlist"@"10.133.253.43";
+GRANT ALL ON zabbix.* TO "healthlist"@"10.133.253.43";
+
+FLUSH PRIVILEGES;
+
+
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, REFERENCES, INDEX, ALTER, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EVENT, TRIGGER ON "zabbix".* TO "healthlist"@"10.133.253.43";
+
+
+JOIN hosts ON (hosts.hostid=items.hostid)
+
+
+
+--show agents who has dublicate interfaces
+SELECT hosts.host FROM interface
+JOIN hosts ON (hosts.hostid=interface.hostid)
+WHERE interface.type=1
+AND interface.main=0;
+
+--delete secondary agent interfaces
+DELETE FROM interface WHERE interface.type=1 AND interface.main=0;
+DELETE FROM interface WHERE interface.type=1 AND interface.main=0 LIMIT 1;
+
+
+--set all agent passive checks to use DNS instaed of IP. check the lenght before adjusting
+UPDATE interface SET useip=0 WHERE type=1 AND main=1 AND LENGTH(dns)>0;
+
+--set all agent passive checks to use IP instaed of DNS
+UPDATE interface SET useip=1 WHERE type=1 AND main=1;
+
+
+--show hosts where inventory field are disabled
+SELECT host FROM hosts
+WHERE hostid NOT IN (
+SELECT hostid FROM host_inventory
+)
+ORDER BY host ASC;
+
+--Hosts list where Inventory is "Manual" OR "Automatic":
+SELECT host FROM hosts
+WHERE hostid IN (
+SELECT hostid FROM host_inventory
+)
+ORDER BY host ASC;
+
+
+
+UPDATE interface ii,hosts h SET ii.useip=0 WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0 and h.host='bcm2711';
+
+
+
 --show dublicate agent interfaces behind proxy. This will not show agents connected directly to master server
 SELECT 
 proxy.host,
@@ -16,7 +76,25 @@ GROUP BY proxy.host,hosts.host
 HAVING COUNT(interface.interfaceid)>1
 ;
   
+
+SELECT 
+task_remote_command.hostid,
+task_remote_command.command_type,
+CASE task_remote_command.execute_on
+WHEN 0 THEN 'agent'
+WHEN 1 THEN 'server'
+WHEN 2 THEN 'proxy'
+END as execute_on,
+task_remote_command.hostid
+FROM task_remote_command
+JOIN task ON (task.taskid=task_remote_command.taskid)
+WHERE task.proxy_hostid=10275
+ORDER BY task.clock ASC
+LIMIT 30;
   
+  
+  
+ 
   
 
 --list all disabled hosts, proxy
@@ -2754,7 +2832,6 @@ select objectid,name from events where source=0 and objectid not in (select trig
 
 select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0;
 
-UPDATE interface ii,hosts h SET ii.useip=0 WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0 and h.host='bcm2711';
 
 /* see unsent alerts */
 select COUNT(*),CASE alerts.status
