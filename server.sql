@@ -14,7 +14,7 @@ ALTER USER "healthlist"@"10.133.253.43" IDENTIFIED WITH mysql_native_password BY
 
 GRANT SELECT, UPDATE, DELETE, INSERT, CREATE, DROP, ALTER, INDEX, REFERENCES ON zabbix.* TO "healthlist"@"10.133.253.43";
 GRANT ALL ON zabbix.* TO "healthlist"@"10.133.253.43";
-
+show grants for "healthlist"@"10.133.253.43";
 FLUSH PRIVILEGES;
 
 
