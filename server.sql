@@ -5,6 +5,46 @@
 
 
 
+--list the enabled hosts in Zabbix and which templates are attached to them
+SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
+    LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
+    LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
+WHERE h.status=0 and h.flags in (0,4);
+
+
+--show triggers per host and show which template is delivering this trigger
+SELECT DISTINCT triggers.description, h.host, htempl.host AS template FROM triggers
+LEFT JOIN functions ON functions.triggerid=triggers.triggerid
+LEFT JOIN items ON items.itemid=functions.itemid
+LEFT JOIN hosts h ON h.hostid=items.hostid
+LEFT JOIN hosts_templates ht ON ht.hostid=h.hostid
+LEFT JOIN hosts htempl ON htempl.hostid=ht.templateid
+WHERE h.status=0 AND h.flags IN (0,4)
+AND triggers.flags<>2
+AND h.hostid=12025
+\G
+
+
+
+SELECT COUNT(*),items.delay,functions.name
+FROM functions
+JOIN items ON (items.itemid=functions.itemid)
+WHERE functions.name IN ('avg','max','min','nodata')
+AND parameter NOT like '#%'
+GROUP BY items.delay,functions.name
+ORDER BY COUNT(*) DESC,items.delay
+LIMIT 20;
+
+
+
+--possibilities to grow
+select COUNT(*),name,parameter
+FROM functions
+GROUP BY name,parameter
+ORDER BY COUNT(*) DESC
+LIMIT 20;
+
+
 --list all enabled items per host on 4.0, 4.2:
 SELECT type,state,key_,error FROM items WHERE status=0 AND hostid=46505681\G
 

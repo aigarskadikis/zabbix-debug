@@ -1,5 +1,25 @@
 
 
+# does all you systems are supposed to be online 24/7. if yes we can replace 
+
+
+# process list
+ps auxww
+
+# proxy poller health
+
+
+# trapper health
+watch -n1 'ps aux|grep "[t]rapper #"'
+watch -n1 'ps -efww|grep -E -o "[t]rapper #.*"'
+
+
+# count of history syncers
+watch -n1 'ps aux|grep "[h]istory syncer #"'
+
+
+# can improve installce 
+
 
 # Disk performance:
 sar -dp -w 1 10 >> /tmp/disk.activity.txt
