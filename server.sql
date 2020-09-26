@@ -4,6 +4,50 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--mysql console
+SHOW ENGINE INNODB STATUS;
+SHOW VARIABLES\G;
+SELECT  SUM(ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 /1024 ), 2))  AS "SIZE IN GB" FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = "zabbix";
+
+
+
+--widget refresh rate configured inside widget
+SELECT
+dashboard.dashboardid,
+widget.type,
+users.alias,
+widget_field.value_int
+FROM widget_field
+JOIN widget ON (widget.widgetid=widget_field.widgetid)
+JOIN dashboard ON (dashboard.dashboardid=widget.dashboardid)
+JOIN users ON (users.userid=dashboard.userid)
+WHERE widget_field.type=0
+AND widget_field.name='rf_rate'
+;
+
+--list templates and item update intervals
+SELECT template.host,
+items.name,
+items.delay
+FROM items 
+JOIN hosts template ON (template.hostid=items.hostid)
+WHERE template.status=3
+AND items.type IN (0,7)
+\G
+
+
+
+
+
+--dashboard widget refresh
+select * from profiles where idx='web.dashbrd.widget.rf_rate';
+
+--dashboard widget refresh set to 15m
+update profiles set value_int=900 where idx='web.dashbrd.widget.rf_rate';
+--disable automatic refresh
+update profiles set value_int=0 where idx='web.dashbrd.widget.rf_rate';
+
+
 
 --list the enabled hosts in Zabbix and which templates are attached to them
 SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
@@ -25,15 +69,14 @@ AND h.hostid=12025
 \G
 
 
-
-SELECT COUNT(*),items.delay,functions.name
+--functions which consumes most power of history syncer 
+SELECT COUNT(*),items.delay,functions.name,functions.parameter
 FROM functions
 JOIN items ON (items.itemid=functions.itemid)
-WHERE functions.name IN ('avg','max','min','nodata')
-AND parameter NOT like '#%'
-GROUP BY items.delay,functions.name
-ORDER BY COUNT(*) DESC,items.delay
-LIMIT 20;
+WHERE functions.name IN ('avg','max','min','nodata','iregexp')
+GROUP BY functions.name,functions.parameter,items.delay
+ORDER BY COUNT(*) DESC, functions.parameter
+LIMIT 200;
 
 
 
@@ -156,6 +199,13 @@ SELECT userid FROM users WHERE type=3
 AND status=0
 LIMIT 1;
 
+
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999999"}'
+
 grep -oP 'itemid\":\K\d+' /tmp/queue.json | xargs -i echo "
 SELECT hosts.host, items.type
 FROM hosts 
@@ -204,7 +254,6 @@ AND LENGTH(history_log.value)>500;
 select itemid,count(*) from history_log where clock >= extract(epoch from now() - interval '10 hour') group by itemid order by count DESC LIMIT 10;
 
 
-
 SELECT @@hostname,
 @@version,
 @@datadir,
@@ -214,6 +263,7 @@ SELECT @@hostname,
 @@innodb_flush_method,
 @@innodb_log_file_size,
 @@max_connections,
+@@open_files_limit,
 @@innodb_flush_log_at_trx_commit,
 @@optimizer_switch\G
 

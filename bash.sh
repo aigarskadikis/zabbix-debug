@@ -1,6 +1,29 @@
 
 
+# logging for snmptrapd
+systemctl edit snmptrapd.service
+ExecStart=/usr/sbin/snmptrapd -Ln -f -Lf /var/log/snmptrapd.log
+
+
+
+
+# common info from DB server
+top -n1 -b >> /tmp/top.output
+sar -d -wp 1 10 >> /tmp/sar.output
+df -h >> /tmp/df.output
+cat /etc/*release
+cat /proc/cpuinfo
+free -h
+
+
+# mysql console
+
 # does all you systems are supposed to be online 24/7. if yes we can replace 
+
+# on centos/red hat
+sudo rpm -qa | grep zabbix
+# ubuntu/debian
+sudo apt list --installed | grep zabbix
 
 
 # process list
@@ -8,10 +31,35 @@ ps auxww
 
 # proxy poller health
 
+sudo tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
+sudo tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2 
+
+
+tar -zcvf /tmp/mysql.5.7.23.conf.tar.gz /etc/my.cnf /etc/mysql
+tar -zcvf /tmp/etc.tar.gz /etc
+
+tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
+tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2
+
+
+# schedule 'innotop utility' to list queries
+echo "* * * * * root date >> /tmp/innotop.txt && innotop -h'127.0.0.1' -P'3306' -u'zabbix' -p'zabbix' --count 1 -d 1 -n --mode Q >> /tmp/innotop.txt && echo ====== >> /tmp/innotop.txt" | sudo tee /etc/cron.d/transactions_onboard
+
+
+echo "* * * * * root date >> /tmp/innotop.txt && innotop -h'ros' -P'3306' -u'zabbix' -p'zabbix' --count 1 -d 1 -n --mode Q >> /tmp/innotop.txt && echo ====== >> /tmp/innotop.txt && sleep 29 && date >> /tmp/innotop.txt && innotop -h'ros' -P'3306' -u'zabbix' -p'zabbix' --count 1 -d 1 -n --mode Q >> /tmp/innotop.txt && echo ====== >> /tmp/innotop.txt" | sudo tee /etc/cron.d/transactions_onboard 
+
+
+watch -n.1 "innotop -h'ros' -P'3306' -u'root' -p'zabbix' --count 1 -d 1 -n --mode Q"
+
 
 # trapper health
 watch -n1 'ps aux|grep "[t]rapper #"'
+
+# trappers
 watch -n1 'ps -efww|grep -E -o "[t]rapper #.*"'
+
+# show proxy pollers
+watch -n1 'ps -efww|grep -E -o "[p]roxy poller #.*"'
 
 
 # count of history syncers
