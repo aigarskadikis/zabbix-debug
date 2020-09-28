@@ -4,6 +4,21 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+
+-- delete internal events
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 100;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 1000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 10000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 100000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 1000000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 10000000;
+
+--backup schema
+mysqldump --flush-logs --single-transaction --create-options --no-data zabbix > schema.sql
+
+
+
+
 --mysql console
 SHOW ENGINE INNODB STATUS;
 SHOW VARIABLES\G;
@@ -671,13 +686,7 @@ ORDER BY COUNT(*) ASC
 \G
 
 
--- delete internal events
-delete from events where source in (1,2,3) limit 1000000;
-delete from events where source in (1,2,3) limit 100000;
-delete from events where source in (1,2,3) limit 10000;
-delete from events where source in (1,2,3) limit 100000;
-delete from events where source in (1,2,3) limit 1000000;
-delete from events where source in (1,2,3) limit 10000000;
+
 
 
 -- produce incorrect info on host prototypes!
@@ -3936,4 +3945,54 @@ DROP PROCEDURE partition_verify; SHOW PROCEDURE STATUS; */
 show databases; 
 select host,db,user from mysql.db;
 SELECT Host,User FROM mysql.user where User="zabbix";
- 
+
+
+Make a backup of existing environment
+
+Stop master console
+
+systemctl stop zabbix-server 
+Make sure no process is running:
+
+ps auxww | grep "[z]abbix_server" 
+On database server
+
+Remove unnecessary internal records from the database:
+
+SET SESSION SQL_LOG_BIN=0;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 100;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 1000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 10000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 100000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 1000000;
+DELETE FROM events WHERE source IN (1,2,3) LIMIT 10000000;
+Backup 3.4 schema
+
+mysqldump --flush-logs --single-transaction --create-options --no-data zabbix | gzip --fast > schema.sql.gz
+Create a backup of everything except raw data:
+
+mysqldump \
+--set-gtid-purged=OFF \
+--flush-logs \
+--single-transaction \
+--no-create-info \
+--ignore-table=zabbix.history \
+--ignore-table=zabbix.history_log \
+--ignore-table=zabbix.history_str \
+--ignore-table=zabbix.history_text \
+--ignore-table=zabbix.history_uint \
+--ignore-table=zabbix.trends \
+--ignore-table=zabbix.trends_uint \
+zabbix | gzip --fast > data.sql.sql
+Backup historical tables individually:
+
+mysqldump --flush-logs --single-transaction --no-create-info zabbix history_uint | sed "s|history_uint|history_uint_old|" | gzip --fast > history_uint_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix history_str | sed "s|history_str|history_str_old|" | gzip --fast > history_str_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix history_log | sed "s|history_log|history_log_old|" | gzip --fast > history_log_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix history | sed "s|history|history_old|" | gzip --fast > history_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix history_text | sed "s|history_text|history_text_old|" | gzip --fast > history_text_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix trends_uint | sed "s|trends_uint|trends_uint_old|" | gzip --fast > trends_uint_old.gz.sql
+mysqldump --flush-logs --single-transaction --no-create-info zabbix trends | sed "s|trends|trends_old|" | gzip --fast > trends_old.gz.sql
+P.S. it may take multiple hours, possibly a night to backup everything. Better create a batch and leave overnight.
+
+
