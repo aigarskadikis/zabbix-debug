@@ -1,33 +1,32 @@
 
 
+--host groups, hosts, items, interfaces
 SELECT
-ARRAY_TO_STRING(array_agg(DISTINCT applications.applicationid), ',') AS "applications",
 ARRAY_TO_STRING(array_agg(DISTINCT hosts_groups.hostgroupid), ',') AS "host groups",
+ARRAY_TO_STRING(array_agg(DISTINCT applications.applicationid), ',') AS "applications",
+interface.type,
 hosts.hostid,
-items.itemid,
-hosts.available,
-hosts.host
+items.itemid
 FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-JOIN items_applications ON (items_applications.itemid=items.itemid)
-JOIN applications ON (applications.applicationid=items_applications.applicationid)
-JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+LEFT JOIN hosts ON (hosts.hostid=items.hostid)
+RIGHT JOIN interface ON (hosts.hostid=interface.hostid)
+LEFT JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+RIGHT JOIN items_applications ON (items.itemid=items_applications.itemid)
+RIGHT JOIN applications ON (items_applications.applicationid=applications.applicationid)
 WHERE hosts.status IN (0,1)
-AND hosts.hostid=10293
-GROUP BY 3,4,5,6
-\gx
+AND hosts.hostid=10084
+GROUP BY
+hosts.hostid,
+interface.type,
+items.itemid
+;
 
+
+\gx
 
 
 /* simplest group_concat example PostgreSQL */
 SELECT DISTINCT hostid,array_to_string(array_agg(itemid), ',') FROM items GROUP BY hostid;
-
-
-
-
-
-
-
 
 
 --curent timestamp 
