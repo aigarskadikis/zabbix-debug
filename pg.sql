@@ -4,7 +4,13 @@
 SELECT
 ARRAY_TO_STRING(array_agg(DISTINCT hosts_groups.hostgroupid), ',') AS "host groups",
 ARRAY_TO_STRING(array_agg(DISTINCT applications.applicationid), ',') AS "applications",
-interface.type,
+CASE
+WHEN interface.type=0 THEN 'UNKNOWN'
+WHEN interface.type=1 THEN 'AGENT'
+WHEN interface.type=2 THEN 'SNMP'
+WHEN interface.type=3 THEN 'IPMI'
+WHEN interface.type=4 THEN 'JMX'
+END AS type,
 hosts.hostid,
 items.itemid
 FROM items
