@@ -2,33 +2,43 @@
 
 --host groups, hosts, items, interfaces
 SELECT
-ARRAY_TO_STRING(array_agg(DISTINCT hosts_groups.hostgroupid), ',') AS "host groups",
-ARRAY_TO_STRING(array_agg(DISTINCT applications.applicationid), ',') AS "applications",
+hosts.host,
+interface.dns,
 CASE
-WHEN interface.type=0 THEN 'UNKNOWN'
-WHEN interface.type=1 THEN 'AGENT'
+WHEN interface.type=0 THEN 'Unknown'
+WHEN interface.type=1 THEN 'Agent'
 WHEN interface.type=2 THEN 'SNMP'
 WHEN interface.type=3 THEN 'IPMI'
 WHEN interface.type=4 THEN 'JMX'
 END AS type,
-hosts.hostid,
-items.itemid
+CASE
+WHEN hosts.available=0 THEN 'Unknown'
+WHEN hosts.available=1 THEN 'Available'
+WHEN hosts.available=2 THEN 'Not available'
+END AS available,
+ARRAY_TO_STRING(array_agg(DISTINCT hstgrp.name), ', ') AS "host groups",
+host_inventory.os_full,host_inventory.os_short,host_inventory.contact,
+hosts.error,
+ARRAY_TO_STRING(array_agg(DISTINCT applications.name), ', ') AS "applications",
+items.name,items.error
 FROM items
 LEFT JOIN hosts ON (hosts.hostid=items.hostid)
 RIGHT JOIN interface ON (hosts.hostid=interface.hostid)
 LEFT JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
 RIGHT JOIN items_applications ON (items.itemid=items_applications.itemid)
 RIGHT JOIN applications ON (items_applications.applicationid=applications.applicationid)
+LEFT JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid)
+LEFT JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
 WHERE hosts.status IN (0,1)
 AND hosts.hostid=10084
 GROUP BY
-hosts.hostid,
-interface.type,
-items.itemid
-;
-
-
+hosts.host,hosts.available,hosts.error,
+interface.dns,interface.type,
+items.name,items.error,
+host_inventory.os_full,host_inventory.os_short,host_inventory.contact
+LIMIT 1
 \gx
+
 
 
 /* simplest group_concat example PostgreSQL */
