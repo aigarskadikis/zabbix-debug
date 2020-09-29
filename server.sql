@@ -5,6 +5,79 @@
 
 
 
+
+
+--hosts, host groups, items, item applications
+SELECT
+GROUP_CONCAT(DISTINCT applications.applicationid),
+GROUP_CONCAT(hosts_groups.hostgroupid),
+hosts.hostid,
+items.itemid,
+hosts.available,
+interface.type,
+interface.dns,
+hosts.host,
+hosts.error,
+item_rtdata.error
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items_applications ON (items_applications.itemid=items.itemid)
+JOIN applications ON (applications.applicationid=items_applications.applicationid)
+JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE hosts.status IN (0,1)
+AND hosts.hostid=12589
+GROUP BY 3,4,5,6,7,8,9,10
+\G
+
+
+
+
+--list items per host by listing first application. show all applications
+SELECT
+GROUP_CONCAT(applications.name),
+items.name,
+host_inventory.os_full,
+host_inventory.os_short,
+host_inventory.contact
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items_applications ON (items_applications.itemid=items.itemid)
+JOIN applications ON (applications.applicationid=items_applications.applicationid)
+JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+WHERE hosts.status IN (0,1)
+AND hosts.hostid=12589
+GROUP BY 2,3,4,5
+\G
+
+
+--list items per host by listing first application
+SELECT
+items.name,
+applications.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items_applications ON (items_applications.itemid=items.itemid)
+JOIN applications ON (applications.applicationid=items_applications.applicationid)
+WHERE hosts.status IN (0,1)
+AND hosts.hostid=12589
+\G
+
+
+
+
+--show all host groups per each hosts (active,disabled), framework
+SELECT hosts.hostid,
+GROUP_CONCAT(hosts_groups.hostgroupid)
+FROM hosts
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+WHERE status IN (0,1)
+GROUP BY hosts.hostid
+;
+
 -- delete internal events
 DELETE FROM events WHERE source IN (1,2,3) LIMIT 100;
 DELETE FROM events WHERE source IN (1,2,3) LIMIT 1000;
@@ -3859,8 +3932,6 @@ group by a.hostid
 
 /* simplest group_concat example MySQL */
 SELECT DISTINCT hostid,GROUP_CONCAT(itemid) FROM items GROUP BY hostid;
-/* simplest group_concat example PostgreSQL */
-SELECT DISTINCT hostid,array_to_string(array_agg(itemid), ',') FROM items GROUP BY hostid;
 
 
 

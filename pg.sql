@@ -1,4 +1,35 @@
 
+
+SELECT
+ARRAY_TO_STRING(array_agg(DISTINCT applications.applicationid), ',') AS "applications",
+ARRAY_TO_STRING(array_agg(DISTINCT hosts_groups.hostgroupid), ',') AS "host groups",
+hosts.hostid,
+items.itemid,
+hosts.available,
+hosts.host
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items_applications ON (items_applications.itemid=items.itemid)
+JOIN applications ON (applications.applicationid=items_applications.applicationid)
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+WHERE hosts.status IN (0,1)
+AND hosts.hostid=10293
+GROUP BY 3,4,5,6
+\gx
+
+
+
+/* simplest group_concat example PostgreSQL */
+SELECT DISTINCT hostid,array_to_string(array_agg(itemid), ',') FROM items GROUP BY hostid;
+
+
+
+
+
+
+
+
+
 --curent timestamp 
 SELECT EXTRACT(EPOCH FROM (NOW() - INTERVAL '5 MINUTES'));
 
