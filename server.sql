@@ -35,6 +35,90 @@ GROUP BY 3,4,5,6,7,8,9,10
 
 
 
+--from one partition
+SELECT ho.hostid, ho.name, count(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+sum(length(history.value))/1024/1024 + sum(length(history.clock))/1024/1024 + sum(length(history.ns))/1024/1024 + sum(length(history.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history PARTITION (p202009290000)
+LEFT OUTER JOIN items i on history.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+
+
+--Total size average (Mb) which multiplies the average row size by the number of records for host, thus the average
+--<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes, extra storage needed)
+SELECT ho.hostid, ho.name, count(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history PARTITION (p202009290000) h
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history h 
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+
+
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history_uint h 
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history_text h 
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_str' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history_str h 
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_log' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+FROM history_log h 
+LEFT OUTER JOIN items i on h.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends Size (Mb)'
+FROM trends t 
+LEFT OUTER JOIN items i on t.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends_uint Size (Mb)' 
+FROM trends_uint t 
+LEFT OUTER JOIN items i on t.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid;
+
+
+
+--<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes, extra storage needed)
+
+
 --list items per host by listing first application. show all applications
 SELECT
 GROUP_CONCAT(applications.name),

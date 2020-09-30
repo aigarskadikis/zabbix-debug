@@ -30,12 +30,14 @@ RIGHT JOIN applications ON (items_applications.applicationid=applications.applic
 LEFT JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid)
 LEFT JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
 WHERE hosts.status IN (0,1)
-AND hosts.hostid=10084
 GROUP BY
 hosts.host,hosts.available,hosts.error,
 interface.dns,interface.type,
 items.name,items.error,
 host_inventory.os_full,host_inventory.os_short,host_inventory.contact
+;
+
+
 LIMIT 1
 \gx
 
