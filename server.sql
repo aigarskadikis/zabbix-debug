@@ -35,7 +35,7 @@ GROUP BY 3,4,5,6,7,8,9,10
 
 
 
---from one partition
+--show most consuming items per data storage float (table history)
 SELECT ho.hostid, ho.name, count(*) AS records, 
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
@@ -44,7 +44,21 @@ FROM history PARTITION (p202009290000)
 LEFT OUTER JOIN items i on history.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
-GROUP BY ho.hostid;
+GROUP BY ho.hostid
+ORDER BY 4 ASC;
+
+
+--biggest integers
+SELECT ho.hostid, ho.name, count(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+sum(length(history_uint.value))/1024/1024 + sum(length(history_uint.clock))/1024/1024 + sum(length(history_uint.ns))/1024/1024 + sum(length(history_uint.itemid))/1024/1024 AS 'history_uint Column Size (Mb)'
+FROM history_uint PARTITION (p202009290000)
+LEFT OUTER JOIN items i on history_uint.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid
+ORDER BY 4 ASC;
 
 
 
