@@ -4,6 +4,10 @@
 systemctl edit snmptrapd.service
 ExecStart=/usr/sbin/snmptrapd -Ln -f -Lf /var/log/snmptrapd.log
 
+a=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeouto);b=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeout);echo "$a,$b" | grep "^0" > 2&>1; if [ $? -eq 0 ]; then echo "$a,$b" | grep -Eo "[0-9]+$" ; else echo no; fi
+
+
+a=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeouto);b=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeout);echo "$b,$a" | grep "^0" > 2&>1; if [ $? -eq 0 ]; then echo "$b,$a" | grep -Eo "[0-9]+$" ; else echo no; fi
 
 
 

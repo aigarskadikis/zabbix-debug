@@ -4,6 +4,30 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--show alerts by status in the last 7 days
+SELECT COUNT(*),
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status
+FROM alerts
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
+GROUP BY alerts.status;
+
+
+--actions which are responsible for initiating the delivery
+SELECT COUNT(*),
+actions.name
+FROM alerts 
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
+GROUP BY 2
+ORDER BY 1;
+
+
+
 
 
 
@@ -49,6 +73,7 @@ ORDER BY 4 ASC;
 
 
 --biggest integers
+SELECT ho.hostid, ho.name, count(*) AS records, 
 SELECT ho.hostid, ho.name, count(*) AS records, 
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
@@ -3103,15 +3128,7 @@ select objectid,name from events where source=0 and objectid not in (select trig
 select h.host from interface ii,hosts h WHERE h.hostid=ii.hostid AND ii.useip=1 AND LENGTH(ii.dns)>0;
 
 
-/* see unsent alerts */
-select COUNT(*),CASE alerts.status
-           WHEN 0 THEN 'NOT_SENT'
-           WHEN 1 THEN 'SENT'
-           WHEN 2 THEN 'FAILED'
-           WHEN 3 THEN 'NEW'
-       END AS status
-from alerts
-group by alerts.status;
+
 
 
 select COUNT(*),CASE alerts.status
