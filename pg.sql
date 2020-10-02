@@ -4,6 +4,72 @@
 SELECT name, setting, boot_val, reset_val, unit FROM pg_settings ORDER BY name;
 
 
+SELECT
+h.hostid,
+i.type,
+items.flags AS "flg",
+h.available AS "avail",
+g.groupid AS "group",
+a.name,
+items.itemid
+FROM items
+LEFT JOIN hosts h ON (h.hostid=items.hostid)
+RIGHT JOIN interface i ON (h.hostid=i.hostid)
+LEFT JOIN hosts_groups hg ON (hg.hostid=h.hostid)
+LEFT JOIN items_applications ia ON (items.itemid=ia.itemid)
+LEFT JOIN applications a ON (ia.applicationid=a.applicationid)
+LEFT JOIN hstgrp g ON (g.groupid=hg.groupid)
+WHERE h.status IN (0,1)
+AND h.hostid=10336
+;
+
+
+
+CASE
+WHEN items.flags=0 THEN 'normal'
+WHEN items.flags=1 THEN 'LLD rule'
+WHEN items.flags=2 THEN 'prototype'
+WHEN items.flags=4 THEN 'from LLD'
+END AS flags,
+
+
+
+SELECT
+h.host,
+i.dns,
+CASE
+WHEN i.type=0 THEN 'Unknown'
+WHEN i.type=1 THEN 'Agent'
+WHEN i.type=2 THEN 'SNMP'
+WHEN i.type=3 THEN 'IPMI'
+WHEN i.type=4 THEN 'JMX'
+END AS type,
+CASE
+WHEN h.available=0 THEN 'Unknown'
+WHEN h.available=1 THEN 'Available'
+WHEN h.available=2 THEN 'Not available'
+END AS available,
+ARRAY_TO_STRING(array_agg(DISTINCT g.name), ', ') AS "host groups",
+h.error,
+ARRAY_TO_STRING(array_agg(DISTINCT a.name), ', ') AS "applications",
+items.name,items.error
+FROM items
+LEFT JOIN hosts h ON (h.hostid=items.hostid)
+RIGHT JOIN interface i ON (h.hostid=i.hostid)
+LEFT JOIN hosts_groups hg ON (hg.hostid=h.hostid)
+RIGHT JOIN items_applications ia ON (items.itemid=ia.itemid)
+RIGHT JOIN applications a ON (ia.applicationid=a.applicationid)
+LEFT JOIN hstgrp g ON (g.groupid=hg.groupid)
+WHERE h.status IN (0,1)
+AND h.hostid=10336
+GROUP BY
+h.host,h.available,h.error,
+i.dns,i.type,
+items.name,items.error
+\gx
+
+
+
 
 --with functions, host groups, hosts, items, interfaces
 SELECT
@@ -30,8 +96,8 @@ FROM items
 LEFT JOIN hosts ON (hosts.hostid=items.hostid)
 RIGHT JOIN interface ON (hosts.hostid=interface.hostid)
 LEFT JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
-RIGHT JOIN items_applications ON (items.itemid=items_applications.itemid)
-RIGHT JOIN applications ON (items_applications.applicationid=applications.applicationid)
+LEFT JOIN items_applications ON (items.itemid=items_applications.itemid)
+LEFT JOIN applications ON (items_applications.applicationid=applications.applicationid)
 LEFT JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid)
 LEFT JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
 WHERE hosts.status IN (0,1)
@@ -43,6 +109,7 @@ interface.dns,interface.type,
 items.name,items.error,
 host_inventory.os_full,host_inventory.os_short,host_inventory.contact
 \gx
+
 
 
 --host groups, hosts, items, interfaces
