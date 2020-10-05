@@ -1,5 +1,38 @@
 
 
+
+
+
+
+
+
+# CPU utilization
+# Memory usage
+# Zabbix cache usage, % free
+# Zabbix data gathering process busy %
+# Zabbix internal process busy %
+# Zabbix server performance
+# Configuration and log files:
+
+# Zabbix server configuration file /etc/zabbix/zabbix_server.conf
+# Zabbix server log file /etc/zabbix/zabbix_server.log
+
+# Command outputs:
+zabbix_server -V
+ps aux | grep zabbix >> /tmp/ps.output
+top -n1 -b >> /tmp/top.output
+sar -d -wp 1 10 >> /tmp/sar.output
+df -h >> /tmp/df.output
+
+# Environment data:
+OS information (cat /etc/*release).
+CPU information (cat /proc/cpuinfo).
+RAM information (free -h).
+Storage information (Disk types - SSD, HDD, SAS) (RAID info).
+Housekeeper or partitioning used for removing old data. 
+
+
+
 # logging for snmptrapd
 systemctl edit snmptrapd.service
 ExecStart=/usr/sbin/snmptrapd -Ln -f -Lf /var/log/snmptrapd.log
