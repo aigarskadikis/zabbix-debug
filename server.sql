@@ -4,6 +4,12 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+
+--how many hosts are directly attached to master server
+SELECT COUNT(*) FROM hosts WHERE proxy_hostid is NULL AND status=0;
+SELECT host FROM hosts WHERE proxy_hostid is NULL AND status=0;
+
+
 --show alerts by status in the last 7 days
 SELECT COUNT(*),
 CASE alerts.status
@@ -25,6 +31,8 @@ JOIN actions ON (actions.actionid=alerts.actionid)
 WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 GROUP BY 2
 ORDER BY 1;
+
+
 
 
 
@@ -3886,13 +3894,20 @@ FROM hosts
 WHERE available=0
   AND proxy_hostid IN (SELECT hostid FROM hosts WHERE HOST='riga');
 
-/* show hosts behind proxies */
+/* show hosts behind proxy proxies */
 SELECT p.host AS proxy_name,
        hosts.host AS host_name
 FROM hosts
 JOIN hosts p ON hosts.proxy_hostid=p.hostid
 WHERE hosts.available = 0
 ORDER BY p.host;
+
+
+SELECT COUNT(*)
+FROM hosts
+WHERE proxy_hostid is NULL 
+AND status=0;
+
 
 
 SELECT p.host AS proxy_name,hosts.host AS host_name
