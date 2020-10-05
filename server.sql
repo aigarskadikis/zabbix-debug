@@ -5,6 +5,23 @@
 
 
 
+--show how many event records have been generated per each host 
+SELECT COUNT(DISTINCT events.eventid),hosts.host
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+GROUP BY hosts.host
+ORDER BY COUNT(DISTINCT events.eventid) ASC;
+
+
+--delete all events comming from specific trigger id. only execute if trigger is not in problem state
+DELETE FROM events WHERE events.source=0 AND events.object=0 AND events.objectid=726241;
+
+
 --how many hosts are directly attached to master server
 SELECT COUNT(*) FROM hosts WHERE proxy_hostid is NULL AND status=0;
 SELECT host FROM hosts WHERE proxy_hostid is NULL AND status=0;
@@ -505,14 +522,30 @@ JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE events.source = 3
   AND events.object = 4
   AND LENGTH(events.name)>0
-  AND events.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 28 DAY)
 GROUP BY hosts.host,events.objectid,items.key_,events.name
-ORDER BY COUNT(*) DESC
-LIMIT 10
+ORDER BY COUNT(*) ASC
 \G 
 
+--failing LLD
+SELECT hosts.host,
+       events.objectid AS itemid,
+       items.key_,
+       events.name AS error,
+       COUNT(events.objectid) AS occurrence
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source = 3
+  AND events.object = 5
+  AND LENGTH(events.name)>0
+GROUP BY hosts.host,events.objectid,items.key_,events.name
+ORDER BY COUNT(*) ASC
 
-/* show trigger evaluation problems - internal events. best query ever! golden query */
+
+
+
+--show trigger evaluation problems - internal events. best query ever! golden query
+--it will print result x3 if bultiple functions are used in one trigger expression
 SELECT DISTINCT hosts.name,
                 COUNT(hosts.name),
                 items.key_,
@@ -527,7 +560,7 @@ WHERE events.source=3
   AND triggers.flags IN (0,4)
   AND triggers.state=1
 GROUP BY hosts.name,items.key_,triggers.error
-ORDER BY COUNT(hosts.name),
+ORDER BY COUNT(hosts.name) ASC,
          hosts.name,
          items.key_,
          triggers.error
@@ -2249,8 +2282,11 @@ GROUP BY alerts.status,actions.name;
 
 
  
-/* mark unsent alerts as sent, remove the queue */
-update alerts set status = 1,message = 'Disabled by Admin' where status = 0;
+--mark unsent alerts as sent, remove the queue
+UPDATE alerts
+SET status=1,
+message = 'Disabled by Admin'
+WHERE status=0;
 
 
 /* system.cpu.num[] - this key will report integer (not float). timestamp will be store in history_uint */
@@ -3882,7 +3918,8 @@ select itemid,COUNT(*) from history group by itemid order by COUNT(*) DESC LIMIT
 select name from events where source=3 order by clock asc limit 20;
 
 
-select COUNT(*), source from events group by source;
+SELECT COUNT(*), source FROM events GROUP BY source;
+SELECT COUNT(*), object FROM events GROUP BY object;
 
 select name from events where source=3 and name like 'No Such Instance%' order by clock asc limit 1200;
 select COUNT(*),name from events where source=3 and name like 'No Such Instance%';
