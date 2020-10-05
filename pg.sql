@@ -26,7 +26,8 @@ host_inventory.os_full,host_inventory.os_short,host_inventory.contact,
 hosts.error,
 ARRAY_TO_STRING(array_agg(DISTINCT applications.name), ', ') AS "applications",
 items.name,items.error,
-functions.functionid
+functions.functionid,
+triggers.expression
 FROM items
 LEFT JOIN hosts ON (hosts.hostid=items.hostid)
 RIGHT JOIN interface ON (hosts.hostid=interface.hostid)
@@ -36,6 +37,7 @@ LEFT JOIN applications ON (items_applications.applicationid=applications.applica
 LEFT JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid)
 LEFT JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
 LEFT JOIN functions ON (functions.itemid=items.itemid)
+LEFT JOIN triggers ON (triggers.triggerid=functions.triggerid)
 WHERE hosts.status IN (0,1)
 AND items.flags IN (0,4)
 AND hosts.hostid=10336
@@ -44,9 +46,17 @@ hosts.host,hosts.available,hosts.error,
 interface.dns,interface.type,
 items.name,items.error,
 host_inventory.os_full,host_inventory.os_short,host_inventory.contact,
-functions.functionid
+functions.functionid,
+triggers.expression
 \gx
 
+
+--expand functions.functionid
+SELECT CONCAT ('{', hosts.host, ':', items.key_, '.', functions.name, '(', functions.parameter, ')')
+FROM functions
+LEFT JOIN items ON (items.itemid=functions.itemid)
+LEFT JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE functions.functionid=22328;
 
 
 
