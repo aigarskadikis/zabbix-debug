@@ -4,6 +4,42 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--why and when alert failed
+SELECT
+FROM_UNIXTIME(alerts.clock) AS 'time',
+actions.name,
+users.alias,
+alerts.error
+FROM alerts
+JOIN actions ON (actions.actionid=alerts.actionid)
+LEFT JOIN users ON (users.userid=alerts.userid)
+WHERE alerts.status=2
+AND alerts.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 DAY)
+ORDER BY alerts.clock ASC
+LIMIT 10\G
+--At least 3 steps are involved in the notification:
+----Escalator. This process cooks the message a validates if a destination (telephone number, email) is configured in user card;
+----Alert manager. It's a single process which passes the task to the individual worker;
+----Alerter. A process which actually executes the delivery. Can be multiple concurrent processes. Can be a bottleneck if the command cannot be executed successfully (timeout, permission, DNS, credential issue).
+
+
+SELECT 
+  FROM_UNIXTIME(alerts.clock) AS 'time',
+  actions.name,
+  users.alias,
+  alerts.error
+FROM alerts
+  JOIN actions ON (actions.actionid=alerts.actionid)
+  LEFT JOIN users ON (users.userid=alerts.userid)
+WHERE alerts.status=2
+AND alerts.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 DAY) 
+ORDER BY alerts.clock ASC
+LIMIT 10\G 
+
+
+--predict when the next check will happen
+SELECT FROM_UNIXTIME(MAX(clock)+3600) FROM history_uint WHERE itemid=248757;
+
 --info about template triggers
 SELECT COUNT(DISTINCT events.eventid),trigger_template.description, hosts.host FROM events
     JOIN triggers ON (triggers.triggerid=events.objectid)

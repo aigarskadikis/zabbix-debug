@@ -1,9 +1,19 @@
 
 
 
+# If the mibs are installed globally at '/usr/share/snmp/mibs' and you have enabled the translator at:
+cat /etc/snmp/snmp.conf
+# mibs :
+# mibdirs /usr/share/snmp/mibs
+# mibs +ALL
+# We can perform an snmpwalk:
+snmpwalk -v 2c -c public 192.168.88.1 . > /tmp/192.168.88.1.snmpwalk
+# remember to include . (dot) right after IP address to have full list!
 
 
 
+# poll config
+grep ^[^#] /etc/zabbix/zabbix_server.conf
 
 
 # CPU utilization
