@@ -4,6 +4,33 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--info about template triggers
+SELECT COUNT(DISTINCT events.eventid),trigger_template.description, hosts.host FROM events
+    JOIN triggers ON (triggers.triggerid=events.objectid)
+    JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
+    JOIN functions ON (functions.triggerid=trigger_template.triggerid)
+    JOIN items ON (items.itemid=functions.itemid)
+    JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+GROUP BY trigger_template.description,hosts.host
+ORDER BY COUNT(DISTINCT events.eventid) ASC\G
+
+
+--report about discovered triggers only
+select COUNT(DISTINCT events.eventid),trigger_template.description FROM events
+    left join trigger_discovery on events.objectid=trigger_discovery.triggerid
+    left join triggers on trigger_discovery.parent_triggerid=triggers.triggerid
+    LEFT JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
+    left JOIN functions ON (functions.triggerid=trigger_template.triggerid)
+    left JOIN items ON (items.itemid=functions.itemid)
+    left JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+AND events.value=1
+GROUP BY trigger_template.description
+ORDER BY COUNT(DISTINCT events.eventid) ASC\G
+
 
 --show how many event records have been generated per each host 
 SELECT COUNT(DISTINCT events.eventid),hosts.host
@@ -48,11 +75,6 @@ JOIN actions ON (actions.actionid=alerts.actionid)
 WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 GROUP BY 2
 ORDER BY 1;
-
-
-
-
-
 
 
 
@@ -2267,7 +2289,7 @@ WHERE alerts.status=0
 GROUP BY alerts.status,actions.name;
 
 
-
+--for postgres
 SELECT COUNT(*),CASE alerts.status
            WHEN 0 THEN 'NOT_SENT'
            WHEN 1 THEN 'SENT'
@@ -2280,6 +2302,20 @@ JOIN actions ON (alerts.actionid=actions.actionid)
 WHERE alerts.clock > EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00'))
 GROUP BY alerts.status,actions.name;
 
+--for mysql
+SELECT COUNT(*),CASE alerts.status
+           WHEN 0 THEN 'NOT_SENT'
+           WHEN 1 THEN 'SENT'
+           WHEN 2 THEN 'FAILED'
+           WHEN 3 THEN 'NEW'
+       END AS status,
+	   actions.name
+FROM alerts
+JOIN actions ON (alerts.actionid=actions.actionid)
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
+GROUP BY alerts.status,actions.name;
+
+> UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 
  
 --mark unsent alerts as sent, remove the queue
