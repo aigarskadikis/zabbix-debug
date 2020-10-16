@@ -4,6 +4,93 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+SELECT hosts.host,
+items.key_,
+CASE
+WHEN items.inventory_link=1 THEN 'type'
+WHEN items.inventory_link=2 THEN 'type_full'
+WHEN items.inventory_link=3 THEN 'name'
+WHEN items.inventory_link=4 THEN 'alias'
+WHEN items.inventory_link=5 THEN 'os'
+WHEN items.inventory_link=6 THEN 'os_full'
+WHEN items.inventory_link=7 THEN 'os_short'
+WHEN items.inventory_link=8 THEN 'serialno_a'
+WHEN items.inventory_link=9 THEN 'serialno_b'
+WHEN items.inventory_link=10 THEN 'tag'
+WHEN items.inventory_link=11 THEN 'asset_tag'
+WHEN items.inventory_link=12 THEN 'macaddress_a'
+WHEN items.inventory_link=13 THEN 'macaddress_b'
+WHEN items.inventory_link=14 THEN 'hardware'
+WHEN items.inventory_link=15 THEN 'hardware_full'
+WHEN items.inventory_link=16 THEN 'software'
+WHEN items.inventory_link=17 THEN 'software_full'
+WHEN items.inventory_link=18 THEN 'software_app_a'
+WHEN items.inventory_link=19 THEN 'software_app_b'
+WHEN items.inventory_link=20 THEN 'software_app_c'
+WHEN items.inventory_link=21 THEN 'software_app_d'
+WHEN items.inventory_link=22 THEN 'software_app_e'
+WHEN items.inventory_link=23 THEN 'contact'
+WHEN items.inventory_link=24 THEN 'location'
+WHEN items.inventory_link=25 THEN 'location_lat'
+WHEN items.inventory_link=26 THEN 'location_lon'
+WHEN items.inventory_link=27 THEN 'notes'
+WHEN items.inventory_link=28 THEN 'chassis'
+WHEN items.inventory_link=29 THEN 'model'
+WHEN items.inventory_link=30 THEN 'hw_arch'
+WHEN items.inventory_link=31 THEN 'vendor'
+WHEN items.inventory_link=32 THEN 'contract_number'
+WHEN items.inventory_link=33 THEN 'installer_name'
+WHEN items.inventory_link=34 THEN 'deployment_status'
+WHEN items.inventory_link=35 THEN 'url_a'
+WHEN items.inventory_link=36 THEN 'url_b'
+WHEN items.inventory_link=37 THEN 'url_c'
+WHEN items.inventory_link=38 THEN 'host_networks'
+WHEN items.inventory_link=39 THEN 'host_netmask'
+WHEN items.inventory_link=40 THEN 'host_router'
+WHEN items.inventory_link=41 THEN 'oob_ip'
+WHEN items.inventory_link=42 THEN 'oob_netmask'
+WHEN items.inventory_link=43 THEN 'oob_router'
+WHEN items.inventory_link=44 THEN 'date_hw_purchase'
+WHEN items.inventory_link=45 THEN 'date_hw_install'
+WHEN items.inventory_link=46 THEN 'date_hw_expiry'
+WHEN items.inventory_link=47 THEN 'date_hw_decomm'
+WHEN items.inventory_link=48 THEN 'site_address_a'
+WHEN items.inventory_link=49 THEN 'site_address_b'
+WHEN items.inventory_link=50 THEN 'site_address_c'
+WHEN items.inventory_link=51 THEN 'site_city'
+WHEN items.inventory_link=52 THEN 'site_state'
+WHEN items.inventory_link=53 THEN 'site_country'
+WHEN items.inventory_link=54 THEN 'site_zip'
+WHEN items.inventory_link=55 THEN 'site_rack'
+WHEN items.inventory_link=56 THEN 'site_notes'
+WHEN items.inventory_link=57 THEN 'poc_1_name'
+WHEN items.inventory_link=58 THEN 'poc_1_email'
+WHEN items.inventory_link=59 THEN 'poc_1_phone_a'
+WHEN items.inventory_link=60 THEN 'poc_1_phone_b'
+WHEN items.inventory_link=61 THEN 'poc_1_cell'
+WHEN items.inventory_link=62 THEN 'poc_1_screen'
+WHEN items.inventory_link=63 THEN 'poc_1_notes'
+WHEN items.inventory_link=64 THEN 'poc_2_name'
+WHEN items.inventory_link=65 THEN 'poc_2_email'
+WHEN items.inventory_link=66 THEN 'poc_2_phone_a'
+WHEN items.inventory_link=67 THEN 'poc_2_phone_b'
+WHEN items.inventory_link=68 THEN 'poc_2_cell'
+WHEN items.inventory_link=69 THEN 'poc_2_screen'
+WHEN items.inventory_link=70 THEN 'poc_2_notes'
+END AS 'will overwrite'
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.inventory_link > 0
+ORDER BY hosts.host
+\G
+
+
+
+--recent activity
+select max(FROM_UNIXTIME(clock)) FROM alerts WHERE actionid=48 AND clock < UNIX_TIMESTAMP(NOW()-INTERVAL 24 HOUR);
+
+
 --why and when alert failed
 SELECT
 FROM_UNIXTIME(alerts.clock) AS 'time',
@@ -912,6 +999,15 @@ ORDER BY COUNT(*) DESC;
 --type 9 performed by http poller
 --type 16 by java poller
 --type 18 dependent item - not an active check, neither a passive
+
+
+SELECT items.type,
+COUNT(*) as count
+FROM items
+WHERE items.type NOT IN (2,7,9,16,17,18)
+GROUP BY items.type
+ORDER BY COUNT(*) DESC;
+
 
 
 --determine if user is using LDAP

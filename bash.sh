@@ -1,5 +1,25 @@
 
 
+tail -99999
+
+zabbix_proxy -R log_level_increase="data sender" 
+zabbix_proxy -R log_level_decrease="data sender" 
+
+
+
+
+# on zabbix master server
+tail -999999 /var/log/zabbix/zabbix_server.log | gzip > /tmp/zabbix_server.log.$(date "+%Y%m%d%H%M").gz
+# on zabbix proxy server
+tail -999999 /var/log/zabbix/zabbix_proxy.log | gzip > /tmp/zabbix_proxy.log.$(date "+%Y%m%d%H%M").gz 
+
+tail -999999 /var/log/zabbix/zabbix_agentd.log | gzip > /tmp/zabbix_agentd.log.$(date "+%Y%m%d%H%M").gz
+
+
+
+
+
+
 
 # If the mibs are installed globally at '/usr/share/snmp/mibs' and you have enabled the translator at:
 cat /etc/snmp/snmp.conf
@@ -9,6 +29,14 @@ cat /etc/snmp/snmp.conf
 # We can perform an snmpwalk:
 snmpwalk -v 2c -c public 192.168.88.1 . > /tmp/192.168.88.1.snmpwalk
 # remember to include . (dot) right after IP address to have full list!
+
+
+
+# Once you start up a server or a proxy, your poller caches the specific engineID and msgAuthoritativeEngineBoots value pair.
+# Another poller then my cache the same engineID on a different device, but this device has a different msgAuthoritativeEngineBoots value.
+# So once the 2nd poller polls the first device or the first poller polls the 2nd device, you're going to have connectivity issues and gaps in data, since the msgAuthoritativeEngineBoots differs from what was expected for this EngineID.
+
+
 
 
 
