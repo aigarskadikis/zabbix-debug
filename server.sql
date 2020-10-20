@@ -4,6 +4,26 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+
+--get SLA from database regarding IT services
+SELECT 
+FROM_UNIXTIME(service_alarms.clock) AS 'clock',
+services.name,
+CASE
+WHEN service_alarms.value=0 THEN 'OK'
+WHEN service_alarms.value=2 THEN 'Warning'
+WHEN service_alarms.value=3 THEN 'Average'
+WHEN service_alarms.value=4 THEN 'High'
+WHEN service_alarms.value=5 THEN 'Disaster'
+END AS 'severity'
+FROM service_alarms
+JOIN services ON (services.serviceid=service_alarms.serviceid)
+ORDER BY service_alarms.clock ASC;
+
+
+
+
+--which inventory field in host level will override inventory field
 SELECT hosts.host,
 items.key_,
 CASE
@@ -2766,7 +2786,7 @@ JOIN hosts on (task_remote_command.hostid=hosts.hostid)
 
 
 
-/* enable loging to table */
+/* enable loging to table. put all queries */
 # Please do the following sequence:
 
 # sign in database client as root. take a look on current settings
@@ -2809,6 +2829,10 @@ show create table mysql.general_log\G
 
 # observe records
 select * from mysql.general_log limit 10\G
+
+-- if argument is hex
+select convert(argument using utf8) from mysql.general_log limit 10\G
+
 
 
 /* summarize a specific discovery rule - unsuppoerted/supported ratio. Does not work on 4.4 */
