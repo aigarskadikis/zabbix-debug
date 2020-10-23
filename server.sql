@@ -4,6 +4,45 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--widget refresh rate configured inside widget
+SELECT
+dashboard.dashboardid,
+widget.type,
+users.alias,
+widget_field.value_int
+FROM widget_field
+JOIN widget ON (widget.widgetid=widget_field.widgetid)
+JOIN dashboard ON (dashboard.dashboardid=widget.dashboardid)
+JOIN users ON (users.userid=dashboard.userid)
+WHERE widget_field.type=0
+AND widget_field.name='rf_rate'
+;
+
+--reset dashboard global settings to 15m
+UPDATE widget_field SET value_int=900 WHERE name='rf_rate';
+--dashboard never reloads
+UPDATE widget_field SET value_int=0 WHERE name='rf_rate';
+
+--dashboard widget refresh
+select * from profiles where idx='web.dashbrd.widget.rf_rate';
+--dashboard widget refresh set to 15m
+update profiles set value_int=900 where idx='web.dashbrd.widget.rf_rate';
+--disable automatic refresh
+update profiles set value_int=0 where idx='web.dashbrd.widget.rf_rate';
+
+
+
+
+--update LDAP configuration via SQL
+UPDATE config
+SET ldap_host='ldaps://ldaps',
+    ldap_port='636',
+    ldap_base_dn='OU=UsersForZabbix,OU=TopSecret,DC=custom,DC=lan',
+    ldap_bind_dn='CN=zbxldap,OU=UsersForZabbix,OU=TopSecret,DC=custom,DC=lan',
+    ldap_bind_password='Abc12345',
+    ldap_search_attribute='sAMAccountName',
+    ldap_configured='1',
+    ldap_case_sensitive='0';
 
 --get SLA from database regarding IT services
 SELECT 
@@ -412,19 +451,6 @@ SELECT  SUM(ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 /1024 ), 2))  AS "
 
 
 
---widget refresh rate configured inside widget
-SELECT
-dashboard.dashboardid,
-widget.type,
-users.alias,
-widget_field.value_int
-FROM widget_field
-JOIN widget ON (widget.widgetid=widget_field.widgetid)
-JOIN dashboard ON (dashboard.dashboardid=widget.dashboardid)
-JOIN users ON (users.userid=dashboard.userid)
-WHERE widget_field.type=0
-AND widget_field.name='rf_rate'
-;
 
 --list templates and item update intervals
 SELECT template.host,
@@ -439,14 +465,6 @@ AND items.type IN (0,7)
 
 
 
-
---dashboard widget refresh
-select * from profiles where idx='web.dashbrd.widget.rf_rate';
-
---dashboard widget refresh set to 15m
-update profiles set value_int=900 where idx='web.dashbrd.widget.rf_rate';
---disable automatic refresh
-update profiles set value_int=0 where idx='web.dashbrd.widget.rf_rate';
 
 
 
@@ -2789,6 +2807,8 @@ JOIN hosts on (task_remote_command.hostid=hosts.hostid)
 /* enable loging to table. put all queries */
 # Please do the following sequence:
 
+truncate table mysql.general_log;
+
 # sign in database client as root. take a look on current settings
 select @@log_output, @@general_log, @@general_log_file\G
 
@@ -2833,6 +2853,11 @@ select * from mysql.general_log limit 10\G
 -- if argument is hex
 select convert(argument using utf8) from mysql.general_log limit 10\G
 
+select convert(argument using utf8)
+from mysql.general_log
+where convert(argument using utf8) like '%ldap%';
+
+ limit 10\G
 
 
 /* summarize a specific discovery rule - unsuppoerted/supported ratio. Does not work on 4.4 */

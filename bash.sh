@@ -1,10 +1,22 @@
 
 
+strace -s 256 -o /tmp/some.domain.name.com.log zabbix_agentd -t net.dns[,some.domain.name.com,,,]
+
+
+
 tail -99999
 
 zabbix_proxy -R log_level_increase="data sender" 
 zabbix_proxy -R log_level_decrease="data sender" 
 
+
+# discover all history syncers
+ps auxww | grep "[h]istory syncer #.*" | awk ' { print $2 } '
+
+# beautifull representation if history syncer
+watch -n1 'ps auxww|grep -o "[h]istory syncer #.*"'
+
+cat /proc/16819/cmdline
 
 
 
