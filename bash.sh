@@ -4,6 +4,13 @@ strace -s 256 -o /tmp/some.domain.name.com.log zabbix_agentd -t net.dns[,some.do
 
 
 
+# ZBX_TCP_WRITE() failed: [32] Broken pipe
+# network issue
+# 250ms is a bad network latency in case of Zabbix version below 4.2. In 4.2 version LLD processing is performed using separate process. You need to increase update interval of the discovery rules used, or decrease network latency. Also you can try to upgrade to the 4.0 version with compression. Key idea here - less data - less time required to send data.
+# Broken pipe it means that TCP connection was interrupted
+
+
+
 tail -99999
 
 zabbix_proxy -R log_level_increase="data sender" 
