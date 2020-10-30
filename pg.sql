@@ -1,5 +1,9 @@
 
 
+
+--show one table size in postgres
+SELECT pg_size_pretty( pg_total_relation_size('events') );
+
 --postgre engine settings, default values
 SELECT name, setting, boot_val, reset_val, unit FROM pg_settings ORDER BY name;
 
@@ -198,6 +202,7 @@ LIMIT 2
 
 
 --size of biggest tables, hypertables, 
+\o /tmp/biggest.tables.log
 SELECT *, pg_size_pretty(total_bytes) AS total
     , pg_size_pretty(index_bytes) AS index
     , pg_size_pretty(toast_bytes) AS toast
@@ -213,7 +218,8 @@ SELECT *, pg_size_pretty(total_bytes) AS total
           LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
           WHERE relkind = 'r'
   ) a
-) a
+) a;
+\o
 \gx
 
 
