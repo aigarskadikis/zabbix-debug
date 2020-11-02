@@ -42,3 +42,5 @@ java -jar jmxterm-1.0.2-uber.jar \
 echo '* * * * * root java -jar jmxterm-1.0.2-uber.jar --url service:jmx:rmi:///jndi/rmi://127.0.0.1:12345/jmxrmi --input /tmp/jmxcommands --verbose verbose --output /tmp/jmxterm/$(date "+\%Y\%m\%d\%H\%M\%S").out' | sudo tee /etc/cron.d/jmxmonitor
 
 
+# pack arhive
+sudo tar -zcvf /tmp/archive.jmxterm.tar.gz /tmp/jmx*
