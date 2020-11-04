@@ -1,7 +1,16 @@
 
 
+
+# Could you please also upload system log 
+# /var/log/messages on RHEL/CentOS 
+# or /var/log/syslog on Debian/Ubuntu?
+
+
 strace -s 256 -o /tmp/some.domain.name.com.log zabbix_agentd -t net.dns[,some.domain.name.com,,,]
 
+
+mysql -u'root' -p'password' -e 'SHOW GLOBAL VARIABLES;' > /tmp/mysql.global.variables.txt
+mysql -u'root' -p'password' -e 'SHOW VARIABLES;' > /tmp/mysql.variables.txt
 
 
 # ZBX_TCP_WRITE() failed: [32] Broken pipe
@@ -9,6 +18,21 @@ strace -s 256 -o /tmp/some.domain.name.com.log zabbix_agentd -t net.dns[,some.do
 # 250ms is a bad network latency in case of Zabbix version below 4.2. In 4.2 version LLD processing is performed using separate process. You need to increase update interval of the discovery rules used, or decrease network latency. Also you can try to upgrade to the 4.0 version with compression. Key idea here - less data - less time required to send data.
 # Broken pipe it means that TCP connection was interrupted
 
+grep housekeeper /var/log/zabbix/zabbix_server.log
+# or search in compressed archives
+zcat /var/log/zabbix/zabbix_server*gz | grep housekeeper | sort | tail -20
+
+find /var/log/zabbix -type f -name '*' -mtime -2 -exec ls -lh {} \;
+
+# houskeeper in last 5 days
+find /var/log/zabbix -type f -name 'zabbix_server*.gz' -mtime -5 -exec sh -c "zcat {} | grep housekeeper" \; | sort
+
+
+
+find /var/log/zabbix -type f -name '*.gz' -mtime -5 -exec zcat {} \ | grep housekeeper;
+
+
+find /var/log/zabbix -type f -name '*.gz' -mtime -5 -exec rm {} \;
 
 
 tail -99999
@@ -127,6 +151,8 @@ ps auxww
 
 sudo tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
 sudo tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2 
+
+sudo tar -zcvf /tmp/archive.jmxterm.tar.gz /tmp/jmx*
 
 
 tar -zcvf /tmp/mysql.5.7.23.conf.tar.gz /etc/my.cnf /etc/mysql
