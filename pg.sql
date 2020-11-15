@@ -5,8 +5,9 @@
 SELECT pg_size_pretty( pg_total_relation_size('events') );
 
 --postgre engine settings, default values
+\o /tmp/postgres.settings.current.vs.stock.txt
 SELECT name, setting, boot_val, reset_val, unit FROM pg_settings ORDER BY name;
-
+\o
 
 --search for big log entries
 SELECT hosts.host,items.key_,LENGTH(history_log.value)
@@ -15,6 +16,23 @@ JOIN items ON (items.itemid=history_log.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'))
 AND LENGTH(history_log.value)>500;
+
+--search for big text entries
+SELECT hosts.host,items.key_,LENGTH(history_text.value)
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'))
+AND LENGTH(history_text.value)>6000;
+
+
+SELECT hosts.name AS host, items.name AS item
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(history_text.value) > 6000
+AND history_text.clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
+\G
 
 
 
@@ -25,13 +43,7 @@ JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'))
 AND LENGTH(history_str.value)>5;
 
---search for big text entries
-SELECT hosts.host,items.key_,LENGTH(history_text.value)
-FROM history_text 
-JOIN items ON (items.itemid=history_text.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'))
-AND LENGTH(history_text.value)>5;
+
 
 --with functions, host groups, hosts, items, interfaces
 SELECT

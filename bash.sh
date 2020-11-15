@@ -6,6 +6,13 @@
 # or /var/log/syslog on Debian/Ubuntu?
 
 
+for i in `seq 1 11`; do echo $(date) >> /tmp/history.syncer.txt && ps auxww|grep "[h]istory syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 5; done 
+
+
+
+while :; do echo $(date) >> /tmp/history.syncer.txt && ps auxww|grep "[h]istory syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 5; done
+
+watch -n1 'ps auxww|grep "[h]istory syncer #"'
 strace -s 256 -o /tmp/some.domain.name.com.log zabbix_agentd -t net.dns[,some.domain.name.com,,,]
 
 
@@ -79,7 +86,7 @@ snmpwalk -v 2c -c public 192.168.88.1 . > /tmp/192.168.88.1.snmpwalk
 # Another poller then my cache the same engineID on a different device, but this device has a different msgAuthoritativeEngineBoots value.
 # So once the 2nd poller polls the first device or the first poller polls the 2nd device, you're going to have connectivity issues and gaps in data, since the msgAuthoritativeEngineBoots differs from what was expected for this EngineID.
 
-
+# on centos7
 
 
 
@@ -149,6 +156,10 @@ ps auxww
 
 # proxy poller health
 
+
+sudo tar -zcvf /tmp/snmpsim.gz /usr/share/snmpsim
+
+
 sudo tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
 sudo tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2 
 
@@ -205,6 +216,9 @@ cat /proc/meminfo >> /tmp/mem.info.txt
 ps auxww >> /tmp/process.list.txt 
 
 
+
+
+
 # Inside the server where service 'zabbix-server' is running please take a few snapshots of process list. It will take 2 minutes to complete:
 for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 5; done 
 
@@ -212,6 +226,8 @@ for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >>
 for i in `seq 1 20`; do echo $(date) >> /tmp/proxy.processes.txt && ps auxww >> /tmp/proxy.processes.txt && echo "=======" >> /tmp/proxy.processes.txt && sleep 5; done 
 
 for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 5; done 
+
+
 
 
 

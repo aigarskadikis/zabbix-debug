@@ -3,6 +3,216 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+-- Condition object>0 filters out all events except triggers.
+delete from events where source=3 and object>0 limit 10000;
+-- 0, EVENT_OBJECT_TRIGGER - Trigger
+-- 1, EVENT_OBJECT_DHOST - Discovered/lost host
+-- 2, EVENT_OBJECT_DSERVICE - Discovered/lost service
+-- 3, EVENT_OBJECT_AUTOREGHOST - Discovered Active agent
+-- 4, EVENT_OBJECT_ITEM - Item
+-- 5, EVENT_OBJECT_LLDRULE - Low level discovery rule
+
+
+
+
+--works on 3.4
+SET SESSION group_concat_max_len = 1000000;
+
+SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',', alerts.subject,',', `groups`.name SEPARATOR '\n')
+FROM alerts
+JOIN events ON events.eventid=alerts.eventid
+JOIN functions ON functions.triggerid=events.objectid
+JOIN items ON items.itemid=functions.itemid
+JOIN hosts_groups ON hosts_groups.hostid=items.hostid
+JOIN `groups` ON `groups`.groupid=hosts_groups.groupid
+WHERE events.source IN (0,3)
+AND events.object = 0 
+;
+
+
+
+SELECT alerts.clock, alerts.sendto
+FROM alerts
+JOIN events ON events.eventid=alerts.eventid
+JOIN functions ON functions.triggerid=events.objectid
+JOIN items ON items.itemid=functions.itemid
+JOIN hosts_groups ON hosts_groups.hostid=items.hostid
+JOIN groups ON groups.groupid=hosts_groups.groupid
+WHERE events.source IN (0,3)
+AND events.object = 0;
+AND hosts_groups.groupid>0
+
+
+
+--works on 5.0
+SET SESSION group_concat_max_len = 1000000;
+SELECT alerts.clock,
+alerts.sendto,
+alerts.subject,
+hosts_groups.hostgroupid,
+hosts_groups.groupid,
+hstgrp.name
+FROM alerts
+JOIN events ON events.eventid=alerts.eventid
+JOIN functions ON functions.triggerid=events.objectid
+JOIN items ON items.itemid=functions.itemid
+JOIN hosts_groups ON hosts_groups.hostid=items.hostid
+JOIN `hstgrp` ON `hstgrp`.groupid=hosts_groups.groupid
+WHERE events.source IN (0,3)
+AND events.object = 0 
+;
+
+
+JOIN hstgrp ON (hstgrp.groupid=hg.hostgroupid)
+
+
+JOIN functions ON (functions.triggerid=events.objectid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+
+
+WHERE alerts.clock > UNIX_TIMESTAMP("2020-08-21 00:00:00")
+AND alerts.clock < UNIX_TIMESTAMP("2020-11-22 00:00:00")
+
+
+
+JOIN groups g ON (g.groupid=hosts_groups.hostid)
+
+JOIN hosts_groups ON (host_groups.hostid=hosts.hostid)
+JOIN groups ON (groups.groupid=hosts_groups.groupid)
+
+
+
+
+--summarize what alerts has been scheduled in database to be delivered 
+SELECT FROM_UNIXTIME(clock), sendto, subject
+FROM alerts
+WHERE clock > UNIX_TIMESTAMP("2020-08-21 00:00:00")
+AND clock < UNIX_TIMESTAMP("2020-11-22 00:00:00")
+;
+
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(FROM_UNIXTIME(clock),',', sendto,',', subject SEPARATOR '\n')
+FROM alerts
+WHERE clock > UNIX_TIMESTAMP("2020-08-21 00:00:00")
+AND clock < UNIX_TIMESTAMP("2020-11-22 00:00:00")
+\G
+
+GROUP_CONCAT(C.name SEPARATOR ', ')
+
+
+
+--historical events
+SELECT FROM_UNIXTIME(clock) AS 'time',
+       CASE severity
+           WHEN 0 THEN 'NOT_CLASSIFIED'
+           WHEN 1 THEN 'INFORMATION'
+           WHEN 2 THEN 'WARNING'
+           WHEN 3 THEN 'AVERAGE'
+           WHEN 4 THEN 'HIGH'
+           WHEN 5 THEN 'DISASTER'
+       END AS severity,
+	   CASE acknowledged
+           WHEN 0 THEN 'NO'
+           WHEN 1 THEN 'YES'
+       END AS acknowledged,
+	   CASE value
+           WHEN 0 THEN 'OK'
+           WHEN 1 THEN 'PROBLEM '
+       END AS trigger_status,
+       name
+FROM events
+WHERE source=0
+  AND object=0
+  ORDER BY clock ASC
+  LIMIT 10\G
+
+  
+  
+--historical event + action name. 5.0
+SELECT FROM_UNIXTIME(events.clock) AS 'time',
+       CASE events.severity
+           WHEN 0 THEN 'NOT_CLASSIFIED'
+           WHEN 1 THEN 'INFORMATION'
+           WHEN 2 THEN 'WARNING'
+           WHEN 3 THEN 'AVERAGE'
+           WHEN 4 THEN 'HIGH'
+           WHEN 5 THEN 'DISASTER'
+       END AS severity,
+	   CASE events.acknowledged
+           WHEN 0 THEN 'NO'
+           WHEN 1 THEN 'YES'
+       END AS acknowledged,
+	   CASE events.value
+           WHEN 0 THEN 'OK'
+           WHEN 1 THEN 'PROBLEM '
+       END AS trigger_status,
+       events.name AS 'event',
+	   actions.name AS 'action'
+FROM events
+JOIN alerts ON (alerts.eventid=events.eventid)
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE events.source=0
+AND events.object=0
+ORDER BY events.clock ASC
+LIMIT 10\G
+  
+--historical event + action name. 3.0
+SELECT FROM_UNIXTIME(events.clock),
+       triggers.description,
+	   actions.name
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN alerts ON (alerts.eventid=events.eventid)
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE events.source=0
+AND events.object=0
+ORDER BY events.clock ASC
+LIMIT 10;
+
+
+
+--critical attributes per overloaded database
+SELECT @@hostname, @@version, @@datadir, @@innodb_file_per_table;
+
+
+--list action names which reference the 'email' delivery only. solution is based in existing records in database. zabbix 5.0
+SELECT DISTINCT actions.name
+FROM actions
+JOIN alerts ON (alerts.actionid=actions.actionid)
+JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
+WHERE media_type.name='Email Google';
+
+--3.0
+SELECT DISTINCT actions.name
+FROM actions
+JOIN alerts ON (alerts.actionid=actions.actionid)
+JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
+WHERE media_type.description='Email';
+
+
+--Show all actions per each media type. Zabbix 5.0
+SELECT DISTINCT actions.name AS 'action name',
+media_type.name AS 'media type'
+FROM actions
+JOIN alerts ON (alerts.actionid=actions.actionid)
+JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
+GROUP BY media_type.name,actions.name
+ORDER BY 1,2
+\G
+
+--3.0
+SELECT DISTINCT actions.name AS 'action name',
+media_type.description AS 'media type'
+FROM actions
+JOIN alerts ON (alerts.actionid=actions.actionid)
+JOIN media_type ON (media_type.mediatypeid=alerts.mediatypeid)
+GROUP BY media_type.description,actions.name
+ORDER BY 1,2
+\G
+
+
 
 --widget refresh rate configured inside widget
 SELECT
@@ -687,6 +897,11 @@ SELECT @@hostname,
 @@optimizer_switch\G
 
 
+SELECT @@hostname,
+@@version,
+@@datadir,
+@@innodb_file_per_table;
+
 --new records in the actions and escalations tables
 select count(*),actionid,status from escalations group by actionid,status order by count(*);
 select count(*),actionid,status from actions group by actionid,status order by count(*);
@@ -1232,7 +1447,7 @@ SELECT hosts.name AS host, items.name AS item
 FROM history_text
 JOIN items ON (items.itemid=history_text.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE LENGTH(history_text.value) > 1
+WHERE LENGTH(history_text.value) > 6000
 AND history_text.clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
 \G
 
@@ -2484,6 +2699,8 @@ FROM alerts
 JOIN actions ON (alerts.actionid=actions.actionid)
 WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 GROUP BY alerts.status,actions.name;
+
+
 
 > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 
