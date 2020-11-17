@@ -194,7 +194,10 @@ watch -n1 'ps -efww|grep -E -o "[p]roxy poller #.*"'
 
 
 # count of history syncers
-watch -n1 'ps aux|grep "[h]istory syncer #"'
+watch -n1 'ps auxww|grep "[h]istory syncer #"'
+
+
+watch -n1 'ps auxww|grep "[t]rapper #"'
 
 
 # can improve installce 
@@ -215,7 +218,7 @@ cat /proc/meminfo >> /tmp/mem.info.txt
 # Process list:
 ps auxww >> /tmp/process.list.txt 
 
-
+for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 1; done 
 
 
 

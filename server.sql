@@ -14,6 +14,18 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 
+--list "Expired" maintenance periods
+SELECT 
+FROM_UNIXTIME(active_till),
+maintenanceid, name
+FROM maintenances
+WHERE active_till < UNIX_TIMESTAMP(NOW());
+
+--remove "Expired" maintenance periods
+DELETE FROM maintenances
+WHERE active_till < UNIX_TIMESTAMP(NOW());
+
+
 
 --works on 3.4
 SET SESSION group_concat_max_len = 1000000;
