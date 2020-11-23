@@ -13,6 +13,11 @@ delete from events where source=3 and object>0 limit 10000;
 -- 5, EVENT_OBJECT_LLDRULE - Low level discovery rule
 
 
+--seek if there are no dublicate records:
+SELECT auditid,COUNT(auditid) FROM auditlog GROUP BY auditid HAVING COUNT(auditid) > 0;
+
+SELECT auditid,COUNT(auditid) FROM auditlog GROUP BY auditid HAVING COUNT(auditid) > 1;
+
 
 --list "Expired" maintenance periods
 SELECT 
@@ -26,6 +31,13 @@ DELETE FROM maintenances
 WHERE active_till < UNIX_TIMESTAMP(NOW());
 
 
+
+
+SELECT hosts.host,items.key_ FROM triggers
+JOIN functions ON functions.triggerid=triggers.triggerid
+JOIN items ON items.itemid=functions.itemid
+JOIN hosts ON hosts.hostid=items.hostid
+WHERE triggers.triggerid=51962\G
 
 --works on 3.4
 SET SESSION group_concat_max_len = 1000000;
@@ -515,7 +527,7 @@ SELECT ho.hostid, ho.name, count(*) AS records,
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
 sum(length(history.value))/1024/1024 + sum(length(history.clock))/1024/1024 + sum(length(history.ns))/1024/1024 + sum(length(history.itemid))/1024/1024 AS 'History Column Size (Mb)'
-FROM history PARTITION (p202009290000)
+FROM history PARTITION (p202011220000)
 LEFT OUTER JOIN items i on history.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
@@ -529,7 +541,7 @@ SELECT ho.hostid, ho.name, count(*) AS records,
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
 sum(length(history_uint.value))/1024/1024 + sum(length(history_uint.clock))/1024/1024 + sum(length(history_uint.ns))/1024/1024 + sum(length(history_uint.itemid))/1024/1024 AS 'history_uint Column Size (Mb)'
-FROM history_uint PARTITION (p202009290000)
+FROM history_uint PARTITION (p202011220000)
 LEFT OUTER JOIN items i on history_uint.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
@@ -996,6 +1008,14 @@ SELECT source,COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2020-08-30 00:
 DELETE h1 FROM hosts h1
 INNER JOIN hosts h2 
 WHERE h1.hostid < h2.hostid AND h1.host = h2.host;
+
+SELECT a1.auditid FROM auditlog
+JOIN auditlog a2
+WHERE a1.auditid < a2.auditid;
+
+
+
+
 
 
 --check if some dublicates left

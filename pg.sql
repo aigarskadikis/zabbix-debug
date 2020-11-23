@@ -1,5 +1,15 @@
 
 
+--active query
+SELECT
+pid,
+now() - pg_stat_activity.query_start AS duration,
+query,
+state
+FROM pg_stat_activity
+WHERE (now() - pg_stat_activity.query_start) > interval '20 minutes';
+
+
 
 --show one table size in postgres
 SELECT pg_size_pretty( pg_total_relation_size('events') );
@@ -462,11 +472,12 @@ select name, setting, source, short_desc from pg_settings where name like '%auto
 
 
 -- when the last time the table received a vacuum
+\o /tmp/zabbix.autovacuum.txt
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
 WHERE n_dead_tup > 0
 ORDER BY n_dead_tup DESC;
-
+\p
 
 select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
 
