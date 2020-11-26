@@ -24,12 +24,6 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 
--- 3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
-
-SELECT max(clock),value FROM 
-history_uint WHERE 
-
-
 --mysql simulate latast data page per history_uint;
 SELECT h2.itemid,FROM_UNIXTIME(h2.clock),h2.value FROM history_uint h2 
 JOIN (
@@ -60,23 +54,7 @@ ORDER BY h2.itemid;
 
 
 
-
-
-SELECT h2.itemid,h2.clock,h2.value FROM history_uint h2 JOIN (
-SELECT h.itemid,MAX(h.clock) AS clock FROM history_uint h GROUP BY h.itemid
-) AS result1
-WHERE result1.itemid = h2.itemid
-AND h2.clock = result1.clock;
-
-
-
-
-
-
-
-
-
---events on haouerly basis
+--events on hourly basis
 SELECT COUNT(*) FROM events WHERE source=0 AND clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR);
 
 

@@ -30,32 +30,34 @@ ORDER BY h2.itemid;
 
 
 
---report about discovered triggers only
-select COUNT(DISTINCT events.eventid),trigger_template.description FROM events
-    left join trigger_discovery on events.objectid=trigger_discovery.triggerid
-    left join triggers on trigger_discovery.parent_triggerid=triggers.triggerid
-    LEFT JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
-    left JOIN functions ON (functions.triggerid=trigger_template.triggerid)
-    left JOIN items ON (items.itemid=functions.itemid)
-    left JOIN hosts ON (hosts.hostid=items.hostid)
+--report events which comes from discovered triggers only
+SELECT COUNT(DISTINCT events.eventid) AS count,trigger_template.description, hosts.host AS template FROM events
+  LEFT JOIN trigger_discovery on events.objectid=trigger_discovery.triggerid
+  LEFT JOIN triggers on trigger_discovery.parent_triggerid=triggers.triggerid
+  LEFT JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
+  LEFT JOIN functions ON (functions.triggerid=trigger_template.triggerid)
+  LEFT JOIN items ON (items.itemid=functions.itemid)
+  LEFT JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE events.source=0
 AND events.object=0
 AND events.value=1
-GROUP BY trigger_template.description
-ORDER BY COUNT(DISTINCT events.eventid) ASC\G
+GROUP BY trigger_template.description,hosts.host
+ORDER BY COUNT(DISTINCT events.eventid) ASC
+\G
 
 
---
-SELECT COUNT(DISTINCT events.eventid),trigger_template.description, hosts.host FROM events
-    JOIN triggers ON (triggers.triggerid=events.objectid)
-    JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
-    JOIN functions ON (functions.triggerid=trigger_template.triggerid)
-    JOIN items ON (items.itemid=functions.itemid)
-    JOIN hosts ON (hosts.hostid=items.hostid)
+--report events which comes only from raw templated triggers
+SELECT COUNT(DISTINCT events.eventid) AS count,trigger_template.description, hosts.host AS template FROM events
+  JOIN triggers ON (triggers.triggerid=events.objectid)
+  JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
+  JOIN functions ON (functions.triggerid=trigger_template.triggerid)
+  JOIN items ON (items.itemid=functions.itemid)
+  JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE events.source=0
 AND events.object=0
 GROUP BY trigger_template.description,hosts.host
-ORDER BY COUNT(DISTINCT events.eventid) ASC;
+ORDER BY COUNT(DISTINCT events.eventid) ASC
+\G
 
 
 
