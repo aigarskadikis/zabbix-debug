@@ -10,6 +10,26 @@ FROM pg_stat_activity
 WHERE (now() - pg_stat_activity.query_start) > interval '20 minutes';
 
 
+
+
+EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'))
+
+--simulate latast data page per history_uint;
+SELECT h2.itemid,h2.clock,h2.value FROM history_uint h2 
+JOIN (
+SELECT h.itemid,MAX(h.clock) AS clock
+FROM history_uint h
+JOIN items i ON i.itemid = h.itemid
+WHERE i.hostid=17954
+AND h.clock > EXTRACT(EPOCH FROM (NOW() - INTERVAL '24 HOUR'))
+GROUP BY h.itemid
+) result1
+ON result1.itemid = h2.itemid
+AND h2.clock = result1.clock
+ORDER BY h2.itemid;
+
+
+
 --report about discovered triggers only
 select COUNT(DISTINCT events.eventid),trigger_template.description FROM events
     left join trigger_discovery on events.objectid=trigger_discovery.triggerid

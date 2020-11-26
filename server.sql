@@ -30,7 +30,7 @@ SELECT max(clock),value FROM
 history_uint WHERE 
 
 
---simulate latast data page per history_uint;
+--mysql simulate latast data page per history_uint;
 SELECT h2.itemid,FROM_UNIXTIME(h2.clock),h2.value FROM history_uint h2 
 JOIN (
 SELECT h.itemid,MAX(h.clock) AS clock
@@ -44,20 +44,20 @@ WHERE result1.itemid = h2.itemid
 AND h2.clock = result1.clock
 ORDER BY h2.itemid;
 
-
-
+--postgres simulate latast data page per history_uint
 SELECT h2.itemid,h2.clock,h2.value FROM history_uint h2 
 JOIN (
 SELECT h.itemid,MAX(h.clock) AS clock
 FROM history_uint h
 JOIN items i ON i.itemid = h.itemid
-WHERE i.hostid=11850
-AND h.clock > 1606407634
+WHERE i.hostid=17954
+AND h.clock > EXTRACT(EPOCH FROM(NOW()-INTERVAL '24 HOUR'))
 GROUP BY h.itemid
-) AS result1
-WHERE result1.itemid = h2.itemid
+) result1
+ON result1.itemid = h2.itemid
 AND h2.clock = result1.clock
 ORDER BY h2.itemid;
+
 
 
 
