@@ -13,6 +13,73 @@ delete from events where source=3 and object>0 limit 10000;
 -- 5, EVENT_OBJECT_LLDRULE - Low level discovery rule
 
 
+
+
+
+0, ITEM_VALUE_TYPE_FLOAT - Float
+1, ITEM_VALUE_TYPE_STR - Character
+2, ITEM_VALUE_TYPE_LOG - Log
+3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
+4, ITEM_VALUE_TYPE_TEXT - Text
+
+
+
+-- 3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
+
+SELECT max(clock),value FROM 
+history_uint WHERE 
+
+
+--simulate latast data page per history_uint;
+SELECT h2.itemid,FROM_UNIXTIME(h2.clock),h2.value FROM history_uint h2 
+JOIN (
+SELECT h.itemid,MAX(h.clock) AS clock
+FROM history_uint h
+JOIN items i ON i.itemid = h.itemid
+WHERE i.hostid=11850
+AND h.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) 
+GROUP BY h.itemid
+) AS result1
+WHERE result1.itemid = h2.itemid
+AND h2.clock = result1.clock
+ORDER BY h2.itemid;
+
+
+
+SELECT h2.itemid,h2.clock,h2.value FROM history_uint h2 
+JOIN (
+SELECT h.itemid,MAX(h.clock) AS clock
+FROM history_uint h
+JOIN items i ON i.itemid = h.itemid
+WHERE i.hostid=11850
+AND h.clock > 1606407634
+GROUP BY h.itemid
+) AS result1
+WHERE result1.itemid = h2.itemid
+AND h2.clock = result1.clock
+ORDER BY h2.itemid;
+
+
+
+
+SELECT h2.itemid,h2.clock,h2.value FROM history_uint h2 JOIN (
+SELECT h.itemid,MAX(h.clock) AS clock FROM history_uint h GROUP BY h.itemid
+) AS result1
+WHERE result1.itemid = h2.itemid
+AND h2.clock = result1.clock;
+
+
+
+
+
+
+
+
+
+--events on haouerly basis
+SELECT COUNT(*) FROM events WHERE source=0 AND clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR);
+
+
 --seek if there are no dublicate records:
 SELECT auditid,COUNT(auditid) FROM auditlog GROUP BY auditid HAVING COUNT(auditid) > 0;
 
