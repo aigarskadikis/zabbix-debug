@@ -46,6 +46,22 @@ ORDER BY COUNT(DISTINCT events.eventid) ASC
 \G
 
 
+SELECT events.eventid,trigger_template.description, hosts.host AS template FROM events
+  LEFT JOIN trigger_discovery on events.objectid=trigger_discovery.triggerid
+  LEFT JOIN triggers on trigger_discovery.parent_triggerid=triggers.triggerid
+  LEFT JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
+  LEFT JOIN functions ON (functions.triggerid=trigger_template.triggerid)
+  LEFT JOIN items ON (items.itemid=functions.itemid)
+  LEFT JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+AND events.value=1
+AND events.clock > UNIX_TIMESTAMP (NOW() - INTERVAL 4 HOUR)
+\G
+
+
+
+
 --report events which comes only from raw templated triggers
 SELECT COUNT(DISTINCT events.eventid) AS count,trigger_template.description, hosts.host AS template FROM events
   JOIN triggers ON (triggers.triggerid=events.objectid)
