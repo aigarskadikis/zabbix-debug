@@ -25,7 +25,7 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 --mysql simulate latast data page per history_uint;
-SELECT h2.itemid,FROM_UNIXTIME(h2.clock),h2.value FROM history_uint h2 
+SELECT h2.itemid,FROM_UNIXTIME(h2.clock),h2.value FROM history_uint h2
 JOIN (
 SELECT h.itemid,MAX(h.clock) AS clock
 FROM history_uint h
