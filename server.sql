@@ -15,6 +15,34 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 
+--You can stop all active escalation (it does not touch the configuration), stop zabbix server and run SQL commands:
+--mark all "not sent" emails as "failed" to have a precise info if the user did recieve a notification
+update alerts set status=2,error='' where status=0 and alerttype=0;
+--stop all active escalations
+delete from escalations;
+
+
+
+
+
+
+--current trends trends 
+SELECT COUNT(*) FROM trends WHERE clock = UNIX_TIMESTAMP("2020-11-30 15:00:00");
+SELECT COUNT(*) FROM trends_uint WHERE clock = UNIX_TIMESTAMP("2020-11-30 15:00:00");
+
+SELECT COUNT(*) FROM trends WHERE clock = UNIX_TIMESTAMP("2020-11-30 16:00:00");
+SELECT COUNT(*) FROM trends_uint WHERE clock = UNIX_TIMESTAMP("2020-11-30 16:00:00");
+
+--previous hour
+SELECT COUNT(*) FROM trends WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 115 MINUTE) AND clock < UNIX_TIMESTAMP(NOW()-INTERVAL 55 MINUTE);
+SELECT COUNT(*) FROM trends_uint WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 115 MINUTE) AND clock < UNIX_TIMESTAMP(NOW()-INTERVAL 55 MINUTE);
+
+--now
+SELECT COUNT(*) FROM trends WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 55 MINUTE);
+SELECT COUNT(*) FROM trends_uint WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 55 MINUTE);
+
+--current trends trends
+
 
 0, ITEM_VALUE_TYPE_FLOAT - Float
 1, ITEM_VALUE_TYPE_STR - Character
@@ -150,6 +178,7 @@ JOIN groups g ON (g.groupid=hosts_groups.hostid)
 
 JOIN hosts_groups ON (host_groups.hostid=hosts.hostid)
 JOIN groups ON (groups.groupid=hosts_groups.groupid)
+
 
 
 
@@ -4243,9 +4272,12 @@ select COUNT(*),source,object,objectid from problem group by source,object,objec
 select * from events where source=3 limit 1;
  
 /* remove events */
-delete from events where source=3 limit 10;
-delete from events where source=3 limit 100;
-delete from events where source=3 limit 1000;
+DELETE FROM events WHERE source>0 LIMIT 10;
+DELETE FROM events WHERE source>0 LIMIT 100;
+DELETE FROM events WHERE source>0 LIMIT 1000;
+DELETE FROM events WHERE source>0 LIMIT 10000;
+DELETE FROM events WHERE source>0 LIMIT 100000;
+
 
 /* long queries */
 SELECT HOST, COMMAND, TIME, ID, ROWS_EXAMINED, INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE TIME > 60 AND COMMAND!='Sleep' AND HOST!='localhost' ORDER BY TIME DESC;
