@@ -14,6 +14,112 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 
+--have to wait till the recovery event arrives 
+--(the one which should close all events per objectid) and then execute housekeeper.
+--tested and it did decrease records in the table 'problem' :)
+SELECT COUNT(*) FROM problem;
+
+--show all internal events together:
+SELECT objectid,object,name,COUNT(*)
+FROM problem 
+WHERE source=3 AND object>0
+GROUP BY objectid,object,name
+ORDER BY COUNT(*) DESC
+LIMIT 15
+\G
+
+
+--internal active problems per items
+SELECT 
+hosts.host,
+items.key_,
+problem.objectid,
+problem.name,
+COUNT(*)
+FROM problem
+JOIN items ON (items.itemid=problem.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE problem.source=3 AND problem.object=4
+GROUP BY problem.objectid,problem.name
+ORDER BY COUNT(*) DESC
+LIMIT 15
+\G
+
+
+
+--internal active problems per lld rule
+SELECT hosts.host,
+items.key_,
+problem.objectid,
+problem.name,
+COUNT(*)
+FROM problem
+JOIN items ON (items.itemid=problem.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE problem.source=3 AND problem.object=5
+GROUP BY problem.objectid,problem.name
+ORDER BY COUNT(*) DESC
+LIMIT 15
+\G
+
+
+
+
+
+
+
+--Let's start with removing problems for source 3 which is related to internal events.
+DELETE FROM problem WHERE source=3 AND object>0 LIMIT 100000; 
+
+
+
+--detect if event correlation is used
+SELECT * FROM event_recovery WHERE correlationid IS NOT NULL;
+
+SELECT * FROM problem WHERE correlationid IS NOT NULL;
+
+--event closed by global correlation rule
+SELECT correlation.name,COUNT(*) FROM event_recovery
+JOIN correlation ON (correlation.correlationid=event_recovery.correlationid)
+WHERE event_recovery.correlationid IS NOT NULL
+GROUP BY correlation.name
+ORDER BY COUNT(*) DESC
+LIMIT 15;
+
+--event closed by a user
+SELECT users.alias,COUNT(*)
+FROM event_recovery 
+JOIN users ON (users.userid=event_recovery.userid)
+WHERE event_recovery.userid IS NOT NULL
+GROUP BY users.alias
+ORDER BY COUNT(*) DESC
+LIMIT 15;
+
+
+
+
+
+
+
+
+--Hosts having most problems, slow frontend, triggers in problem state
+SELECT COUNT(*),
+hosts.host,
+triggers.description
+FROM problem
+JOIN triggers ON (triggers.triggerid=problem.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE problem.source=3
+AND problem.object=0
+GROUP BY functions.functionid,hosts.host,triggers.description
+ORDER BY COUNT(*)
+DESC LIMIT 15;
+
+
+
+
 
 --You can stop all active escalation (it does not touch the configuration), stop zabbix server and run SQL commands:
 --mark all "not sent" emails as "failed" to have a precise info if the user did recieve a notification

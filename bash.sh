@@ -6,6 +6,8 @@
 # or /var/log/syslog on Debian/Ubuntu?
 
 
+for i in `seq 225 230`; do ping -c1 10.$(ip a | grep -oP "inet 10\.\K\d+\.\d+").$i; done;
+
 for i in `seq 1 11`; do echo $(date) >> /tmp/history.syncer.txt && ps auxww|grep "[h]istory syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 5; done 
 
 
