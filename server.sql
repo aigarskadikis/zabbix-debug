@@ -717,7 +717,6 @@ ORDER BY 4 ASC;
 
 --biggest integers
 SELECT ho.hostid, ho.name, count(*) AS records, 
-SELECT ho.hostid, ho.name, count(*) AS records, 
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
 sum(length(history_uint.value))/1024/1024 + sum(length(history_uint.clock))/1024/1024 + sum(length(history_uint.ns))/1024/1024 + sum(length(history_uint.itemid))/1024/1024 AS 'history_uint Column Size (Mb)'
@@ -728,6 +727,17 @@ WHERE ho.status IN (0,1)
 GROUP BY ho.hostid
 ORDER BY 4 ASC;
 
+--biggest text values
+SELECT ho.hostid, ho.name, count(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024/1024 + sum(length(history_text.ns))/1024/1024 + sum(length(history_text.itemid))/1024/1024 AS 'history_text Column Size (Mb)'
+FROM history_text PARTITION (p202012270000)
+LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1) 
+GROUP BY ho.hostid
+ORDER BY 4 ASC;
 
 
 --Total size average (Mb) which multiplies the average row size by the number of records for host, thus the average
