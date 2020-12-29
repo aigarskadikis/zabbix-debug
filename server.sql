@@ -14,6 +14,60 @@ delete from events where source=3 and object>0 limit 10000;
 
 
 
+SET SESSION group_concat_max_len = 1000000;
+
+SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',', alerts.subject,',', `groups`.name SEPARATOR '\n')
+
+--see missconfiguration
+SELECT 
+functions.name,
+functions.parameter,
+GROUP_CONCAT(hosts.host) AS 'templates'
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 3
+AND functions.name IN ('nodata','avg','min','max')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+AND functions.parameter > 0
+AND functions.parameter < 60
+GROUP BY 1,2
+LIMIT 100
+\G
+
+
+
+
+
+
+--see misconfiguration
+SELECT hosts.host AS 'template',
+functions.name,
+functions.parameter
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 3
+AND functions.name IN ('nodata','avg','min','max')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+GROUP BY 1,2,3
+LIMIT 100
+\G
+
+
+
+
+
 --have to wait till the recovery event arrives 
 --(the one which should close all events per objectid) and then execute housekeeper.
 --tested and it did decrease records in the table 'problem' :)
@@ -4412,6 +4466,7 @@ select status, COUNT(*) from alerts where status in ('0','1','3') group by statu
 
 delete from events where source=3 limit 10000;
 
+DELETE FROM events WHERE source=3 LIMIT 10;
 
 
 SELECT FROM events WHERE source=0 and object=0 and clock <= UNIX_TIMESTAMP(NOW() - INTERVAL 2 DAY) ORDER BY 'eventid' limit 1000;
@@ -4808,6 +4863,10 @@ INNER JOIN items ON functions.itemid = items.itemid
 INNER JOIN hosts ON hosts.hostid = items.hostid
 WHERE functions.name = 'nodata'
 AND hosts.status = 3
+
+
+
+
 
 
 
