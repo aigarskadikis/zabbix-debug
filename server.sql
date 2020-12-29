@@ -42,6 +42,49 @@ LIMIT 100
 
 
 
+--missconfiguration in template
+SELECT
+functions.name,
+functions.parameter,
+GROUP_CONCAT(hosts.host) AS 'templates'
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 3
+AND functions.name IN ('nodata','avg','min','max')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+AND functions.parameter > 0
+AND functions.parameter < 60
+GROUP BY 1,2
+LIMIT 100
+\G
+
+--missconfiguration in hosts
+SELECT
+functions.name,
+functions.parameter,
+GROUP_CONCAT(hosts.host) AS 'templates'
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 0
+AND functions.name IN ('nodata','avg','min','max')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+AND functions.parameter > 0
+AND functions.parameter < 60
+GROUP BY 1,2
+LIMIT 100
+\G
 
 
 
