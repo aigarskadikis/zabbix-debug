@@ -3,6 +3,216 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+
+--show unreachable hosts. hosts not reachable:
+SELECT
+hosts.host,
+interface.ip,
+interface.dns,
+interface.useip,
+CASE interface.type
+WHEN 1 THEN 'ZBX'
+WHEN 2 THEN 'SNMP'
+WHEN 3 THEN 'IPMI'
+WHEN 4 THEN 'JMX'
+END AS "type",
+hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+WHERE hosts.available=2
+AND interface.main=1
+AND hosts.status=0;
+
+
+
+SELECT
+hosts.host,
+interface.ip,
+interface.dns,
+interface.useip,
+interface.type,
+hosts.error
+FROM hosts
+WHERE interface.hostid=hosts.hostid
+AND hosts.available=2
+AND interface.main=1
+AND hosts.status=0;
+
+
+
+--frequent big metrics
+SELECT itemid,COUNT(*),AVG(LENGTH(value))
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 115 MINUTE)
+GROUP BY itemid
+ORDER BY COUNT(*) DESC
+LIMIT 15;
+
+
+--frequent big metrics
+SELECT itemid,AVG(LENGTH(value)),COUNT(*)
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 15 MINUTE)
+GROUP BY itemid
+ORDER BY AVG(LENGTH(value)) DESC
+LIMIT 30;
+
+SELECT itemid,AVG(LENGTH(value)),COUNT(*)
+FROM history_log
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 15 MINUTE)
+GROUP BY itemid
+ORDER BY AVG(LENGTH(value)) DESC
+LIMIT 30;
+
+ZBX_STARTJAVAPOLLERS=5
+
+
+
+--frequent big metrics used in value cache
+SELECT itemid,COUNT(*),AVG(LENGTH(value))
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 15 MINUTE)
+AND itemid IN (
+SELECT itemid FROM functions WHERE name='count' AND parameter LIKE '%like%'
+)
+GROUP BY itemid
+ORDER BY COUNT(*) DESC;
+
+--log table
+SELECT itemid,COUNT(*),AVG(LENGTH(value))
+FROM history_log
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 15 MINUTE)
+AND itemid IN (
+SELECT itemid FROM functions WHERE name='count' AND parameter LIKE '%like%'
+)
+GROUP BY itemid
+ORDER BY COUNT(*) DESC;
+
+--str table
+SELECT itemid,COUNT(*),AVG(LENGTH(value))
+FROM history_str
+WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 15 MINUTE)
+AND itemid IN (
+SELECT itemid FROM functions WHERE name='count' AND parameter LIKE '%like%'
+)
+GROUP BY itemid
+ORDER BY COUNT(*) DESC;
+
+--frequently used count functions 4.0,4.2,4.4,5.0
+SELECT `functions`.`name`,
+parameter,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND functions.name='count'
+AND functions.parameter LIKE '%like%'
+GROUP BY 1,2 
+ORDER BY 2;
+
+--filter out functions which contains an installed macro
+SELECT `functions`.`name`,
+hostmacro.value,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hostmacro ON (hostmacro.macro=functions.parameter)
+WHERE hosts.status=0
+AND functions.parameter LIKE '{%'
+GROUP BY 1,2
+ORDER BY 2;
+
+--host level mapping
+SELECT `functions`.`name`,
+hostmacro.value,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hostmacro ON (hostmacro.macro=functions.parameter)
+WHERE hosts.status=0
+AND functions.parameter LIKE '{%'
+GROUP BY 1,2
+ORDER BY 2;
+
+
+--host level mapping+templates
+SELECT `functions`.`name`,
+hostmacro.value,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hostmacro ON (hostmacro.macro=functions.parameter)
+WHERE functions.parameter LIKE '{%'
+GROUP BY 1,2
+ORDER BY 2;
+
+--global level mapping
+SELECT `functions`.`name`,
+globalmacro.value,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN globalmacro ON (globalmacro.macro=functions.parameter)
+WHERE functions.parameter LIKE '{%'
+GROUP BY 1,2
+ORDER BY 2;
+
+WHERE hosts.status=0
+
+
+
+
+
+
+--list item IDs on a host level which is having unsupported state
+--copy content to notepad for later reference
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(items.itemid) FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.flags IN (0,4)
+AND items.state=0;
+
+
+--mysql: list all unsupported items coming from hosts which are currently enabled
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(itemid)
+FROM items
+WHERE flags IN (0,4)
+AND state=1
+AND hostid IN (SELECT hostid FROM hosts WHERE status=0);
+
+--postgres: list all unsupported items comming from hosts which are currently enabled
+SELECT array_to_string(array_agg(itemid), ',')
+FROM items
+WHERE flags IN (0,4)
+AND state=1
+AND hostid IN (SELECT hostid FROM hosts WHERE status=0);
+
+--set unsupported items to be disabled for the hosts which are currently enabled
+UPDATE items
+SET status=1
+WHERE flags IN (0,4)
+AND state=1
+AND hostid IN (SELECT hostid FROM hosts WHERE status=0);
+
+
+
+
+
+--postgres
+SELECT array_to_string(array_agg(items.itemid), ',') FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.flags IN (0,4)
+AND items.state=0;
+
+
 -- Condition object>0 filters out all events except triggers.
 delete from events where source=3 and object>0 limit 10000;
 -- 0, EVENT_OBJECT_TRIGGER - Trigger
@@ -11,6 +221,58 @@ delete from events where source=3 and object>0 limit 10000;
 -- 3, EVENT_OBJECT_AUTOREGHOST - Discovered Active agent
 -- 4, EVENT_OBJECT_ITEM - Item
 -- 5, EVENT_OBJECT_LLDRULE - Low level discovery rule
+
+--frequently used functions 3.2, 3.4,
+SELECT `functions`.`parameter`,
+`items`.`delay`,
+`functions`.`function`,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=3
+AND REGEXP_LIKE(`functions`.`parameter`, '[0-9]+')
+AND `functions`.`function` NOT IN ('last','change','diff','nodata')
+GROUP BY 1,2,3
+ORDER BY `functions`.`parameter`,`items`.`delay`;
+
+--look if build in template set has some references per this OID
+SELECT key_ FROM items WHERE snmp_oid like '%1.3.6.1.2.1.2.2.1.8%';
+SELECT key_ FROM items WHERE snmp_oid like '%1.3.6.1.4.1.11.2.3.7.8.3%';
+
+
+
+SELECT hosts.host,items.key_ FROM items 
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.snmp_oid like '%1.3.6.1.4.1.11.2.3%'
+\G
+
+
+
+--frequently used functions 4.0,4.2,4.4,5.0
+SELECT `functions`.`name`,
+parameter,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+GROUP BY 1,2 
+ORDER BY 2;
+
+
+--itemid's behind proxy
+SELECT p.host,hosts.hostid,items.itemid
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+WHERE hosts.available=0;
+
+--itemid's linked to master
+SELECT hosts.host,items.itemid
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.available=0;
 
 
 
@@ -28,7 +290,7 @@ INNER JOIN functions ON functions.triggerid = triggers.triggerid
 INNER JOIN items ON functions.itemid = items.itemid
 INNER JOIN hosts ON hosts.hostid = items.hostid
 WHERE hosts.status = 3
-AND functions.name IN ('nodata','avg','min','max')
+AND functions.name IN ('nodata','avg','min','max','sum')
 AND functions.parameter NOT LIKE '#%'
 AND functions.parameter NOT LIKE '%m'
 AND functions.parameter NOT LIKE '%h'
@@ -37,8 +299,54 @@ AND functions.parameter NOT LIKE ''
 AND functions.parameter > 0
 AND functions.parameter < 60
 GROUP BY 1,2
-LIMIT 100
+LIMIT 100;
 \G
+
+--value cache is increasing forever
+SELECT 
+functions.name,
+functions.parameter,
+GROUP_CONCAT(hosts.host) AS 'templates'
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 3
+AND functions.name IN ('nodata','avg','min','max','sum')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+AND functions.parameter > 0
+AND functions.parameter < 60
+GROUP BY 1,2
+LIMIT 100;
+\G
+
+
+
+--postgres
+SELECT 
+functions.name,
+functions.parameter,
+hosts.host AS "template"
+FROM triggers
+INNER JOIN functions ON functions.triggerid = triggers.triggerid
+INNER JOIN items ON functions.itemid = items.itemid
+INNER JOIN hosts ON hosts.hostid = items.hostid
+WHERE hosts.status = 3
+AND functions.name IN ('nodata','avg','min','max')
+AND functions.parameter NOT LIKE '#%'
+AND functions.parameter NOT LIKE '%m'
+AND functions.parameter NOT LIKE '%h'
+AND functions.parameter NOT LIKE '%d'
+AND functions.parameter NOT LIKE ''
+AND functions.parameter NOT LIKE '{%'
+AND functions.parameter NOT LIKE '%}'
+GROUP BY 1,2,3
+LIMIT 100;
+
 
 
 
@@ -158,9 +466,6 @@ GROUP BY problem.objectid,problem.name
 ORDER BY COUNT(*) DESC
 LIMIT 15
 \G
-
-
-
 
 
 
@@ -3952,9 +4257,11 @@ FLUSH PRIVILEGES;
 /* for 5.5.64-MariaDB Comming from Base CentOS 7 repo */
 /* https://www.digitalocean.com/community/tutorials/how-to-change-a-mysql-data-directory-to-a-new-location-on-centos-7 */
 
-SELECT @@version,@@datadir\G
+SELECT @@hostname,@@version,@@datadir\G
 
 SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
+
+
 
 
 SELECT @@version,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_flush_method,@@innodb_log_file_size,@@open_files_limit,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G
@@ -4645,8 +4952,15 @@ LIMIT 5\G
 
 
 
-
-SELECT 
+--active log items
+SELECT COUNT(*),items.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.key_ like 'log%'
+GROUP BY items.delay
+ORDER BY COUNT(*) ASC
+;
 
 
 

@@ -1,6 +1,10 @@
 
 
 
+# check time difference
+timedatectl
+
+
 # Could you please also upload system log 
 # /var/log/messages on RHEL/CentOS 
 # or /var/log/syslog on Debian/Ubuntu?
@@ -10,6 +14,18 @@ for i in `seq 225 230`; do ping -c1 10.$(ip a | grep -oP "inet 10\.\K\d+\.\d+").
 
 for i in `seq 1 11`; do echo $(date) >> /tmp/history.syncer.txt && ps auxww|grep "[h]istory syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 5; done 
 
+# generate random number 
+echo $(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)
+
+for i in `seq 1 11`; do ; done 
+
+
+
+zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"
+
+for i in `seq 1 11`; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"; done 
+
+while :; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"; done
 
 
 while :; do echo $(date) >> /tmp/history.syncer.txt && ps auxww|grep "[h]istory syncer #" >> /tmp/history.syncer.txt && echo "=======" >> /tmp/history.syncer.txt && sleep 5; done
