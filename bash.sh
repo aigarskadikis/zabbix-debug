@@ -1,4 +1,21 @@
 
+tasklist | findstr "zabbix"
+netstat -ano 0 | findstr "10050"
+sc query "zabbix agent"
+
+while (sleep 3) do lsof | grep ^java | wc -l; done
+while (sleep 30) do lsof | grep ^java | wc -l; done
+
+
+# list of open files:
+lsof -p $(pidof mysqld) > /tmp/mysqld.list.open.files.txt
+lsof > /tmp/list.open.files.txt
+
+mkdir /tmp/lsof 
+
+# cat /etc/cron.d/open_file_descriptors
+*/15 * * * * root /usr/sbin/lsof > /tmp/lsof/$(date "+\%Y\%m\%d\%H\%M\%S").out
+
 
 
 # check time difference
@@ -174,6 +191,10 @@ ps auxww
 
 # proxy poller health
 
+
+sudo tar -zcvf /tmp/mysqld.conf.tar.gz ~/mysql.txt /var/log/mysqld.log 
+
+sudo tar -zcvf /tmp/mysqld.conf.tar.gz /etc/my.cnf /etc/mysql/my.cnf /usr/etc/my.cnf /root/.my.cnf
 
 sudo tar -zcvf /tmp/snmpsim.gz /usr/share/snmpsim
 

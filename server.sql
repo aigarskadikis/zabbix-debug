@@ -4,6 +4,108 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--biggest text values
+SELECT ho.hostid, ho.name, count(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024/1024 + sum(length(history_text.ns))/1024/1024 + sum(length(history_text.itemid))/1024/1024 AS 'history_text Column Size (Mb)'
+FROM history_text
+LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1)
+AND clock > UNIX_TIMESTAMP(now() - INTERVAL 1 DAY - INTERVAL 600 MINUTE)
+AND clock < UNIX_TIMESTAMP(now() - INTERVAL 1 DAY)
+GROUP BY ho.hostid
+ORDER BY 4 DESC
+LIMIT 5\G
+
+
+
+
+SELECT problem.objectid,problem.object,problem.source,problem.correlationid,COUNT(*) FROM problem GROUP BY 1,2,3,4 ORDER BY COUNT(*) DESC LIMIT 15;
+
+
+SELECT min(clock) from events;
+
+DELETE FROM events WHERE clock < UNIX_TIMESTAMP(NOW() - INTERVAL 6 MONTH) LIMIT 1000;
+
+DELETE FROM events WHERE clock < UNIX_TIMESTAMP(NOW() - INTERVAL 14 DAY) LIMIT 1000;
+
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY) group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY) group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-06-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-07-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-07-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-08-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-08-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-09-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-09-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-10-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-10-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-11-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-11-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-12-01 00:00:00') group by source,object;
+
+select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-12-01 00:00:00') AND clock < UNIX_TIMESTAMP('2021-01-01 00:00:00') group by 
+
+
+
+
+
+--biggest metrics in database mysql
+SELECT hosts.host,items.key_,LENGTH(history_text.value)
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
+AND LENGTH(history_text.value)>6000;
+
+SELECT hosts.host,items.key_,LENGTH(history_log.value)
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
+AND LENGTH(history_log.value)>500;
+
+
+--postgrese
+select itemid,count(*) from history_log
+where clock >= extract(epoch from now() - interval '10 hour')
+group by itemid order by count DESC LIMIT 10;
+
+select itemid,count(*) from history_str
+where clock >= extract(epoch from now() - interval '10 hour')
+group by itemid order by count DESC LIMIT 10;
+
+
+
+SELECT hosts.host, items.key_,
+AVG(LENGTH(history_text.value))::NUMERIC(10,2),
+COUNT(history_text.itemid) FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history_text.clock >= extract(epoch from now() - interval '1 hour')
+GROUP BY 1,2
+HAVING COUNT(history_text.itemid) > 0
+ORDER BY AVG(LENGTH(history_text.value))::NUMERIC(10,2) DESC
+LIMIT 10;
+
+
+SELECT hosts.host, items.key_,
+AVG(LENGTH(history_log.value))::NUMERIC(10,2),
+COUNT(history_log.itemid) FROM history_log
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history_log.clock >= extract(epoch from now() - interval '1 hour')
+GROUP BY 1,2
+HAVING COUNT(history_log.itemid) > 0
+ORDER BY AVG(LENGTH(history_log.value))::NUMERIC(10,2) DESC
+LIMIT 10;
+
+
+
 --show unreachable hosts. hosts not reachable:
 SELECT
 hosts.host,
@@ -1137,7 +1239,7 @@ sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024
 FROM history_text PARTITION (p202012270000)
 LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
-WHERE ho.status IN (0,1) 
+WHERE ho.status IN (0,1)
 GROUP BY ho.hostid
 ORDER BY 4 ASC;
 
@@ -1480,23 +1582,7 @@ select alias from users where type=3
 
 
 
-SELECT hosts.host,items.key_,LENGTH(history_text.value)
-FROM history_text 
-JOIN items ON (items.itemid=history_text.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
-AND LENGTH(history_text.value)>6000;
 
-SELECT hosts.host,items.key_,LENGTH(history_log.value)
-FROM history_log 
-JOIN items ON (items.itemid=history_log.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
-AND LENGTH(history_log.value)>500;
-
-
---postgrese
-select itemid,count(*) from history_log where clock >= extract(epoch from now() - interval '10 hour') group by itemid order by count DESC LIMIT 10;
 
 
 SELECT @@hostname,
@@ -1749,8 +1835,7 @@ JOIN task ON (task.taskid=task_close_problem.taskid)
 JOIN events ON (events.eventid=acknowledges.eventid)
 JOIN triggers ON (triggers.triggerid=events.objectid)
 GROUP BY 2,3,4
-ORDER BY 2
-;
+ORDER BY 2;
 
 
 
