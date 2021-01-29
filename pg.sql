@@ -1,5 +1,62 @@
 
 
+
+
+SELECT ho.hostid, ho.name, COUNT(*) AS records, 
+(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
+WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS "Total size average (Mb)", 
+sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024/1024 + sum(length(history_text.ns))/1024/1024
++ sum(length(history_text.itemid))/1024/1024 AS "history_text Column Size (Mb)"
+FROM history_text
+LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
+LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
+WHERE ho.status IN (0,1)
+AND clock > EXTRACT(epoch FROM NOW()-INTERVAL '30 MINUTE')
+AND clock < EXTRACT(epoch FROM NOW())
+GROUP BY ho.hostid
+ORDER BY 4 DESC
+LIMIT 5;
+
+
+
+--best query ever. most consuming text metrics
+SELECT hosts.host,history_text.itemid,items.key_,
+COUNT(history_text.itemid) AS "count", AVG(LENGTH(history_text.value))::NUMERIC(10,2) AS "avg size",
+(COUNT(history_text.itemid) * AVG(LENGTH(history_text.value)))::NUMERIC(10,2) AS "Count x AVG"
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '96 HOUR')
+GROUP BY hosts.host,history_text.itemid,items.key_
+ORDER BY 6 DESC
+LIMIT 5
+\gx
+
+
+--best query ever. analyze history_log
+SELECT hosts.host,history_log.itemid,items.key_,
+COUNT(history_log.itemid) AS "count", AVG(LENGTH(history_log.value))::NUMERIC(10,2) AS "avg size",
+(COUNT(history_log.itemid) * AVG(LENGTH(history_log.value)))::NUMERIC(10,2) AS "Count x AVG"
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '30 MINUTE')
+GROUP BY hosts.host,history_log.itemid,items.key_
+ORDER BY 6 DESC
+LIMIT 5
+\gx
+
+
+SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_all_tables
+WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC
+LIMIT 10
+\gx
+
+
+
+
 --active query
 SELECT
 pid,
@@ -9,6 +66,19 @@ state
 FROM pg_stat_activity
 WHERE (now() - pg_stat_activity.query_start) > interval '20 minutes';
 
+
+--biggest metrics on postgres
+SELECT hosts.host, items.itemid, items.key_,
+AVG(LENGTH(history_text.value))::NUMERIC(10,2),
+COUNT(history_text.itemid) FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history_text.clock >= extract(epoch from now() - interval '24 hour')
+GROUP BY 1,2
+HAVING COUNT(history_text.itemid) > 0
+ORDER BY AVG(LENGTH(history_text.value))::NUMERIC(10,2) DESC
+LIMIT 10
+\gx
 
 
 
@@ -326,24 +396,28 @@ LIMIT 2
 
 --size of biggest tables, hypertables, 
 \o /tmp/biggest.tables.log
-SELECT *, pg_size_pretty(total_bytes) AS total
-    , pg_size_pretty(index_bytes) AS index
-    , pg_size_pretty(toast_bytes) AS toast
-    , pg_size_pretty(table_bytes) AS table
-  FROM (
-  SELECT *, total_bytes-index_bytes-coalesce(toast_bytes,0) AS table_bytes FROM (
-      SELECT c.oid,nspname AS table_schema, relname AS table_name
-              , c.reltuples AS row_estimate
-              , pg_total_relation_size(c.oid) AS total_bytes
-              , pg_indexes_size(c.oid) AS index_bytes
-              , pg_total_relation_size(reltoastrelid) AS toast_bytes
-          FROM pg_class c
-          LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-          WHERE relkind = 'r'
-  ) a
-) a;
+SELECT *, pg_size_pretty(total_bytes) AS total , pg_size_pretty(index_bytes) AS index ,
+       pg_size_pretty(toast_bytes) AS toast , pg_size_pretty(table_bytes) AS table
+FROM
+  (SELECT *, total_bytes-index_bytes-coalesce(toast_bytes, 0) AS table_bytes
+   FROM
+     (SELECT c.oid,
+             nspname AS table_schema,
+             relname AS table_name ,
+             c.reltuples AS row_estimate ,
+             pg_total_relation_size(c.oid) AS total_bytes ,
+             pg_indexes_size(c.oid) AS index_bytes ,
+             pg_total_relation_size(reltoastrelid) AS toast_bytes
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE relkind = 'r' ) a) a;
 \o
 \gx
+
+
+
+
+
 
 
 

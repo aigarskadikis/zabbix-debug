@@ -1,4 +1,14 @@
 
+
+# active files in current directory with recent timestamp
+find . -cmin -60
+
+
+
+
+grep -r innodb_buffer_pool_size /etc/*
+
+
 tasklist | findstr "zabbix"
 netstat -ano 0 | findstr "10050"
 sc query "zabbix agent"
@@ -15,7 +25,6 @@ mkdir /tmp/lsof
 
 # cat /etc/cron.d/open_file_descriptors
 */15 * * * * root /usr/sbin/lsof > /tmp/lsof/$(date "+\%Y\%m\%d\%H\%M\%S").out
-
 
 
 # check time difference
@@ -156,6 +165,40 @@ Housekeeper or partitioning used for removing old data.
 
 
 
+
+
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999999"}'
+
+grep -oP 'itemid\":\K\d+' /tmp/queue.json | xargs -i echo "
+SELECT hosts.host, items.type
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid='{}'
+AND proxy.host='broceni';
+" | mysql -N zabbix | sort | uniq
+
+
+jq '.data[].itemid' /tmp/queue.json | xargs -i echo "
+SELECT hosts.host, items.type
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid='{}'
+AND proxy.host='broceni';
+" | mysql -N zabbix | sort | uniq
+
+
+
+
+--zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999999"}'
+
+
+
 # logging for snmptrapd
 systemctl edit snmptrapd.service
 ExecStart=/usr/sbin/snmptrapd -Ln -f -Lf /var/log/snmptrapd.log
@@ -257,8 +300,10 @@ cat /proc/meminfo >> /tmp/mem.info.txt
 # Process list:
 ps auxww >> /tmp/process.list.txt 
 
-for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 1; done 
+for i in `seq 1 20`; do echo $(date) >> /tmp/master.processes.txt && ps auxww >> /tmp/master.processes.txt && echo "=======" >> /tmp/master.processes.txt && sleep 3; done 
 
+
+for i in `seq 1 5`; do echo $(date) >> /tmp/processes.$(hostname -s).txt && ps auxww >> /tmp/processes.$(hostname -s).txt && echo "=======" >> /tmp/processes.$(hostname -s).txt && sleep 1; done 
 
 
 # Inside the server where service 'zabbix-server' is running please take a few snapshots of process list. It will take 2 minutes to complete:

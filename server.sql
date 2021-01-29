@@ -3,6 +3,84 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+yum -y install iperf
+iperf -s -p 10051
+
+
+--show all items and state on one host. 4.4, 5.0, 5.2
+SELECT items.itemid,
+items.type,
+items.key_,
+items.flags,
+item_rtdata.state,
+item_rtdata.error
+FROM items
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE items.status=0
+AND items.hostid=12345\G
+
+
+SELECT items.key_,events.object,events.name
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.object IN (4,5)
+AND events.source=3
+AND events.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 DAY)
+AND hosts.hostid=11268\G
+
+
+SELECT items.key_,events.object,COUNT(*)
+FROM events
+JOIN items ON (items.itemid=events.objectid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.object IN (4,5)
+AND events.source=3
+AND events.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 DAY)
+AND hosts.hostid=11268
+GROUP BY events.object
+\G
+
+
+
+
+
+--SNMPv3 hosts behind proxy
+SELECT p.host,hosts.hostid,items.itemid
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+
+WHERE hosts.available=0;
+
+
+
+--best query ever. log entries consuming the most space. history_log
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+(COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 30 MINUTE)
+GROUP BY hosts.host,history_log.itemid
+ORDER BY 6 DESC
+LIMIT 3\G
+
+
+--best query ever. history_text entries consuming the most space
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_text.itemid) AS 'count', AVG(LENGTH(history_text.value)) AS 'avg size',
+(COUNT(history_text.itemid) * AVG(LENGTH(history_text.value))) AS 'Count x AVG'
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 30 MINUTE)
+GROUP BY hosts.host,history_text.itemid
+ORDER BY 6 DESC
+LIMIT 3\G
+
+
 
 --biggest text values
 SELECT ho.hostid, ho.name, count(*) AS records, 
@@ -19,6 +97,66 @@ GROUP BY ho.hostid
 ORDER BY 4 DESC
 LIMIT 5\G
 
+
+
+/* Measure the size of text blocks getting inserted in text tables recently */
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_text WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 MINUTE);
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_log WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 MINUTE);
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_str WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 MINUTE);
+
+
+
+
+
+--biggest metrics in database mysql, table history_text
+SELECT hosts.host,items.key_,AVG(LENGTH(history_text.value))
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 60 MINUTE)
+AND LENGTH(history_text.value)>60
+GROUP BY 1,2,3
+ORDER BY LENGTH(history_text.value) DESC
+LIMIT 3\G
+
+
+
+--biggest metrics in database mysql, table history_log
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_log.itemid) AS 'occurance',
+AVG(LENGTH(history_log.value)) AS 'average length'
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 30 MINUTE)
+GROUP BY hosts.host,history_log.itemid
+LIMIT 5\G
+
+
+--biggest metrics in database mysql, table history_text
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_text.itemid) AS 'occurance',
+AVG(LENGTH(history_text.value)) AS 'average length'
+FROM history_text 
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 30 MINUTE)
+GROUP BY hosts.host,history_text.itemid
+LIMIT 5\G
+
+
+
+
+
+--biggest metrics in database mysql, table history_log
+SELECT hosts.host,items.key_,LENGTH(history_log.value) AS 'length'
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 60 MINUTE)
+AND LENGTH(history_log.value)>60
+ORDER BY LENGTH(history_log.value) DESC
+LIMIT 3\G
 
 
 
@@ -54,13 +192,8 @@ select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-1
 
 
 
---biggest metrics in database mysql
-SELECT hosts.host,items.key_,LENGTH(history_text.value)
-FROM history_text 
-JOIN items ON (items.itemid=history_text.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE)
-AND LENGTH(history_text.value)>6000;
+
+
 
 SELECT hosts.host,items.key_,LENGTH(history_log.value)
 FROM history_log 
@@ -1211,12 +1344,13 @@ SELECT ho.hostid, ho.name, count(*) AS records,
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
 sum(length(history.value))/1024/1024 + sum(length(history.clock))/1024/1024 + sum(length(history.ns))/1024/1024 + sum(length(history.itemid))/1024/1024 AS 'History Column Size (Mb)'
-FROM history PARTITION (p202011220000)
+FROM history PARTITION (p2021_01_21)
 LEFT OUTER JOIN items i on history.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid
-ORDER BY 4 ASC;
+ORDER BY 4 DESC
+LIMIT 10;
 
 
 --biggest integers
@@ -1224,24 +1358,30 @@ SELECT ho.hostid, ho.name, count(*) AS records,
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
 sum(length(history_uint.value))/1024/1024 + sum(length(history_uint.clock))/1024/1024 + sum(length(history_uint.ns))/1024/1024 + sum(length(history_uint.itemid))/1024/1024 AS 'history_uint Column Size (Mb)'
-FROM history_uint PARTITION (p202011220000)
+FROM history_uint PARTITION (p2021_01_21)
 LEFT OUTER JOIN items i on history_uint.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid
-ORDER BY 4 ASC;
+ORDER BY 4 DESC
+LIMIT 10;
+
 
 --biggest text values
 SELECT ho.hostid, ho.name, count(*) AS records, 
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
 WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
-sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024/1024 + sum(length(history_text.ns))/1024/1024 + sum(length(history_text.itemid))/1024/1024 AS 'history_text Column Size (Mb)'
-FROM history_text PARTITION (p202012270000)
+sum(length(history_text.value))/1024/1024 + 
+sum(length(history_text.clock))/1024/1024 +
+sum(length(history_text.ns))/1024/1024 + 
+sum(length(history_text.itemid))/1024/1024 AS 'history_text Column Size (Mb)'
+FROM history_text PARTITION (p2021_01_21)
 LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1)
 GROUP BY ho.hostid
-ORDER BY 4 ASC;
+ORDER BY 4 DESC
+LIMIT 10;
 
 
 --Total size average (Mb) which multiplies the average row size by the number of records for host, thus the average
@@ -1545,37 +1685,6 @@ SELECT userid FROM users WHERE type=3
 )
 AND status=0
 LIMIT 1;
-
-
-zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99"}'
-zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999"}'
-zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999"}'
-zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99999"}'
-zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999999"}'
-
-grep -oP 'itemid\":\K\d+' /tmp/queue.json | xargs -i echo "
-SELECT hosts.host, items.type
-FROM hosts 
-JOIN items ON (hosts.hostid = items.hostid)
-JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
-WHERE items.itemid='{}'
-AND proxy.host='broceni';
-" | mysql -N zabbix | sort | uniq
-
-
-jq '.data[].itemid' /tmp/queue.json | xargs -i echo "
-SELECT hosts.host, items.type
-FROM hosts 
-JOIN items ON (hosts.hostid = items.hostid)
-JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
-WHERE items.itemid='{}'
-AND proxy.host='broceni';
-" | mysql -N zabbix | sort | uniq
-
-
-
-
-zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999999"}'
 
 select alias from users where type=3
 
@@ -2112,10 +2221,6 @@ LIMIT 10
 ;
 
 
-/* Measure the size of text blocks getting inserted in text tables recently */
-select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
-select max(LENGTH (value)), avg(LENGTH (value)) from history_log where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
-select max(LENGTH (value)), avg(LENGTH (value)) from history_str where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);  
 
 
 
@@ -3631,6 +3736,7 @@ ORDER BY hosts.hostid;
 /* This table contains list of active problems, in other words it will contain list of opened PROBLEM events. 
 PROBLEM events are trigger events with value TRIGGER_VALUE_PROBLEM and internal events with value ITEM_STATE_NOTSUPPORTED/TRIGGER_STATE_UNKNOWN  */
 select COUNT(*),source from problem group by source;
+SELECT COUNT(*),source FROM events GROUP BY source;
 
 
 /* show item prototypes, discoveries and items configured with SNMPv3 */
@@ -4860,7 +4966,8 @@ WHERE clock>=1578924000
   AND clock<=1578957600
 GROUP BY source;
 
-select COUNT(*), source, object from events group by source;
+
+SELECT COUNT(*),source FROM events GROUP BY source;
 
 /* show the the problem which are spamming the problem table the most */
 select COUNT(*),source,object,objectid from problem group by source,object,objectid order by COUNT(*) desc limit 20;
