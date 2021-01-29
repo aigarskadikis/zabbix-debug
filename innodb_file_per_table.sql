@@ -86,6 +86,13 @@ systemctl stop zabbix-server zabbix-agent rh-nginx116-nginx rh-php72-php-fpm
 --make sure no process is running
 ps aux | grep "[z]abbix_server"
 
+
+--create dump of schema
+mysqldump --flush-logs --single-transaction --create-options --no-data zabbix > schema.sql 
+
+--create dump of data
+mysqldump --flush-logs --single-transaction --no-create-info zabbix | gzip --fast > data.sql.gz
+
 --stop database engine
 systemctl stop mariadb
 
