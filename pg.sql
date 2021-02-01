@@ -1,34 +1,49 @@
 
 
 
-psql -c "COPY (SELECT * FROM my_table WHERE created_at > '2012-05-01') TO STDOUT;" source_db | psql -c "COPY my_table FROM STDIN;" target_db
 
-psql -c "COPY (
-SELECT * FROM big_table WHERE created_at > '2012-05-01'
-) TO STDOUT;" -h localhost -d my_database -U my_user > path/to/file
+--backup one month.
+time psql z50 -c "COPY (
+SELECT * FROM trends_uint
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-01 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-02-01 00:00:00'))
+) TO STDOUT;" | gzip --best > trends_uint.202101.raw.gz
 
+--install paralel gzip. this will use all CPU cores for compression
+--yum install pigz
+time psql z50 -c "COPY (
+SELECT * FROM trends_uint
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-01 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-02-01 00:00:00'))
+) TO STDOUT;" | pigz --best > trends_uint.202101.raw.gz
 
+--better compression. sacrifice time
+time psql z50 -c "COPY (
+SELECT * FROM trends_uint
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-01 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-02-01 00:00:00'))
+) TO STDOUT;" | xz > trends_uint.202101.raw.xz
 
-WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-03 00:00:00'))
-AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-05 00:00:00'))
-
-
---backup data from a specific time period
-psql z50 -c "COPY (
-SELECT * FROM trends_uint_new
-WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-28 00:00:00'))
-AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-29 00:00:00'))
-) TO STDOUT;" > 20210128.raw
-
---delete records
+--test inserting create test table
 psql z50 -c "
-DELETE FROM trends_uint_new
-WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-28 00:00:00'))
-AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-29 00:00:00'));
+CREATE TABLE trends_uint_test (LIKE trends_uint INCLUDING ALL);
+"
+
+time zcat trends_uint.202101.raw.gz | psql -c "COPY trends_uint_test FROM STDIN;" z50
+
+--drop and recreate table
+psql z50 -c "
+DROP TABLE trends_uint_test; CREATE TABLE trends_uint_test (LIKE trends_uint INCLUDING ALL);
 "
 
 --copy back
-cat 20210128.raw | psql -c "COPY trends_uint_new FROM STDIN;" z50
+time xzcat trends_uint.202101.raw.xz | psql -c "COPY trends_uint_test FROM STDIN;" z50
+
+psql z50 -c "
+DROP TABLE trends_uint_test;
+"
+
+--it's important to test with a backend online as we will insert data in background in a similar way.
 
 
 
