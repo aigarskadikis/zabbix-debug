@@ -1,6 +1,61 @@
 
 
 
+psql -c "COPY (SELECT * FROM my_table WHERE created_at > '2012-05-01') TO STDOUT;" source_db | psql -c "COPY my_table FROM STDIN;" target_db
+
+psql -c "COPY (
+SELECT * FROM big_table WHERE created_at > '2012-05-01'
+) TO STDOUT;" -h localhost -d my_database -U my_user > path/to/file
+
+
+
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-03 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-05 00:00:00'))
+
+
+--backup data from a specific time period
+psql z50 -c "COPY (
+SELECT * FROM trends_uint_new
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-28 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-29 00:00:00'))
+) TO STDOUT;" > 20210128.raw
+
+--delete records
+psql z50 -c "
+DELETE FROM trends_uint_new
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-28 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-01-29 00:00:00'));
+"
+
+--copy back
+cat 20210128.raw | psql -c "COPY trends_uint_new FROM STDIN;" z50
+
+
+
+
+pg_dump \
+--dbname=z50 \
+--format=plain \
+--blobs \
+--verbose \
+--data-only \
+--table=history_uint \
+--file=z50.history_uint.sql
+
+ls -lh z50.history_uint.sql
+
+
+
+pg_dump \
+--dbname=z50 \
+--format=plain \
+--blobs \
+--verbose \
+--data-only \
+--table='_timescaledb_internal._hyper_9_783_chunk' \
+--file=z50.history_uint.sql
+
+
 
 SELECT ho.hostid, ho.name, COUNT(*) AS records, 
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
@@ -801,8 +856,6 @@ pg_dump \
 
 
 
-, , <database>
-
 
 pg_dump \
 --dbname=z44 \
@@ -865,8 +918,6 @@ WHERE triggers.flags IN (0)
 \gx
 
   AND hosts.host=''
-
-
 
 
 
@@ -955,6 +1006,10 @@ pg_dump \
 --file=zabbix44.pg.schema.dump \
 --schema-only \
 --format=plain
+
+
+
+
 
 
 
@@ -1183,8 +1238,15 @@ z42 > z42.sql
 
 
 
-
-
+pg_dump
+--dbname=z50 \
+--format=plain \
+--blobs \
+--clean \
+--verbose \
+--data-only \
+--include-table-data=history_uint \
+--file=history_uint.sql
 
 
 z42 > zabbix.pg.dump.compressed

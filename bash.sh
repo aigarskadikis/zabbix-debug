@@ -3,6 +3,25 @@
 # active files in current directory with recent timestamp
 find . -cmin -60
 
+cd /var/log/zabbix
+find . -cmin -1440 | xargs ls -lh
+find . -cmin -1440 | xargs grep Z3001
+
+# statistics about database went down
+zcat /var/log/zabbix/zabbix_server*gz | grep Z3001 | sort | tail -10
+
+
+
+find /var/log/zabbix -type f -name '*.gz' -mtime -5 -exec zcat {} \ | grep housekeeper;
+
+
+
+1440
+
+find . -cmin -1440 | xargs
+
+zcat /var/log/zabbix/zabbix_server*gz | grep housekeeper | sort | tail -20
+
 
 
 
@@ -164,7 +183,8 @@ Storage information (Disk types - SSD, HDD, SAS) (RAID info).
 Housekeeper or partitioning used for removing old data. 
 
 
-
+e9eec97e9c670fbc37658710bfadd61e
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e9eec97e9c670fbc37658710bfadd61e","type":"details","limit":"999999"}'
 
 
 zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99"}'
@@ -227,6 +247,9 @@ free -h
 sudo rpm -qa | grep zabbix
 # ubuntu/debian
 sudo apt list --installed | grep zabbix
+
+
+/usr/sbin/mysqld --verbose --help | grep -A 1 "Default options"
 
 
 # process list
@@ -404,7 +427,7 @@ ps auxw | grep "data sender" | awk '{print " -p " $2}'|xargs strace -s 256 -T -t
 # snapshot of process list
 for i in `seq 1 6`; do echo $(date) >> /tmp/process.list.txt && ps -efwww >> /tmp/process.list.txt && echo "=======" >> /tmp/process.list.txt && sleep 1; done
 
-
+du -a /var/lib/mysql/zabbix | sort
 
 cat /proc/cpuinfo
 cat /proc/meminfo
