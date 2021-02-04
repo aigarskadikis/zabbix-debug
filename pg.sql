@@ -1,5 +1,43 @@
 
 
+--configuration backup
+
+pg_dump --host=pg \
+--format=custom \
+--blobs \
+--clean \
+--verbose \
+--exclude-table-data=history* \
+--exclude-table-data=trends* \
+--exclude-table-data=events \
+--exclude-table-data=acknowledges \
+--exclude-table-data=alerts \
+--exclude-table-data=auditlog \
+--exclude-table-data=auditlog_details \
+--exclude-table-data=profiles \
+--exclude-table-data=service_alarms \
+--exclude-table-data=sessions \
+--exclude-table-data=problem \
+--exclude-table-data=event_recovery \
+z44 > z44.sql
+
+
+--Backup postgres, ignore hyper tables, hypertables
+
+pg_dump \
+--dbname=z44 \
+--file=zabbix44.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-schema=_timescaledb_internal \
+--exclude-schema=_timescaledb_cache \
+--exclude-schema=_timescaledb_catalog \
+--exclude-schema=_timescaledb_config \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
 
 
 --backup one month.
@@ -1240,7 +1278,7 @@ pg_dump --host=pg \
 --exclude-table-data=history* \
 --exclude-table-data=trends* \
 --exclude-table-data=events \
---exclude-table-data-data=acknowledges \
+--exclude-table-data=acknowledges \
 --exclude-table-data=alerts \
 --exclude-table-data=auditlog \
 --exclude-table-data=auditlog_details \
