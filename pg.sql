@@ -1,5 +1,9 @@
 
 
+
+--delete from events in postgres
+DELETE FROM events WHERE source > 0 AND clock IN (SELECT clock FROM events WHERE source > 0 LIMIT 1 OFFSET 0);
+
 --configuration backup
 
 pg_dump --host=pg \
@@ -548,7 +552,7 @@ AND clock <= EXTRACT(EPOCH FROM (TIMESTAMP '2020-08-10 00:00:00' - INTERVAL '1 M
 
 
 
-
+DELETE FROM events WHERE source > 0 AND clock IN (SELECT clock FROM events WHERE source > 0 LIMIT 1 OFFSET 0);
 
 DELETE FROM events WHERE source=0 and object=0 and clock <= EXTRACT(EPOCH FROM (timestamp '2020-07-24 00:00:00' - INTERVAL '1 MONTH ')) ORDER BY 'eventid' limit 100000;
 

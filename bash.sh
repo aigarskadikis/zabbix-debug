@@ -291,6 +291,14 @@ watch -n.1 "innotop -h'ros' -P'3306' -u'root' -p'zabbix' --count 1 -d 1 -n --mod
 # trapper health
 watch -n1 'ps aux|grep "[t]rapper #"'
 
+watch -n1 'ps auxww | grep "[z]abbix_server: trapper #"'
+
+watch -n.1 'ps auxww | grep "^zabbix.*[z]abbix_server: trapper #"'
+
+watch -n.1 'ps auxww | grep "^zabbix.*[z]abbix_server: trapper #.*waiting for connection"'
+
+
+
 # trappers
 watch -n1 'ps -efww|grep -E -o "[t]rapper #.*"'
 
@@ -505,6 +513,9 @@ while :; do echo "$(date),$(kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel
 sed "s|idle|idle,|;s|wait|wait,|;s|user|user,|;s|kernel|kernel,|;s|$|,|" | \
 tr -cd "[:print:]" )" | tee -a ~/cpu_stat.csv; sleep 5; done
 
+
+
+while :; do nr=0; nr=((nr+1)); echo $nr; sleep 1; done
 
 
 while :; do date >> ~/cpu_stat.log; kstat -p cpu_stat:::/^idle$\|^wait$\|^user$\|^kernel$/ >> ~/cpu_stat.log; sleep 5; done

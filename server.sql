@@ -3,6 +3,40 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
+
+--list all items per one host
+SELECT key_, delay, type, flags, value_type
+FROM items
+WHERE status=0
+AND hostid=12795;
+
+
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+(COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 6 MINUTE)
+GROUP BY hosts.host,history_log.itemid
+ORDER BY 6 DESC
+LIMIT 5\G
+
+
+SELECT hosts.host,items.itemid,items.key_,
+COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+(COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
+FROM history_log 
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP("2021-02-02 15:00:00")
+AND clock < UNIX_TIMESTAMP("2021-02-02 15:30:00")
+GROUP BY hosts.host,history_log.itemid
+ORDER BY 6 DESC
+LIMIT 5\G
+
+
+
 yum -y install iperf
 iperf -s -p 10051
 
@@ -1457,7 +1491,7 @@ GROUP BY ho.hostid;
 
 --list items per host by listing first application. show all applications
 SELECT
-GROUP_CONCAT(applications.name),
+applications.name,
 items.name,
 host_inventory.os_full,
 host_inventory.os_short,
@@ -1469,8 +1503,8 @@ JOIN applications ON (applications.applicationid=items_applications.applicationi
 JOIN host_inventory ON (host_inventory.hostid=hosts.hostid)
 JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
 WHERE hosts.status IN (0,1)
-AND hosts.hostid=12589
-GROUP BY 2,3,4,5
+AND applications.name=''
+GROUP BY 1,2,3,4,5
 \G
 
 
@@ -1486,7 +1520,20 @@ WHERE hosts.status IN (0,1)
 AND hosts.hostid=12589
 \G
 
+--items with an empty application
+SELECT
+items.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE itemid NOT IN (SELECT itemid FROM items_applications)
+AND hosts.status=0;
 
+
+JOIN items_applications ON (items_applications.itemid=items.itemid)
+JOIN applications ON (applications.applicationid=items_applications.applicationid)
+WHERE hosts.status IN (0,1)
+AND hosts.hostid=12589
+\G
 
 
 --show all host groups per each hosts (active,disabled), framework
