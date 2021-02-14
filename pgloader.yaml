@@ -1,0 +1,43 @@
+
+Destination DB server on RHEL7:
+  - install PG12 from official repository:
+    - rpm -Uvh https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+  - install pgloader for RHEL7:
+    - rpm -Uvh http://ftp.postgresql.org/pub/repos/yum/testing/common/redhat/rhel-7-x86_64/pgloader-3.6.2-1.rhel7.x86_64.rpm
+
+Source MariaDB server(cluster):
+  - create new user 'root'@'%' to be capable to reach out from destination server
+  
+Destination PG12 server:
+  - create user 'zabbix'
+  - create database 'zabbixDB' which is owned by postgreSQL user 'zabbix'
+  
+
+Create pgloader profile:
+
+# download and unpack source
+maj=4.2
+min=8
+cd
+curl -kL "https://cdn.zabbix.com/zabbix/sources/stable/$maj/zabbix-$maj.$min.tar.gz" -o zabbix-$maj.$min.tar.gz
+curl -kL "https://cdn.zabbix.com/zabbix/sources/oldstable/$maj/zabbix-$maj.$min.tar.gz" -o zabbix-$maj.$min.tar.gz
+tar -vzxf zabbix-$maj.$min.tar.gz
+mv ~/zabbix-$maj.$min/database/postgresql/schema.sql /tmp
+
+cd
+sed -n '/CREATE.*/,/INSERT.*$/p' /tmp/schema.sql | head -n-1 > ~/create.sql
+grep ALTER /tmp/schema.sql > ~/alter.sql
+
+  
+create a profile
+
+
+
+Source MariaDB server(cluster):
+  - make sure replication is working and in good state
+    - stop replication
+    - for extra (backup) security let's use slave node for migration purpose:
+
+
+
+

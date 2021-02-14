@@ -1,4 +1,29 @@
 
+SELECT hosts.host FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+WHERE items.itemid='zabbix[queue]'
+AND hosts.status=0;
+
+
+
+watch -n.1 'ps auxww|grep "[h]istory syncer #"'
+
+watch -n.1 'ps auxww|grep -oE "zabbix_server: [h]istory syncer #.*"'
+
+watch -n.1 'ps auxww|grep -oE "[h]istory syncer #.*"'
+
+
+
+grep "syncing history data in progress\|syncing trend data done" *
+
+Zabbix Server stopped
+
+grep "Zabbix Server stopped\|Starting Zabbix Server" *
+
+grep "Zabbix Server stopped" *
+
+grep "Starting Zabbix Server" *
+
 
 # active files in current directory with recent timestamp
 find . -cmin -60
