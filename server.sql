@@ -4,6 +4,74 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+
+
+/* unsupported LLDs discoveries items 5.0 */
+SELECT
+hosts.host,
+items.name,
+CONCAT( '/host_discovery.php?form=update&itemid=', items.itemid ) AS "open item"
+FROM item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags IN (1)
+AND items.status=0
+AND LENGTH(item_rtdata.error)>0
+\G
+
+--leading host with most unsupported items
+SELECT hosts.host,
+COUNT(*),
+CONCAT( '/items.php?filter_hostids%5B%5D=', hosts.hostid ,'&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&filter_set=1') AS "show unsupported items"
+FROM items
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE hosts.status=0
+AND LENGTH(item_rtdata.error) > 0
+GROUP BY 1,3
+ORDER BY COUNT(*) DESC
+LIMIT 1
+\G
+
+
+SELECT hosts.host,
+items.key_,
+CONCAT( "https://zbx.catonrug.net/", 'history.php?itemids%5B0%5D=', items.itemid, '&action=showlatest' ) AS "check data",
+CONCAT( "https://zbx.catonrug.net/", 'items.php?form=update&hostid=', hosts.hostid, '&itemid=', items.itemid ) AS "open item"
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.templateid IS NULL
+AND items.flags NOT IN (4,1)
+AND items.status=0
+\G
+
+
+
+
+items.php?form=update&hostid=12814&itemid=309738
+
+
+https://zbx.catonrug.net/history.php?itemids%5B0%5D=109064&action=showlatest
+
+
+--5.0 show which items are linked to hosts but not belong to any template
+SELECT hosts.host,
+hosts.hostid,
+items.key_,
+items.itemid,
+items.templateid
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.templateid IS NULL
+AND items.flags NOT IN (4)
+AND items.status=0
+\G
+
+
+
+
 --list all items per one host
 SELECT key_, delay, type, flags, value_type
 FROM items
@@ -3293,6 +3361,17 @@ WHERE source=3
 GROUP BY hosts.host,items.key_,
          item_rtdata.error
 ORDER BY COUNT(items.key_)\G
+
+
+
+
+
+
+
+
+
+
+
 
 -- for one host on 4.4
 SELECT FROM_UNIXTIME(clock) as 'clock',
