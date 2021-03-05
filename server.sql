@@ -5,6 +5,82 @@
 
 
 
+--delete all events comming from specific trigger id. only execute if trigger is not in problem state
+SELECT clock,eventid,value FROM events
+WHERE events.source=0 AND events.object=0 AND events.objectid=428537
+ORDER BY clock DESC LIMIT 10;
+
+
+
+/* which escalation is causing the most trouble */
+SELECT COUNT(*),actions.name,escalations.status
+from escalations
+JOIN actions ON (actions.actionid=escalations.actionid)
+GROUP BY actions.name,escalations.status
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+
+
+SELECT actions.name, COUNT(*)
+FROM events
+JOIN alerts ON (alerts.eventid=events.eventid)
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE events.source=0
+AND events.object=0
+AND alerts.clock > UNIX_TIMESTAMP('2021-03-02 12:20:00')
+AND alerts.clock < UNIX_TIMESTAMP('2021-03-02 12:40:00')
+GROUP BY actions.name
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+
+
+
+
+/* hosts not reachable behind proxy and master server */
+SELECT p.host AS proxy_name,
+hosts.host,
+interface.ip,
+interface.dns,
+interface.useip,
+CASE interface.type
+WHEN 1 THEN 'ZBX'
+WHEN 2 THEN 'SNMP'
+WHEN 3 THEN 'IPMI'
+WHEN 4 THEN 'JMX'
+END AS "type",
+hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+LEFT JOIN hosts p ON hosts.proxy_hostid=p.hostid
+WHERE hosts.status=0
+AND interface.main=1
+AND hosts.available=2;
+
+
+SELECT hosts.host,
+interface.ip,
+interface.dns,
+interface.useip,
+CASE interface.type
+WHEN 1 THEN 'ZBX'
+WHEN 2 THEN 'SNMP'
+WHEN 3 THEN 'IPMI'
+WHEN 4 THEN 'JMX'
+END AS "type",
+hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+WHERE hosts.status=0
+AND interface.main=1
+AND hosts.available=2;
+
+
+
+
 
 /* unsupported LLDs discoveries items 5.0 */
 SELECT
@@ -982,6 +1058,7 @@ JOIN hosts_groups ON hosts_groups.hostid=items.hostid
 JOIN groups ON groups.groupid=hosts_groups.groupid
 WHERE events.source IN (0,3)
 AND events.object = 0;
+
 AND hosts_groups.groupid>0
 
 
@@ -1100,6 +1177,12 @@ WHERE events.source=0
 AND events.object=0
 ORDER BY events.clock ASC
 LIMIT 10\G
+
+
+
+
+
+
   
 --historical event + action name. 3.0
 SELECT FROM_UNIXTIME(events.clock),
@@ -3758,6 +3841,10 @@ ORDER BY count(items.key_),hosts.host,items.key_ ASC
 \G
 
 
+
+SELECT NOW();
+
+SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_text WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR);
 
 
 

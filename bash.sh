@@ -5,6 +5,8 @@ WHERE items.itemid='zabbix[queue]'
 AND hosts.status=0;
 
 
+for i in `seq 1 2`; do echo $(date) >> /tmp/ps.auxww.$(hostname).log && ps auxww >> /tmp/ps.auxww.$(hostname).log && echo "=======" >> /tmp/ps.auxww.$(hostname).log && sleep 5; done 
+
 
 watch -n.1 'ps auxww|grep "[h]istory syncer #"'
 
