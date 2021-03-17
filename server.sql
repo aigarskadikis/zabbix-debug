@@ -5,6 +5,35 @@
 
 
 
+
+--fetch recent floating numbers
+SELECT DISTINCT(history.itemid),hosts.host,items.key_,
+FROM_UNIXTIME(MAX(history.clock)) AS "clock",
+history.value
+FROM history
+JOIN items ON (items.itemid=history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 10 MINUTE)
+GROUP BY history.itemid,items.key_,hosts.host,history.value
+LIMIT 2
+\G
+
+
+
+--fetch recent integers
+SELECT DISTINCT(history_uint.itemid),hosts.host,items.key_,
+FROM_UNIXTIME(MAX(history_uint.clock)) AS "clock",
+history_uint.value
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history_uint.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 2 MINUTE)
+GROUP BY history_uint.itemid,items.key_,hosts.host,history_uint.value; 
+
+
+
+
+
 --delete all events comming from specific trigger id. only execute if trigger is not in problem state
 SELECT clock,eventid,value FROM events
 WHERE events.source=0 AND events.object=0 AND events.objectid=428537

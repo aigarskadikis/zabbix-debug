@@ -16,6 +16,18 @@ watch -n.1 'ps auxww|grep -oE "[h]istory syncer #.*"'
 
 
 
+#!/bin/bash
+
+if [ -f /tmp/completed ]; then
+    echo "the script has been executed already" 
+else
+    echo "executing someting now"
+    [ $? -eq 0 ] && touch /tmp/completed
+fi
+
+
+
+
 grep "syncing history data in progress\|syncing trend data done" *
 
 Zabbix Server stopped
