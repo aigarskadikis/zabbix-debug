@@ -1916,6 +1916,9 @@ SELECT userid FROM users WHERE type=3
 AND status=0
 LIMIT 1;
 
+SELECT sessionid FROM sessions WHERE userid IN (SELECT userid FROM users WHERE type=3) AND status=0 LIMIT 1;
+
+
 select alias from users where type=3
 
 

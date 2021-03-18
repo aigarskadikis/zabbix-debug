@@ -2,12 +2,15 @@
 # server queue details
 # obtain session tokken:
 curl http://127.0.0.1:152/api_jsonrpc.php -s -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"user.login","params":{"user":"Admin","password":"zabbix"},"id":1,"auth":null}' | grep -E -o "([0-9a-f]{32,32})"
+curl http://127.0.0.1/api_jsonrpc.php -s -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"user.login","params":{"user":"api","password":"zabbix"},"id":1,"auth":null}' | grep -E -o "([0-9a-f]{32,32})"
 
 # Query if it works
 zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e7eb57ca751ac49ce8fb134f4126bbd3","type":"details","limit":"999999"}'
 
 # put ID's in file:
 zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}' > /tmp/queue.json
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e7eb57ca751ac49ce8fb134f4126bbd3","type":"details","limit":"999999"}' > /tmp/queue.json
 
 
 # count of items
@@ -19,7 +22,34 @@ JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
 WHERE items.itemid='{}'
 ;" | psql --no-align --tuples-only z52 | sort | uniq -c
 
+# golden query
+grep -oP 'itemid\":\K\d+' /tmp/queue.json | tr '\n' ',' | sed 's|.$||' | xargs -i echo "
+SELECT p.host, hosts.host, items.key_
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+LEFT JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+WHERE items.itemid IN ({})
+;" | mysql --table zabbix
 
+
+
+grep -oP 'itemid\":\K\d+' /tmp/queue.json | tr '\n' ',' | sed 's|.$||' | xargs -i echo "
+SELECT p.host AS proxy, hosts.host, items.key_
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+LEFT JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+WHERE items.itemid IN ({})
+;" | psql z52
+
+# maximum 2MB of data can be passed to xargs
+# echo | xargs --show-limits
+Your environment variables take up 2351 bytes
+POSIX upper limit on argument length (this system): 2092753
+POSIX smallest allowable upper limit on argument length (all systems): 4096
+Maximum length of command we could actually use: 2090402
+Size of command buffer we are actually using: 131072
 
 
 
