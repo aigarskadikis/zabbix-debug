@@ -1832,6 +1832,9 @@ AND interface.main=0;
 DELETE FROM interface WHERE interface.type=1 AND interface.main=0;
 DELETE FROM interface WHERE interface.type=1 AND interface.main=0 LIMIT 1;
 
+--delete secondary SNMP interfaces
+DELETE FROM interface WHERE interface.type=2 AND interface.main=0 LIMIT 1;
+
 
 --set all agent passive checks to use DNS instaed of IP. check the lenght before adjusting
 UPDATE interface SET useip=0 WHERE type=1 AND main=1 AND LENGTH(dns)>0;

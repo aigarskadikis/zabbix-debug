@@ -1,4 +1,29 @@
 
+# server queue details
+# obtain session tokken:
+curl http://127.0.0.1:152/api_jsonrpc.php -s -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"user.login","params":{"user":"Admin","password":"zabbix"},"id":1,"auth":null}' | grep -E -o "([0-9a-f]{32,32})"
+
+# Query if it works
+zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}'
+
+# put ID's in file:
+zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}' > /tmp/queue.json
+
+
+# count of items
+grep -oP 'itemid\":\K\d+' /tmp/queue.json | xargs -i echo "
+SELECT hosts.host
+FROM hosts 
+JOIN items ON (hosts.hostid = items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid='{}'
+;" | psql --no-align --tuples-only z52 | sort | uniq -c
+
+
+
+
+
+
 SELECT hosts.host FROM hosts
 JOIN items ON (items.hostid=hosts.hostid)
 WHERE items.itemid='zabbix[queue]'
@@ -226,6 +251,18 @@ e9eec97e9c670fbc37658710bfadd61e
 zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e9eec97e9c670fbc37658710bfadd61e","type":"details","limit":"999999"}'
 
 
+SELECT sessionid FROM sessions;
+SELECT sessionid FROM sessions
+WHERE 
+
+;
+
+;
+
+
+echo 'SELECT sessionid FROM sessions​ WHERE userid IN (SELECT userid FROM users WHERE type=3) AND status=0 LIMIT 1'
+
+
 zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"99"}'
 zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"999"}'
 zabbix_get -s 127.0.0.1 -p 10051 -k {"request":"queue.get","sid":"c56cae42778e90fe1a1c88a55c341f41","type":"details","limit":"9999"}'
@@ -251,6 +288,13 @@ WHERE items.itemid='{}'
 AND proxy.host='broceni';
 " | mysql -N zabbix | sort | uniq
 
+
+curl http://127.0.0.1:152/api_jsonrpc.php -s -X POST -H 'Content-Type: application/json' -d \
+'{"jsonrpc":"2.0","method":"user.login","params":{"user":"Admin","password":"zabbix"},"id":1,"auth":null}' | \
+grep -E -o "([0-9a-f]{32,32})"
+
+
+zabbix_get -s 127.0.0.1 -p 15251 ​-k '{"request":"queue.get","sid":"0cf5f7e39de997d9a02593ab973acf85","type":"details","limit":"9999999"}' > /tmp/queue.json 
 
 
 
