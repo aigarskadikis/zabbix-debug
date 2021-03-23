@@ -6,11 +6,11 @@ curl http://127.0.0.1/api_jsonrpc.php -s -X POST -H 'Content-Type: application/j
 
 # Query if it works
 zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}'
-zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e7eb57ca751ac49ce8fb134f4126bbd3","type":"details","limit":"999999"}'
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"2fbf06f496529c68bce2c94f94a0531a","type":"details","limit":"999999"}'
 
 # put ID's in file:
 zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}' > /tmp/queue.json
-zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"e7eb57ca751ac49ce8fb134f4126bbd3","type":"details","limit":"999999"}' > /tmp/queue.json
+zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"2fbf06f496529c68bce2c94f94a0531a","type":"details","limit":"999999"}' > /tmp/queue.json
 
 
 # count of items
@@ -24,13 +24,13 @@ WHERE items.itemid='{}'
 
 # golden query
 grep -oP 'itemid\":\K\d+' /tmp/queue.json | tr '\n' ',' | sed 's|.$||' | xargs -i echo "
-SELECT p.host, hosts.host, items.key_
+SELECT p.host AS proxy, hosts.host, items.key_
 FROM hosts 
 JOIN items ON (hosts.hostid = items.hostid)
 JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
 LEFT JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
 WHERE items.itemid IN ({})
-;" | mysql --table zabbix
+;" | mysql --table zabbix > /tmp/queue.txt
 
 
 

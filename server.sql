@@ -5,6 +5,35 @@
 
 
 
+--big data in mysql history_text
+SELECT itemid,COUNT(*),SUM(LENGTH(value)) FROM history_text
+WHERE clock >= UNIX_TIMESTAMP('2021-03-19 00:00:00')
+AND clock < UNIX_TIMESTAMP('2021-03-20 00:00:00')
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC LIMIT 20;
+--big data in mysql history_log
+SELECT itemid,COUNT(*),SUM(LENGTH(value)) FROM history_log
+WHERE clock >= UNIX_TIMESTAMP('2021-03-19 00:00:00')
+AND clock < UNIX_TIMESTAMP('2021-03-20 00:00:00')
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC LIMIT 20;
+
+
+
+--postgres
+SELECT itemid,COUNT(*),SUM(LENGTH(value)) FROM history_text
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-02-20 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-03-21 00:00:00'))
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC;
+--posthres integers
+SELECT itemid,COUNT(*),SUM(value) FROM history_uint
+WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2021-02-20 00:00:00'))
+AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2021-03-21 00:00:00'))
+GROUP BY itemid
+ORDER BY SUM(value) DESC;
+
+
 
 --fetch recent floating numbers
 SELECT DISTINCT(history.itemid),hosts.host,items.key_,
