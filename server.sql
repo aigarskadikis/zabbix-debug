@@ -1828,6 +1828,14 @@ JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
 WHERE status IN (0,1)
 GROUP BY hosts.hostid
 ;
+--postgres
+SELECT hosts.hostid, hosts.name, array_to_string(array_agg(hstgrp.name),',') as Groups
+FROM hosts
+LEFT JOIN hosts_groups ON hosts_groups.hostid=hosts.hostid
+LEFT JOIN hstgrp ON hosts_groups.groupid = hstgrp.groupid
+WHERE status IN (0,1)
+GROUP BY hosts.hostid;
+
 
 
 -- delete internal events
