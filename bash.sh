@@ -1,4 +1,18 @@
 
+
+
+
+grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+'
+# We can print on screen SQL delete commands which can be used to improve the situation:
+grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+' | xargs -i echo "DELETE FROM task WHERE taskid IN ({});"
+
+
+
+
+
+
+
+
 # server queue details
 # obtain session tokken:
 curl http://127.0.0.1:152/api_jsonrpc.php -s -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","method":"user.login","params":{"user":"Admin","password":"zabbix"},"id":1,"auth":null}' | grep -E -o "([0-9a-f]{32,32})"
@@ -163,6 +177,11 @@ for i in `seq 1 11`; do ; done
 zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"
 
 for i in `seq 1 11`; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"; done 
+
+
+for i in `seq 1 11`; do echo 1;sleep 1; done 
+
+
 
 while :; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"; done
 

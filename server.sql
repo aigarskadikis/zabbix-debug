@@ -5,6 +5,83 @@
 
 
 
+--remove looping tasks
+# https://support.zabbix.com/browse/ZBX-18802
+SELECT count(a.eventid) FROM task_close_problem tcp LEFT JOIN acknowledges a ON tcp.acknowledgeid=a.acknowledgeid LEFT JOIN events e ON a.eventid=e.eventid WHERE e.eventid IN (SELECT eventid FROM events WHERE object = 0 AND source=0 AND clock>0 AND objectid NOT IN (SELECT triggerid FROM triggers));
+SELECT count(eventid) FROM events WHERE object = 0 AND source=0 AND clock>0 AND objectid NOT IN (SELECT triggerid FROM triggers);
+
+
+delete from task where taskid in (
+select t.taskid FROM task t
+JOIN task_close_problem ON task_close_problem.taskid = t.taskid
+JOIN acknowledges an ON acknowledges.acknowledgeid = task_close_problem.acknowledgeid
+JOIN problem p ON problem.eventid = acknowledges.eventid
+WHERE task.type = 1 AND task.status = 1 AND problem.source=0 AND problem.object=0 AND problem.objectid not in (
+select triggerid from triggers where status=0
+)
+);
+
+
+
+
+
+
+--list the enabled hosts in Zabbix and which templates are attached to them
+SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
+    LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
+    LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
+WHERE h.status=0 and h.flags in (0,4);
+
+
+--delete all events comming from specific trigger id. only execute if trigger is not in problem state
+
+
+
+--live unsupported items
+SELECT hosts.host,COUNT(*),
+CONCAT('http://zabprd02/items.php?filter_hostids%5B%5D=', hosts.hostid, '&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS \"check data\"
+ FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE hosts.status=0
+AND items.flags IN (0,4)
+AND item_rtdata.state=1
+GROUP BY hosts.host,3
+ORDER BY COUNT(*) DESC
+LIMIT 1
+;
+
+
+
+
+
+
+http://zabprd02/items.php?filter_hostids%5B%5D=10681&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1
+
+
+--catter host inventory
+SELECT host_inventory.macaddress_a,GROUP_CONCAT(hosts.host) FROM host_inventory
+JOIN hosts ON (hosts.hostid=host_inventory.hostid)
+WHERE hosts.status=0 AND host_inventory.macaddress_a LIKE '%enterprises%'
+GROUP BY host_inventory.macaddress_a
+\G
+
+--query all device title which has installed objectID at the 'macaddress_a' field
+SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(hosts.host) FROM host_inventory
+JOIN hosts ON (hosts.hostid=host_inventory.hostid)
+WHERE hosts.status=0 AND host_inventory.macaddress_a LIKE '%enterprises%'
+\G
+
+
+--query all device title which has installed objectID at the 'macaddress_a' field
+SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(interface.ip) FROM interface
+JOIN hosts ON (hosts.hostid=interface.hostid)
+WHERE hosts.status=0 AND interface.main=1 AND interface.type=2
+\G
+
+JOIN host_inventory ON (host_inventory.hostid=interface.hostid)
+
+
 --big data in mysql history_text
 SELECT itemid,COUNT(*),SUM(LENGTH(value)) FROM history_text
 WHERE clock >= UNIX_TIMESTAMP('2021-03-19 00:00:00')
@@ -63,10 +140,7 @@ GROUP BY history_uint.itemid,items.key_,hosts.host,history_uint.value;
 
 
 
---delete all events comming from specific trigger id. only execute if trigger is not in problem state
-SELECT clock,eventid,value FROM events
-WHERE events.source=0 AND events.object=0 AND events.objectid=428537
-ORDER BY clock DESC LIMIT 10;
+
 
 
 
@@ -980,7 +1054,8 @@ SELECT COUNT(*),
 hosts.host,
 triggers.description
 FROM problem
-JOIN triggers ON (triggers.triggerid=problem.objectid)
+JOIN 
+s ON (triggers.triggerid=problem.objectid)
 JOIN functions ON (functions.triggerid=triggers.triggerid)
 JOIN items ON (items.itemid=functions.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -1747,12 +1822,13 @@ AND hosts.hostid=12589
 
 --show all host groups per each hosts (active,disabled), framework
 SELECT hosts.hostid,
-GROUP_CONCAT(hosts_groups.hostgroupid)
+GROUP_CONCAT(hosts_groups.groupid)
 FROM hosts
 JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
 WHERE status IN (0,1)
 GROUP BY hosts.hostid
 ;
+
 
 -- delete internal events
 DELETE FROM events WHERE source IN (1,2,3) LIMIT 100;
@@ -1792,11 +1868,7 @@ AND items.type IN (0,7)
 
 
 
---list the enabled hosts in Zabbix and which templates are attached to them
-SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
-    LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
-    LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
-WHERE h.status=0 and h.flags in (0,4);
+
 
 
 --show triggers per host and show which template is delivering this trigger
