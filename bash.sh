@@ -7,8 +7,8 @@ grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | gre
 grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+' | xargs -i echo "DELETE FROM task WHERE taskid IN ({});"
 
 
-
-
+# vmware statistics
+grep vmware /var/log/zabbix/zabbix_server.log | grep "Performance counter data" | cut -d '[' -f1 | cut -d ":" -f4 | sort | uniq -c
 
 
 

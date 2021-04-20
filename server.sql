@@ -5,6 +5,42 @@
 
 
 
+--highlight exceptions
+SELECT items.delay,items.key_,items.templateid
+FROM items
+JOIN hosts ON hosts.hostid=items.hostid
+WHERE items.itemid=333307;
+
+SELECT items.delay,items.key_,items.templateid
+FROM items
+JOIN hosts ON hosts.hostid=items.hostid
+WHERE hosts.hostid=109293;
+
+
+SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
+    LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
+    LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
+WHERE h.status=0 and h.hostid=11850 and h.flags in (0,4);
+
+
+--show pure items
+--i.flags IN (0,1,2) show discovery rules and item prototypes
+SELECT i.itemid AS itemAtHostLevel, h.hostid, 
+htempl.hostid AS templateID
+FROM items i
+LEFT JOIN hosts h ON h.hostid=i.hostid
+LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
+LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
+WHERE h.status=0
+AND i.flags IN (0)
+AND h.hostid=11850;
+
+
+select * from items where itemid=320197\G
+hostid=12856
+
+
+
 --remove looping tasks
 # https://support.zabbix.com/browse/ZBX-18802
 SELECT count(a.eventid) FROM task_close_problem tcp LEFT JOIN acknowledges a ON tcp.acknowledgeid=a.acknowledgeid LEFT JOIN events e ON a.eventid=e.eventid WHERE e.eventid IN (SELECT eventid FROM events WHERE object = 0 AND source=0 AND clock>0 AND objectid NOT IN (SELECT triggerid FROM triggers));
@@ -33,13 +69,14 @@ SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
 WHERE h.status=0 and h.flags in (0,4);
 
 
+
 --delete all events comming from specific trigger id. only execute if trigger is not in problem state
 
 
 
 --live unsupported items
 SELECT hosts.host,COUNT(*),
-CONCAT('http://zabprd02/items.php?filter_hostids%5B%5D=', hosts.hostid, '&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS \"check data\"
+CONCAT('items.php?filter_hostids%5B%5D=', hosts.hostid, '&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS "check data"
  FROM hosts
 JOIN items ON (items.hostid=hosts.hostid)
 JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
@@ -49,7 +86,7 @@ AND item_rtdata.state=1
 GROUP BY hosts.host,3
 ORDER BY COUNT(*) DESC
 LIMIT 1
-;
+\G
 
 
 
@@ -227,7 +264,7 @@ AND items.status=0
 AND LENGTH(item_rtdata.error)>0
 \G
 
---leading host with most unsupported items
+--leading host with most unsupported items. works on 4.4
 SELECT hosts.host,
 COUNT(*),
 CONCAT( '/items.php?filter_hostids%5B%5D=', hosts.hostid ,'&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&filter_set=1') AS "show unsupported items"
@@ -350,6 +387,10 @@ AND events.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 30 DAY)
 AND hosts.hostid=11268
 GROUP BY events.object
 \G
+
+
+
+
 
 
 
