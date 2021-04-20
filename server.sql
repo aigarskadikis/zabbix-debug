@@ -91,11 +91,6 @@ LIMIT 1
 
 
 
-
-
-http://zabprd02/items.php?filter_hostids%5B%5D=10681&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1
-
-
 --catter host inventory
 SELECT host_inventory.macaddress_a,GROUP_CONCAT(hosts.host) FROM host_inventory
 JOIN hosts ON (hosts.hostid=host_inventory.hostid)
@@ -172,11 +167,6 @@ JOIN items ON (items.itemid=history_uint.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE history_uint.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 2 MINUTE)
 GROUP BY history_uint.itemid,items.key_,hosts.host,history_uint.value; 
-
-
-
-
-
 
 
 
