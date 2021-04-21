@@ -4,6 +4,53 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+--detect exceptions in update. valuable query
+SELECT h1.host AS exceptionInstalled,
+i1.name,
+i1.key_,
+i1.delay,
+h2.host AS differesFromTemplate,
+i2.name,
+i2.key_,
+i2.delay
+FROM items i1
+JOIN items i2 ON (i2.itemid=i1.templateid)
+JOIN hosts h1 ON (h1.hostid=i1.hostid)
+JOIN hosts h2 ON (h2.hostid=i2.hostid)
+WHERE i1.delay<>i2.delay\G
+
+
+--item update frequency
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.delay, h2.host AS differesFromTemplate, i2.delay FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.delay<>i2.delay\G
+--save history for n days
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.history, h2.host AS differesFromTemplate, i2.history FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.history<>i2.history\G
+--keep trends
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.trends, h2.host AS differesFromTemplate, i2.trends FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.trends<>i2.trends\G
+--item disable or enabled
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.status, h2.host AS differesFromTemplate, i2.status FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.status<>i2.status\G
+--credentials
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.username, h2.host AS differesFromTemplate, i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.password, h2.host AS differesFromTemplate, i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
+
+
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.publickey, h2.host AS differesFromTemplate, i2.publickey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.publickey<>i2.publickey\G
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.privatekey, h2.host AS differesFromTemplate, i2.privatekey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.privatekey<>i2.privatekey\G
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.description, h2.host AS differesFromTemplate, i2.description FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.description<>i2.description\G
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.discover, h2.host AS differesFromTemplate, i2.discover FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.discover<>i2.discover\G
+
+--different lifetime on LLD rule
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.lifetime, h2.host AS differesFromTemplate, i2.lifetime FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.lifetime<>i2.lifetime\G
+
+
+--different username
+SELECT level1.key_,items.key_ FROM items
+JOIN items level1 ON (level1.itemid=items.templateid) 
+WHERE level1.username<>items.username;
+
+--different password
+SELECT level1.key_,items.key_ FROM items
+JOIN items level1 ON (level1.itemid=items.templateid)
+WHERE level1.password<>items.password;
 
 --highlight exceptions
 SELECT items.delay,items.key_,items.templateid
