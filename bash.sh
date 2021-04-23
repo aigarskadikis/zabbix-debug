@@ -2,6 +2,15 @@
 
 
 
+
+
+for x in {1..5}; do ps aux | sort -nrk 3,3 | head -n 10; sleep 5; done >> /tmp/processes.txt
+
+for x in {1..5}; do ps ax | grep zabbix; sleep 5; done >> /tmp/zabbix.txt
+
+
+
+
 grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+'
 # We can print on screen SQL delete commands which can be used to improve the situation:
 grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+' | xargs -i echo "DELETE FROM task WHERE taskid IN ({});"
@@ -73,8 +82,14 @@ JOIN items ON (items.hostid=hosts.hostid)
 WHERE items.itemid='zabbix[queue]'
 AND hosts.status=0;
 
+for i in `seq 1 20`; do echo $(date) >> /tmp/proxy.proc.log && ps auxww >> /tmp/proxy.proc.log && echo "=======" >> /tmp/proxy.proc.log && sleep 5; done 
+for i in `seq 1 2`; do echo $(date) >> /tmp/proxy.proc.log && ps auxww >> /tmp/proxy.proc.log && echo "=======" >> /tmp/proxy.proc.log && sleep 5; done 
 
-for i in `seq 1 2`; do echo $(date) >> /tmp/ps.auxww.$(hostname).log && ps auxww >> /tmp/ps.auxww.$(hostname).log && echo "=======" >> /tmp/ps.auxww.$(hostname).log && sleep 5; done 
+
+for i in `seq 1 20`; do echo $(date) >> /tmp/proxy.proc.log && ps auxww >> /tmp/ps.auxww.$(hostname).log && echo "=======" >> /tmp/proxy.proc.log && sleep 5; done 
+for i in `seq 1 2`; do echo $(date) >> /tmp/proxy.proc.log && ps auxww >> /tmp/ps.auxww.$(hostname).log && echo "=======" >> /tmp/proxy.proc.log && sleep 5; done 
+
+for i in `seq 1 20`; do echo $(date) >> /tmp/ps.auxww.$(hostname).log && ps auxww >> /tmp/ps.auxww.$(hostname).log && echo "=======" >> /tmp/ps.auxww.$(hostname).log && sleep 5; done 
 
 
 watch -n.1 'ps auxww|grep "[h]istory syncer #"'
