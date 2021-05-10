@@ -4,6 +4,39 @@
 --Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
 
 
+
+
+--biggest text metrics in database
+SELECT hosts.host,hosts.hostid,history_text.itemid,COUNT(*),SUM(LENGTH(history_text.value))
+FROM history_text
+JOIN items ON (items.itemid=history_text.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 113600 MINUTE)
+GROUP BY history_text.itemid
+ORDER BY SUM(LENGTH(history_text.value)) DESC
+LIMIT 10;
+
+--biggest log entries
+SELECT hosts.host,hosts.hostid,history_log.itemid,COUNT(*),SUM(LENGTH(history_log.value))
+FROM history_log
+JOIN items ON (items.itemid=history_log.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3600 MINUTE)
+GROUP BY history_log.itemid
+ORDER BY SUM(LENGTH(history_log.value)) DESC
+LIMIT 10;
+
+--string entries
+SELECT hosts.host,hosts.hostid,history_str.itemid,COUNT(*),SUM(LENGTH(history_str.value))
+FROM history_str
+JOIN items ON (items.itemid=history_str.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3600 MINUTE)
+GROUP BY history_str.itemid
+ORDER BY SUM(LENGTH(history_str.value)) DESC
+LIMIT 10;
+
+
 --detect exceptions in update. valuable query
 SELECT h1.host AS exceptionInstalled,
 i1.name,
@@ -152,7 +185,7 @@ WHERE hosts.status=0 AND host_inventory.macaddress_a LIKE '%enterprises%'
 \G
 
 
---query all device title which has installed objectID at the 'macaddress_a' field
+--query all device title which has installed objectID at the 'macaddress_a' field. ip address, ip addreses
 SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(interface.ip) FROM interface
 JOIN hosts ON (hosts.hostid=interface.hostid)
 WHERE hosts.status=0 AND interface.main=1 AND interface.type=2
@@ -1906,6 +1939,18 @@ JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
 WHERE status IN (0,1)
 GROUP BY hosts.hostid
 ;
+
+--host group names per host. Works on 5.0
+SELECT hosts.host,
+GROUP_CONCAT(hstgrp.name)
+FROM hosts
+JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid)
+JOIN hstgrp ON (hosts_groups.groupid=hstgrp.groupid)
+WHERE status IN (0,1)
+GROUP BY hosts.hostid
+;
+
+
 --postgres
 SELECT hosts.hostid, hosts.name, array_to_string(array_agg(hstgrp.name),',') as Groups
 FROM hosts
