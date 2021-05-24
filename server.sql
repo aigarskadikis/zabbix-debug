@@ -6,12 +6,42 @@
 
 
 
+--The item is not discovered anymore and will be deleted in
+SELECT hosts.host,
+items.key_,
+FROM_UNIXTIME(item_discovery.ts_delete) AS 'willBeDeleted',
+CONCAT('items.php?form=update&hostid=', hosts.hostid, '&itemid=', items.itemid ) AS 'URL'
+from items 
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE item_discovery.ts_delete > 0
+\G
+
+
+
+
+
+SELECT history_text.itemid,
+SUM(LENGTH(history_text.value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=', history_text.itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3 DAY)
+GROUP BY history_text.itemid
+ORDER BY SUM(LENGTH(history_text.value)) DESC
+LIMIT 10;
+
+
+
+334514&action=showlatest
+
+
+
 --biggest text metrics in database
 SELECT hosts.host,hosts.hostid,history_text.itemid,COUNT(*),SUM(LENGTH(history_text.value))
 FROM history_text
 JOIN items ON (items.itemid=history_text.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 113600 MINUTE)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3 DAY)
 GROUP BY history_text.itemid
 ORDER BY SUM(LENGTH(history_text.value)) DESC
 LIMIT 10;
@@ -167,6 +197,9 @@ GROUP BY hosts.host,3
 ORDER BY COUNT(*) DESC
 LIMIT 1
 \G
+
+
+
 
 
 
