@@ -5,6 +5,92 @@
 
 
 
+--Force all Zabbix agent hosts to use IP:
+UPDATE interface SET useip=1 WHERE type=1 AND main=1; 
+
+--Set all Zabbix agent hosts to use DNS:
+UPDATE interface SET useip=0 WHERE type=1 AND main=1 AND LENGTH(dns)>0;
+
+
+
+--recent txt metrics in 10 minutes
+SELECT history_text.itemid,
+SUM(LENGTH(history_text.value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=', history_text.itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 10 MINUTE)
+GROUP BY history_text.itemid
+ORDER BY SUM(LENGTH(history_text.value)) DESC
+LIMIT 10\G
+
+
+--recent log metrics in 10 minutes
+SELECT history_log.itemid,
+SUM(LENGTH(history_log.value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=', history_log.itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_log
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 10 MINUTE)
+GROUP BY history_log.itemid
+ORDER BY SUM(LENGTH(history_log.value)) DESC
+LIMIT 10\G
+
+
+--how many items each host is having
+SELECT COUNT(*),hosts.host
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY hosts.host
+ORDER BY COUNT(*) ASC;
+
+
+--list "Zabbix trapper" keys (items.type=2) only for monitored hosts (hosts.status=0) and enabled items (items.status=0)
+SELECT COUNT(*),
+key_
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND items.type=2
+GROUP BY key_;
+
+
+
+--web scenarios
+SELECT DISTINCT hosts.host,
+p.host AS proxy_name
+FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+LEFT JOIN hosts p ON hosts.proxy_hostid=p.hostid
+WHERE hosts.status=0
+AND items.type=9
+ORDER BY proxy_name;
+
+SELECT COUNT(*),objectid,object,source FROM events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY) GROUP BY objectid,object,source ORDER BY COUNT(*) ASC;
+
+SELECT COUNT(*),source FROM events GROUP BY source;
+
+
+
+SELECT hosts.host,
+triggers.triggerid,
+FROM_UNIXTIME(alerts.clock) AS 'clock',
+alerts.actionid,
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status
+FROM alerts
+JOIN events ON (events.eventid=alerts.eventid)
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source IN (0,3) AND events.object = 0
+ORDER BY alerts.clock ASC;
+
+
 
 --The item is not discovered anymore and will be deleted in
 SELECT hosts.host,
@@ -18,6 +104,7 @@ WHERE item_discovery.ts_delete > 0
 \G
 
 
+SELECT COUNT(*),objectid,object,source FROM events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY) GROUP BY objectid,object,source ORDER BY COUNT(*) ASC;
 
 
 
@@ -295,17 +382,17 @@ LIMIT 10;
 
 
 
-SELECT actions.name, COUNT(*)
+SELECT COUNT(*),
+actions.name, 
+actions.actionid 
 FROM events
 JOIN alerts ON (alerts.eventid=events.eventid)
 JOIN actions ON (actions.actionid=alerts.actionid)
 WHERE events.source=0
 AND events.object=0
-AND alerts.clock > UNIX_TIMESTAMP('2021-03-02 12:20:00')
-AND alerts.clock < UNIX_TIMESTAMP('2021-03-02 12:40:00')
-GROUP BY actions.name
-ORDER BY COUNT(*) DESC
-LIMIT 10;
+GROUP BY actions.name,actions.actionid
+ORDER BY COUNT(*) ASC
+LIMIT 10\G
 
 
 
@@ -358,7 +445,8 @@ AND hosts.available=2;
 SELECT
 hosts.host,
 items.name,
-CONCAT( '/host_discovery.php?form=update&itemid=', items.itemid ) AS "open item"
+CONCAT( 'host_discovery.php?form=update&itemid=', items.itemid ) AS "open item",
+item_rtdata.error
 FROM item_rtdata
 JOIN items ON (items.itemid=item_rtdata.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -366,6 +454,8 @@ WHERE items.flags IN (1)
 AND items.status=0
 AND LENGTH(item_rtdata.error)>0
 \G
+
+
 
 --leading host with most unsupported items. works on 4.4
 SELECT hosts.host,
@@ -1749,8 +1839,9 @@ SELECT COUNT(*) FROM hosts WHERE proxy_hostid is NULL AND status=0;
 SELECT host FROM hosts WHERE proxy_hostid is NULL AND status=0;
 
 
---show alerts by status in the last 7 days
+--show alerts by status in the last 7 days. Zabbix 5.0
 SELECT COUNT(*),
+alerts.actionid,actions.name,
 CASE alerts.status
 WHEN 0 THEN 'NOT_SENT'
 WHEN 1 THEN 'SENT'
@@ -1758,8 +1849,9 @@ WHEN 2 THEN 'FAILED'
 WHEN 3 THEN 'NEW'
 END AS status
 FROM alerts
-WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
-GROUP BY alerts.status;
+JOIN actions ON (actions.actionid=alerts.actionid)
+GROUP BY alerts.actionid,alerts.status,actions.name
+ORDER BY COUNT(*) ASC\G
 
 
 --actions which are responsible for initiating the delivery
@@ -1767,7 +1859,7 @@ SELECT COUNT(*),
 actions.name
 FROM alerts 
 JOIN actions ON (actions.actionid=alerts.actionid)
-WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 1 DAY)
 GROUP BY 2
 ORDER BY 1;
 
@@ -4032,7 +4124,37 @@ GROUP BY alerts.status,actions.name;
 UPDATE alerts
 SET status=1,
 message = 'Disabled by Admin'
-WHERE status=0;
+WHERE status=0
+AND actionid=7
+LIMIT 10;
+
+
+
+
+--3.2
+SELECT COUNT(*),
+alerts.actionid,
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status
+FROM alerts
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 1 DAY)
+GROUP BY alerts.actionid,alerts.status;
+
+
+UPDATE alerts SET status=1, message = 'Disabled by Admin' WHERE status=0 AND actionid=7 LIMIT 10;
+
+SELECT COUNT(*),
+actions.name,
+alerts.actionid
+FROM alerts
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 1 DAY)
+GROUP BY 2
+ORDER BY 1;
 
 
 /* system.cpu.num[] - this key will report integer (not float). timestamp will be store in history_uint */
@@ -5457,6 +5579,8 @@ select object,objectid,COUNT(*) from events where source = 3 and object = 5 grou
 
 /* show the event count per source */
 SELECT COUNT(*),source FROM events GROUP BY source;
+
+
 
 
 SELECT COUNT(*),
