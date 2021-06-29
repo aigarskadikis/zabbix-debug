@@ -1,5 +1,17 @@
 
 
+--biggest metrics
+SELECT itemid,SUM(LENGTH(value)) FROM history_text WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '5 MINUTE') GROUP BY itemid ORDER BY SUM(LENGTH(value)) DESC LIMIT 5;
+SELECT itemid,SUM(LENGTH(value)) FROM history_str WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '5 MINUTE') GROUP BY itemid ORDER BY SUM(LENGTH(value)) DESC LIMIT 5;
+SELECT itemid,SUM(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '5 MINUTE') GROUP BY itemid ORDER BY SUM(LENGTH(value)) DESC LIMIT 5;
+
+
+
+--copy host names, host groups, IPs to CSV. Zabbix 5.0. It works only as a one line:
+\copy (SELECT hosts.host AS host,hstgrp.name AS host_group,interface.ip AS IP FROM hosts JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid) JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.status IN (0,1))  TO '/tmp/hosts.hg.ips.csv' WITH CSV
+
+
+
 
 --delete from events in postgres
 DELETE FROM events WHERE source > 0 AND clock IN (SELECT clock FROM events WHERE source > 0 LIMIT 1 OFFSET 0);
@@ -40,6 +52,9 @@ pg_dump \
 --exclude-schema=_timescaledb_config \
 --exclude-table-data '*.history*' \
 --exclude-table-data '*.trends*'
+
+
+
 
 
 

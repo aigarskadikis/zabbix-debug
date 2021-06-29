@@ -404,6 +404,14 @@ ps auxww
 
 # proxy poller health
 
+# compress gzip 
+sudo tar -zcvf /tmp/httpd/conf.d.tar.gz /etc/httpd/conf.d
+# or better the whole etc
+sudo tar -zcvf /tmp/etc.tar.gz /etc
+
+sudo tar -zcvf /tmp/httpd.tar.gz /etc/httpd
+
+
 
 sudo tar -zcvf /tmp/mysqld.conf.tar.gz ~/mysql.txt /var/log/mysqld.log 
 

@@ -124,21 +124,19 @@ LIMIT 10;
 
 
 --biggest text metrics in database
-SELECT hosts.host,hosts.hostid,history_text.itemid,COUNT(*),SUM(LENGTH(history_text.value))
+SELECT itemid,SUM(LENGTH(value))
 FROM history_text
-JOIN items ON (items.itemid=history_text.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3 DAY)
-GROUP BY history_text.itemid
-ORDER BY SUM(LENGTH(history_text.value)) DESC
-LIMIT 10;
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC
+LIMIT 5;
 
 --biggest log entries
 SELECT hosts.host,hosts.hostid,history_log.itemid,COUNT(*),SUM(LENGTH(history_log.value))
 FROM history_log
 JOIN items ON (items.itemid=history_log.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3600 MINUTE)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
 GROUP BY history_log.itemid
 ORDER BY SUM(LENGTH(history_log.value)) DESC
 LIMIT 10;
@@ -148,7 +146,7 @@ SELECT hosts.host,hosts.hostid,history_str.itemid,COUNT(*),SUM(LENGTH(history_st
 FROM history_str
 JOIN items ON (items.itemid=history_str.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3600 MINUTE)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
 GROUP BY history_str.itemid
 ORDER BY SUM(LENGTH(history_str.value)) DESC
 LIMIT 10;
