@@ -1,7 +1,52 @@
 
 
 
+mysql -sN --batch zabbix -e "
+SELECT items.name,
+items.key_,
+items.delay,
+hosts.host,
+p.host AS proxy_name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+LEFT JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+WHERE hosts.status=0;
+" > /tmp/items.tsv
 
+
+Thank you for the screenshot. Since this is a test environment, for troubleshooting purposes it could really help to install:
+
+StartAlerters=1
+Restart the backend, increase the log level for "alert manager" and "alerter" by executing this block:
+
+zabbix_server -R log_level_increase="alert manager"
+zabbix_server -R log_level_increase="alerter"
+zabbix_server -R log_level_increase="alert manager"
+zabbix_server -R log_level_increase="alerter"
+Check debug level:
+
+grep "log level" /var/log/zabbix/zabbix_server.log  
+ The last 2 lines should say "log level has been increased to 5"
+
+Simulate a fresh event in GUI. Make sure the ServiceNow engagement has been initiated.
+
+Decrease log level:
+
+zabbix_server -R log_level_decrease="alert manager"
+zabbix_server -R log_level_decrease="alerter"
+zabbix_server -R log_level_decrease="alert manager"
+zabbix_server -R log_level_decrease="alerter"
+grep "log level" /var/log/zabbix/zabbix_server.log
+Last 2 lines should say: "log level has been increased to 3"
+
+
+
+grep "Starting Zabbix Server\|Zabbix Server stopped" /var/log/zabbix/zabbix_server.log
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbix Server stopped" | sort | tail -20
+
+
+grep "please increase" /var/log/zabbix/zabbix_server.log
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "please increase" | sort | tail -20
 
 
 for x in {1..5}; do ps aux | sort -nrk 3,3 | head -n 10; sleep 5; done >> /tmp/processes.txt
@@ -733,6 +778,11 @@ grep "zbx_setproctitle.*title.*data sender" /var/log/zabbix/zabbix_proxy.log | g
 # we will require to see lines before the matched line
 
 zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbix Server stopped\|syncing history data\|syncing trend data"
+
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "Starting Zabbix Server\|Zabbix Server stopped" | sort | tail -20
+
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "query failed"
+zcat /var/log/zabbix/zabbix_server.log-*gz | grep "database"
 
 for i in `seq 1 60`; do ./json_item_tcp.sh >> /tmp/tcp.conn && sleep 1; done; netstat -a >> /tmp/tcp.conn
 

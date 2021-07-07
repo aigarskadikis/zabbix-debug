@@ -1,8 +1,177 @@
 
---MySQL engine 5.6 and even 5.7 are not so good as MySQL 8.0/Percona 8.0, also InnoDB cluster from MySQL CE 8.0 has good performance and reliability (InnoDB cluster with MySQL router).
---Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme, etc), file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
---Galera can be used in parallel with GTID based replication, so after creation of the second cluster, you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial, but allow you seamless migration.
+--MySQL engine 5.6 and even 5.7 are not so good as MySQL 8.0/Percona 8.0 THEN 'also InnoDB cluster from MySQL CE 8.0 has good performance and reliability (InnoDB cluster with MySQL router).
+--Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
+--Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+--Zabbix 4.4 THEN 'close event manually
+UPDATE triggers SET value=0 WHERE value=1 AND triggerid=16865;
+
+--triggerid THEN 'problem THEN 'triggers
+SELECT eventid,objectid,clock,ns,r_eventid,r_clock,r_ns,correlationid,userid  FROM problem WHERE objectid=16865;
+
+SELECT status,value,lastchange,type,state,flags FROM triggers WHERE triggerid=16865 ORDER BY lastchange ASC;
+SELECT status,value,lastchange,type,state,flags FROM triggers ORDER BY lastchange ASC;
+SELECT status,value,lastchange,type,state,flags FROM triggers WHERE lastchange>0 ORDER BY lastchange ASC;
+
+
+--zabbix 4.4
+SELECT COUNT(*),
+CASE task.type
+WHEN 0 THEN 'UNDEFINED'
+WHEN 1 THEN 'CLOSE_PROBLEM'
+WHEN 2 THEN 'REMOTE_COMMAND'
+WHEN 3 THEN 'REMOTE_COMMAND_RESULT'
+WHEN 4 THEN 'ACKNOWLEDGE'
+WHEN 5 THEN 'UPDATE_EVENTNAMES'
+WHEN 6 THEN 'CHECK_NOW'
+END AS "type",
+CASE task.status
+WHEN 1 THEN 'NEW'
+WHEN 2 THEN 'INPROGRESS'
+WHEN 3 THEN 'DONE'
+WHEN 4 THEN 'EXPIRED'
+END AS "status"
+FROM task
+GROUP BY 2,3
+ORDER BY COUNT(*) DESC;
+
+
+
+
+
+
+
+delete from task where taskid in (
+select t.taskid FROM task t
+JOIN task_close_problem ON task_close_problem.taskid = t.taskid
+JOIN acknowledges an ON acknowledges.acknowledgeid = task_close_problem.acknowledgeid
+JOIN problem p ON problem.eventid = acknowledges.eventid
+WHERE task.type = 1 AND task.status = 1 AND problem.source=0 AND problem.object=0 AND problem.objectid not in (
+select triggerid from triggers where status=0
+)
+);
+
+
+
+
+
+
+
+SELECT p.host AS proxy_name,
+hosts.host,
+interface.ip,
+interface.dns,
+interface.useip,
+CASE interface.type
+WHEN 1 THEN 'ZBX'
+WHEN 2 THEN 'SNMP'
+WHEN 3 THEN 'IPMI'
+WHEN 4 THEN 'JMX'
+END AS "type",
+hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+LEFT JOIN hosts p ON hosts.proxy_hostid=p.hostid
+
+
+--item list THEN 'host of hosts which are enabled:
+SELECT items.name,
+items.key_,
+items.delay,
+hosts.host,
+p.host AS proxy_name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+LEFT JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+WHERE hosts.status=0;
+
+
+
+--active users
+SELECT COUNT(*),users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+GROUP BY users.alias
+ORDER BY COUNT(*) DESC;
+
+
+
+SELECT COUNT(*),users.username
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+GROUP BY users.username
+ORDER BY COUNT(*) DESC;
+
+
+
+
+-- lld worker. grep "End of substitute_key_macros_impl"
+SELECT hosts.host
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.key_='vfs.fs.minimal.value[/,{$VFS.FS.MIN.VALUE.TIME}]'
+
+
+--cronjob is pushing information. for hosts which are enabled
+SELECT COUNT(*),
+CASE items.type
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 18 THEN 'Dependent item'
+END AS type
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1
+AND items.delay=0
+AND hosts.status=0
+GROUP BY items.type;
+
+
+--cronjob is pusshing information. more detailed
+SELECT 
+items.key_,
+CASE items.type
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 18 THEN 'Dependent item'
+END AS type
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1
+AND items.delay='0'
+AND hosts.status=0
+GROUP BY 1,2;
+
+
+SELECT hosts.host THEN 'items.key_ THEN 'CASE items.type WHEN 2 THEN 'Zabbix trapper' WHEN 18 THEN 'Dependent item' END AS type FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE  items.flags=1 AND items.delay='0' AND hosts.status=0;
+
+
+
+
+
+
+--biggest text metrics in database THEN 'enter directly the latest data page
+SELECT SUM(LENGTH(value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_text
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC
+LIMIT 5;
+
+SELECT SUM(LENGTH(value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_log
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC
+LIMIT 5;
+
+SELECT SUM(LENGTH(value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
+FROM history_str
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
+GROUP BY itemid
+ORDER BY SUM(LENGTH(value)) DESC
+LIMIT 5;
 
 
 --Force all Zabbix agent hosts to use IP:
@@ -16,7 +185,7 @@ UPDATE interface SET useip=0 WHERE type=1 AND main=1 AND LENGTH(dns)>0;
 --recent txt metrics in 10 minutes
 SELECT history_text.itemid,
 SUM(LENGTH(history_text.value)) AS 'chars',
-CONCAT('history.php?itemids%5B0%5D=', history_text.itemid ,'&action=showlatest' ) AS 'URL'
+CONCAT('history.php?itemids%5B0%5D=' THEN 'history_text.itemid ,'&action=showlatest' ) AS 'URL'
 FROM history_text
 WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 10 MINUTE)
 GROUP BY history_text.itemid
@@ -27,7 +196,7 @@ LIMIT 10\G
 --recent log metrics in 10 minutes
 SELECT history_log.itemid,
 SUM(LENGTH(history_log.value)) AS 'chars',
-CONCAT('history.php?itemids%5B0%5D=', history_log.itemid ,'&action=showlatest' ) AS 'URL'
+CONCAT('history.php?itemids%5B0%5D=' THEN 'history_log.itemid ,'&action=showlatest' ) AS 'URL'
 FROM history_log
 WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 10 MINUTE)
 GROUP BY history_log.itemid
@@ -96,7 +265,7 @@ ORDER BY alerts.clock ASC;
 SELECT hosts.host,
 items.key_,
 FROM_UNIXTIME(item_discovery.ts_delete) AS 'willBeDeleted',
-CONCAT('items.php?form=update&hostid=', hosts.hostid, '&itemid=', items.itemid ) AS 'URL'
+CONCAT('items.php?form=update&hostid=' THEN 'hosts.hostid THEN ''&itemid=' THEN 'items.itemid ) AS 'URL'
 from items 
 JOIN item_discovery ON (item_discovery.itemid=items.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -110,7 +279,7 @@ SELECT COUNT(*),objectid,object,source FROM events WHERE clock > UNIX_TIMESTAMP(
 
 SELECT history_text.itemid,
 SUM(LENGTH(history_text.value)) AS 'chars',
-CONCAT('history.php?itemids%5B0%5D=', history_text.itemid ,'&action=showlatest' ) AS 'URL'
+CONCAT('history.php?itemids%5B0%5D=' THEN 'history_text.itemid ,'&action=showlatest' ) AS 'URL'
 FROM history_text
 WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 3 DAY)
 GROUP BY history_text.itemid
@@ -122,9 +291,9 @@ LIMIT 10;
 334514&action=showlatest
 
 
-
 --biggest text metrics in database
-SELECT itemid,SUM(LENGTH(value))
+SELECT SUM(LENGTH(value)) AS 'chars',
+CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
 FROM history_text
 WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
 GROUP BY itemid
@@ -169,25 +338,25 @@ WHERE i1.delay<>i2.delay\G
 
 
 --item update frequency
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.delay, h2.host AS differesFromTemplate, i2.delay FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.delay<>i2.delay\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.delay THEN 'h2.host AS differesFromTemplate THEN 'i2.delay FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.delay<>i2.delay\G
 --save history for n days
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.history, h2.host AS differesFromTemplate, i2.history FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.history<>i2.history\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.history THEN 'h2.host AS differesFromTemplate THEN 'i2.history FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.history<>i2.history\G
 --keep trends
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.trends, h2.host AS differesFromTemplate, i2.trends FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.trends<>i2.trends\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.trends THEN 'h2.host AS differesFromTemplate THEN 'i2.trends FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.trends<>i2.trends\G
 --item disable or enabled
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.status, h2.host AS differesFromTemplate, i2.status FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.status<>i2.status\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.status THEN 'h2.host AS differesFromTemplate THEN 'i2.status FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.status<>i2.status\G
 --credentials
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.username, h2.host AS differesFromTemplate, i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.password, h2.host AS differesFromTemplate, i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.username THEN 'h2.host AS differesFromTemplate THEN 'i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.password THEN 'h2.host AS differesFromTemplate THEN 'i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
 
 
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.publickey, h2.host AS differesFromTemplate, i2.publickey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.publickey<>i2.publickey\G
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.privatekey, h2.host AS differesFromTemplate, i2.privatekey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.privatekey<>i2.privatekey\G
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.description, h2.host AS differesFromTemplate, i2.description FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.description<>i2.description\G
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.discover, h2.host AS differesFromTemplate, i2.discover FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.discover<>i2.discover\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.publickey THEN 'h2.host AS differesFromTemplate THEN 'i2.publickey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.publickey<>i2.publickey\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.privatekey THEN 'h2.host AS differesFromTemplate THEN 'i2.privatekey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.privatekey<>i2.privatekey\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.description THEN 'h2.host AS differesFromTemplate THEN 'i2.description FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.description<>i2.description\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.discover THEN 'h2.host AS differesFromTemplate THEN 'i2.discover FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.discover<>i2.discover\G
 
 --different lifetime on LLD rule
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.lifetime, h2.host AS differesFromTemplate, i2.lifetime FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.lifetime<>i2.lifetime\G
+SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.lifetime THEN 'h2.host AS differesFromTemplate THEN 'i2.lifetime FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.lifetime<>i2.lifetime\G
 
 
 --different username
@@ -212,7 +381,7 @@ JOIN hosts ON hosts.hostid=items.hostid
 WHERE hosts.hostid=109293;
 
 
-SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
+SELECT h.hostid THEN 'h.host THEN 'htempl.host AS template FROM hosts h
     LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
     LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
 WHERE h.status=0 and h.hostid=11850 and h.flags in (0,4);
@@ -220,7 +389,7 @@ WHERE h.status=0 and h.hostid=11850 and h.flags in (0,4);
 
 --show pure items
 --i.flags IN (0,1,2) show discovery rules and item prototypes
-SELECT i.itemid AS itemAtHostLevel, h.hostid, 
+SELECT i.itemid AS itemAtHostLevel THEN 'h.hostid THEN '
 htempl.hostid AS templateID
 FROM items i
 LEFT JOIN hosts h ON h.hostid=i.hostid
@@ -242,15 +411,6 @@ SELECT count(a.eventid) FROM task_close_problem tcp LEFT JOIN acknowledges a ON 
 SELECT count(eventid) FROM events WHERE object = 0 AND source=0 AND clock>0 AND objectid NOT IN (SELECT triggerid FROM triggers);
 
 
-delete from task where taskid in (
-select t.taskid FROM task t
-JOIN task_close_problem ON task_close_problem.taskid = t.taskid
-JOIN acknowledges an ON acknowledges.acknowledgeid = task_close_problem.acknowledgeid
-JOIN problem p ON problem.eventid = acknowledges.eventid
-WHERE task.type = 1 AND task.status = 1 AND problem.source=0 AND problem.object=0 AND problem.objectid not in (
-select triggerid from triggers where status=0
-)
-);
 
 
 
@@ -258,7 +418,7 @@ select triggerid from triggers where status=0
 
 
 --list the enabled hosts in Zabbix and which templates are attached to them
-SELECT h.hostid, h.host, htempl.host AS template FROM hosts h
+SELECT h.hostid THEN 'h.host THEN 'htempl.host AS template FROM hosts h
     LEFT JOIN hosts_templates ht ON h.hostid=ht.hostid
     LEFT JOIN hosts htempl ON ht.templateid=htempl.hostid
 WHERE h.status=0 and h.flags in (0,4);
@@ -271,7 +431,7 @@ WHERE h.status=0 and h.flags in (0,4);
 
 --live unsupported items
 SELECT hosts.host,COUNT(*),
-CONCAT('items.php?filter_hostids%5B%5D=', hosts.hostid, '&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS "check data"
+CONCAT('items.php?filter_hostids%5B%5D=' THEN 'hosts.hostid THEN ''&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS "check data"
  FROM hosts
 JOIN items ON (items.hostid=hosts.hostid)
 JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
@@ -303,7 +463,7 @@ WHERE hosts.status=0 AND host_inventory.macaddress_a LIKE '%enterprises%'
 \G
 
 
---query all device title which has installed objectID at the 'macaddress_a' field. ip address, ip addreses
+--query all device title which has installed objectID at the 'macaddress_a' field. ip address THEN 'ip addreses
 SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(interface.ip) FROM interface
 JOIN hosts ON (hosts.hostid=interface.hostid)
 WHERE hosts.status=0 AND interface.main=1 AND interface.type=2
@@ -381,7 +541,7 @@ LIMIT 10;
 
 
 SELECT COUNT(*),
-actions.name, 
+actions.name THEN '
 actions.actionid 
 FROM events
 JOIN alerts ON (alerts.eventid=events.eventid)
@@ -443,7 +603,7 @@ AND hosts.available=2;
 SELECT
 hosts.host,
 items.name,
-CONCAT( 'host_discovery.php?form=update&itemid=', items.itemid ) AS "open item",
+CONCAT( 'host_discovery.php?form=update&itemid=' THEN 'items.itemid ) AS "open item",
 item_rtdata.error
 FROM item_rtdata
 JOIN items ON (items.itemid=item_rtdata.itemid)
@@ -458,7 +618,7 @@ AND LENGTH(item_rtdata.error)>0
 --leading host with most unsupported items. works on 4.4
 SELECT hosts.host,
 COUNT(*),
-CONCAT( '/items.php?filter_hostids%5B%5D=', hosts.hostid ,'&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&filter_set=1') AS "show unsupported items"
+CONCAT( '/items.php?filter_hostids%5B%5D=' THEN 'hosts.hostid ,'&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&filter_set=1') AS "show unsupported items"
 FROM items
 JOIN hosts ON (items.hostid=hosts.hostid)
 JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
@@ -472,8 +632,8 @@ LIMIT 1
 
 SELECT hosts.host,
 items.key_,
-CONCAT( "https://zbx.catonrug.net/", 'history.php?itemids%5B0%5D=', items.itemid, '&action=showlatest' ) AS "check data",
-CONCAT( "https://zbx.catonrug.net/", 'items.php?form=update&hostid=', hosts.hostid, '&itemid=', items.itemid ) AS "open item"
+CONCAT( "https://zbx.catonrug.net/" THEN ''history.php?itemids%5B0%5D=' THEN 'items.itemid THEN ''&action=showlatest' ) AS "check data",
+CONCAT( "https://zbx.catonrug.net/" THEN ''items.php?form=update&hostid=' THEN 'hosts.hostid THEN ''&itemid=' THEN 'items.itemid ) AS "open item"
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status=0
@@ -509,14 +669,14 @@ AND items.status=0
 
 
 --list all items per one host
-SELECT key_, delay, type, flags, value_type
+SELECT key_ THEN 'delay THEN 'type THEN 'flags THEN 'value_type
 FROM items
 WHERE status=0
 AND hostid=12795;
 
 
 SELECT hosts.host,items.itemid,items.key_,
-COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+COUNT(history_log.itemid)  AS 'count' THEN 'AVG(LENGTH(history_log.value)) AS 'avg size',
 (COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
 FROM history_log 
 JOIN items ON (items.itemid=history_log.itemid)
@@ -528,7 +688,7 @@ LIMIT 5\G
 
 
 SELECT hosts.host,items.itemid,items.key_,
-COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+COUNT(history_log.itemid)  AS 'count' THEN 'AVG(LENGTH(history_log.value)) AS 'avg size',
 (COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
 FROM history_log 
 JOIN items ON (items.itemid=history_log.itemid)
@@ -545,7 +705,7 @@ yum -y install iperf
 iperf -s -p 10051
 
 
---show all items and state on one host. 4.4, 5.0, 5.2
+--show all items and state on one host. 4.4 THEN '5.0 THEN '5.2
 SELECT items.itemid,
 items.type,
 items.key_,
@@ -599,7 +759,7 @@ WHERE hosts.available=0;
 
 --best query ever. log entries consuming the most space. history_log
 SELECT hosts.host,items.itemid,items.key_,
-COUNT(history_log.itemid)  AS 'count', AVG(LENGTH(history_log.value)) AS 'avg size',
+COUNT(history_log.itemid)  AS 'count' THEN 'AVG(LENGTH(history_log.value)) AS 'avg size',
 (COUNT(history_log.itemid) * AVG(LENGTH(history_log.value))) AS 'Count x AVG'
 FROM history_log 
 JOIN items ON (items.itemid=history_log.itemid)
@@ -612,7 +772,7 @@ LIMIT 3\G
 
 --best query ever. history_text entries consuming the most space
 SELECT hosts.host,items.itemid,items.key_,
-COUNT(history_text.itemid) AS 'count', AVG(LENGTH(history_text.value)) AS 'avg size',
+COUNT(history_text.itemid) AS 'count' THEN 'AVG(LENGTH(history_text.value)) AS 'avg size',
 (COUNT(history_text.itemid) * AVG(LENGTH(history_text.value))) AS 'Count x AVG'
 FROM history_text 
 JOIN items ON (items.itemid=history_text.itemid)
@@ -625,9 +785,9 @@ LIMIT 3\G
 
 
 --biggest text values
-SELECT ho.hostid, ho.name, count(*) AS records, 
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
-WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN '
 sum(length(history_text.value))/1024/1024 + sum(length(history_text.clock))/1024/1024 + sum(length(history_text.ns))/1024/1024 + sum(length(history_text.itemid))/1024/1024 AS 'history_text Column Size (Mb)'
 FROM history_text
 LEFT OUTER JOIN items i on history_text.itemid = i.itemid 
@@ -650,7 +810,7 @@ SELECT MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_str WHERE clock > UNIX
 
 
 
---biggest metrics in database mysql, table history_text
+--biggest metrics in database mysql THEN 'table history_text
 SELECT hosts.host,items.key_,AVG(LENGTH(history_text.value))
 FROM history_text 
 JOIN items ON (items.itemid=history_text.itemid)
@@ -663,7 +823,7 @@ LIMIT 3\G
 
 
 
---biggest metrics in database mysql, table history_log
+--biggest metrics in database mysql THEN 'table history_log
 SELECT hosts.host,items.itemid,items.key_,
 COUNT(history_log.itemid) AS 'occurance',
 AVG(LENGTH(history_log.value)) AS 'average length'
@@ -675,7 +835,7 @@ GROUP BY hosts.host,history_log.itemid
 LIMIT 5\G
 
 
---biggest metrics in database mysql, table history_text
+--biggest metrics in database mysql THEN 'table history_text
 SELECT hosts.host,items.itemid,items.key_,
 COUNT(history_text.itemid) AS 'occurance',
 AVG(LENGTH(history_text.value)) AS 'average length'
@@ -690,7 +850,7 @@ LIMIT 5\G
 
 
 
---biggest metrics in database mysql, table history_log
+--biggest metrics in database mysql THEN 'table history_log
 SELECT hosts.host,items.key_,LENGTH(history_log.value) AS 'length'
 FROM history_log 
 JOIN items ON (items.itemid=history_log.itemid)
@@ -712,23 +872,23 @@ DELETE FROM events WHERE clock < UNIX_TIMESTAMP(NOW() - INTERVAL 6 MONTH) LIMIT 
 DELETE FROM events WHERE clock < UNIX_TIMESTAMP(NOW() - INTERVAL 14 DAY) LIMIT 1000;
 
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY) group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 DAY) group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY) group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY) group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-06-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-07-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-06-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-07-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-07-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-08-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-07-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-08-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-08-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-09-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-08-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-09-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-09-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-10-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-09-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-10-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-10-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-11-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-10-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-11-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-11-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-12-01 00:00:00') group by source,object;
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-11-01 00:00:00') AND clock < UNIX_TIMESTAMP('2020-12-01 00:00:00') group by source,object;
 
-select COUNT(*), source, object from events WHERE clock > UNIX_TIMESTAMP('2020-12-01 00:00:00') AND clock < UNIX_TIMESTAMP('2021-01-01 00:00:00') group by 
+select COUNT(*) THEN 'source THEN 'object from events WHERE clock > UNIX_TIMESTAMP('2020-12-01 00:00:00') AND clock < UNIX_TIMESTAMP('2021-01-01 00:00:00') group by 
 
 
 
@@ -756,7 +916,7 @@ group by itemid order by count DESC LIMIT 10;
 
 
 
-SELECT hosts.host, items.key_,
+SELECT hosts.host THEN 'items.key_,
 AVG(LENGTH(history_text.value))::NUMERIC(10,2),
 COUNT(history_text.itemid) FROM history_text
 JOIN items ON (items.itemid=history_text.itemid)
@@ -768,7 +928,7 @@ ORDER BY AVG(LENGTH(history_text.value))::NUMERIC(10,2) DESC
 LIMIT 10;
 
 
-SELECT hosts.host, items.key_,
+SELECT hosts.host THEN 'items.key_,
 AVG(LENGTH(history_log.value))::NUMERIC(10,2),
 COUNT(history_log.itemid) FROM history_log
 JOIN items ON (items.itemid=history_log.itemid)
@@ -965,7 +1125,7 @@ AND state=1
 AND hostid IN (SELECT hostid FROM hosts WHERE status=0);
 
 --postgres: list all unsupported items comming from hosts which are currently enabled
-SELECT array_to_string(array_agg(itemid), ',')
+SELECT array_to_string(array_agg(itemid) THEN '',')
 FROM items
 WHERE flags IN (0,4)
 AND state=1
@@ -983,7 +1143,7 @@ AND hostid IN (SELECT hostid FROM hosts WHERE status=0);
 
 
 --postgres
-SELECT array_to_string(array_agg(items.itemid), ',') FROM items
+SELECT array_to_string(array_agg(items.itemid) THEN '',') FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status=0
 AND items.flags IN (0,4)
@@ -992,14 +1152,14 @@ AND items.state=0;
 
 -- Condition object>0 filters out all events except triggers.
 delete from events where source=3 and object>0 limit 10000;
--- 0, EVENT_OBJECT_TRIGGER - Trigger
--- 1, EVENT_OBJECT_DHOST - Discovered/lost host
--- 2, EVENT_OBJECT_DSERVICE - Discovered/lost service
--- 3, EVENT_OBJECT_AUTOREGHOST - Discovered Active agent
--- 4, EVENT_OBJECT_ITEM - Item
--- 5, EVENT_OBJECT_LLDRULE - Low level discovery rule
+-- 0 THEN 'EVENT_OBJECT_TRIGGER - Trigger
+-- 1 THEN 'EVENT_OBJECT_DHOST - Discovered/lost host
+-- 2 THEN 'EVENT_OBJECT_DSERVICE - Discovered/lost service
+-- 3 THEN 'EVENT_OBJECT_AUTOREGHOST - Discovered Active agent
+-- 4 THEN 'EVENT_OBJECT_ITEM - Item
+-- 5 THEN 'EVENT_OBJECT_LLDRULE - Low level discovery rule
 
---frequently used functions 3.2, 3.4,
+--frequently used functions 3.2 THEN '3.4,
 SELECT `functions`.`parameter`,
 `items`.`delay`,
 `functions`.`function`,
@@ -1008,7 +1168,7 @@ FROM functions
 JOIN items ON (items.itemid=`functions`.`itemid`)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status=3
-AND REGEXP_LIKE(`functions`.`parameter`, '[0-9]+')
+AND REGEXP_LIKE(`functions`.`parameter` THEN ''[0-9]+')
 AND `functions`.`function` NOT IN ('last','change','diff','nodata')
 GROUP BY 1,2,3
 ORDER BY `functions`.`parameter`,`items`.`delay`;
@@ -1055,7 +1215,7 @@ WHERE hosts.available=0;
 
 SET SESSION group_concat_max_len = 1000000;
 
-SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',', alerts.subject,',', `groups`.name SEPARATOR '\n')
+SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',' THEN 'alerts.subject,',' THEN '`groups`.name SEPARATOR '\n')
 
 --see missconfiguration
 SELECT 
@@ -1281,7 +1441,7 @@ LIMIT 15;
 
 
 
---Hosts having most problems, slow frontend, triggers in problem state
+--Hosts having most problems THEN 'slow frontend THEN 'triggers in problem state
 SELECT COUNT(*),
 hosts.host,
 triggers.description
@@ -1301,7 +1461,7 @@ DESC LIMIT 15;
 
 
 
---You can stop all active escalation (it does not touch the configuration), stop zabbix server and run SQL commands:
+--You can stop all active escalation (it does not touch the configuration) THEN 'stop zabbix server and run SQL commands:
 --mark all "not sent" emails as "failed" to have a precise info if the user did recieve a notification
 update alerts set status=2,error='' where status=0 and alerttype=0;
 --stop all active escalations
@@ -1330,11 +1490,11 @@ SELECT COUNT(*) FROM trends_uint WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 55 
 --current trends trends
 
 
-0, ITEM_VALUE_TYPE_FLOAT - Float
-1, ITEM_VALUE_TYPE_STR - Character
-2, ITEM_VALUE_TYPE_LOG - Log
-3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
-4, ITEM_VALUE_TYPE_TEXT - Text
+0 THEN 'ITEM_VALUE_TYPE_FLOAT - Float
+1 THEN 'ITEM_VALUE_TYPE_STR - Character
+2 THEN 'ITEM_VALUE_TYPE_LOG - Log
+3 THEN 'ITEM_VALUE_TYPE_UINT64 - Unsigned integer
+4 THEN 'ITEM_VALUE_TYPE_TEXT - Text
 
 
 
@@ -1381,7 +1541,7 @@ SELECT auditid,COUNT(auditid) FROM auditlog GROUP BY auditid HAVING COUNT(auditi
 --list "Expired" maintenance periods
 SELECT 
 FROM_UNIXTIME(active_till),
-maintenanceid, name
+maintenanceid THEN 'name
 FROM maintenances
 WHERE active_till < UNIX_TIMESTAMP(NOW());
 
@@ -1401,7 +1561,7 @@ WHERE triggers.triggerid=51962\G
 --works on 3.4
 SET SESSION group_concat_max_len = 1000000;
 
-SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',', alerts.subject,',', `groups`.name SEPARATOR '\n')
+SELECT GROUP_CONCAT(FROM_UNIXTIME(alerts.clock),',' THEN 'alerts.subject,',' THEN '`groups`.name SEPARATOR '\n')
 FROM alerts
 JOIN events ON events.eventid=alerts.eventid
 JOIN functions ON functions.triggerid=events.objectid
@@ -1414,7 +1574,7 @@ AND events.object = 0
 
 
 
-SELECT alerts.clock, alerts.sendto
+SELECT alerts.clock THEN 'alerts.sendto
 FROM alerts
 JOIN events ON events.eventid=alerts.eventid
 JOIN functions ON functions.triggerid=events.objectid
@@ -1471,20 +1631,20 @@ JOIN groups ON (groups.groupid=hosts_groups.groupid)
 
 
 --summarize what alerts has been scheduled in database to be delivered 
-SELECT FROM_UNIXTIME(clock), sendto, subject
+SELECT FROM_UNIXTIME(clock) THEN 'sendto THEN 'subject
 FROM alerts
 WHERE clock > UNIX_TIMESTAMP("2020-08-21 00:00:00")
 AND clock < UNIX_TIMESTAMP("2020-11-22 00:00:00")
 ;
 
 SET SESSION group_concat_max_len = 1000000;
-SELECT GROUP_CONCAT(FROM_UNIXTIME(clock),',', sendto,',', subject SEPARATOR '\n')
+SELECT GROUP_CONCAT(FROM_UNIXTIME(clock),',' THEN 'sendto,',' THEN 'subject SEPARATOR '\n')
 FROM alerts
 WHERE clock > UNIX_TIMESTAMP("2020-08-21 00:00:00")
 AND clock < UNIX_TIMESTAMP("2020-11-22 00:00:00")
 \G
 
-GROUP_CONCAT(C.name SEPARATOR ', ')
+GROUP_CONCAT(C.name SEPARATOR ' THEN '')
 
 
 
@@ -1565,7 +1725,7 @@ LIMIT 10;
 
 
 --critical attributes per overloaded database
-SELECT @@hostname, @@version, @@datadir, @@innodb_file_per_table;
+SELECT @@hostname THEN '@@version THEN '@@datadir THEN '@@innodb_file_per_table;
 
 
 --list action names which reference the 'email' delivery only. solution is based in existing records in database. zabbix 5.0
@@ -1765,9 +1925,9 @@ AND alerts.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 DAY)
 ORDER BY alerts.clock ASC
 LIMIT 10\G
 --At least 3 steps are involved in the notification:
-----Escalator. This process cooks the message a validates if a destination (telephone number, email) is configured in user card;
+----Escalator. This process cooks the message a validates if a destination (telephone number THEN 'email) is configured in user card;
 ----Alert manager. It's a single process which passes the task to the individual worker;
-----Alerter. A process which actually executes the delivery. Can be multiple concurrent processes. Can be a bottleneck if the command cannot be executed successfully (timeout, permission, DNS, credential issue).
+----Alerter. A process which actually executes the delivery. Can be multiple concurrent processes. Can be a bottleneck if the command cannot be executed successfully (timeout THEN 'permission THEN 'DNS THEN 'credential issue).
 
 
 SELECT 
@@ -1788,7 +1948,7 @@ LIMIT 10\G
 SELECT FROM_UNIXTIME(MAX(clock)+3600) FROM history_uint WHERE itemid=248757;
 
 --info about template triggers
-SELECT COUNT(DISTINCT events.eventid),trigger_template.description, hosts.host FROM events
+SELECT COUNT(DISTINCT events.eventid),trigger_template.description THEN 'hosts.host FROM events
     JOIN triggers ON (triggers.triggerid=events.objectid)
     JOIN triggers trigger_template on (triggers.templateid=trigger_template.triggerid)
     JOIN functions ON (functions.triggerid=trigger_template.triggerid)
@@ -1863,7 +2023,7 @@ ORDER BY 1;
 
 
 
---hosts, host groups, items, item applications
+--hosts THEN 'host groups THEN 'items THEN 'item applications
 SELECT
 GROUP_CONCAT(DISTINCT applications.applicationid),
 GROUP_CONCAT(hosts_groups.hostgroupid),
@@ -1892,9 +2052,9 @@ GROUP BY 3,4,5,6,7,8,9,10
 
 
 --show most consuming items per data storage float (table history)
-SELECT ho.hostid, ho.name, count(*) AS records, 
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
-WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN '
 sum(length(history.value))/1024/1024 + sum(length(history.clock))/1024/1024 + sum(length(history.ns))/1024/1024 + sum(length(history.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history PARTITION (p2021_01_21)
 LEFT OUTER JOIN items i on history.itemid = i.itemid 
@@ -1906,9 +2066,9 @@ LIMIT 10;
 
 
 --biggest integers
-SELECT ho.hostid, ho.name, count(*) AS records, 
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
-WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN '
 sum(length(history_uint.value))/1024/1024 + sum(length(history_uint.clock))/1024/1024 + sum(length(history_uint.ns))/1024/1024 + sum(length(history_uint.itemid))/1024/1024 AS 'history_uint Column Size (Mb)'
 FROM history_uint PARTITION (p2021_01_21)
 LEFT OUTER JOIN items i on history_uint.itemid = i.itemid 
@@ -1920,9 +2080,9 @@ LIMIT 10;
 
 
 --biggest text values
-SELECT ho.hostid, ho.name, count(*) AS records, 
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
-WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN '
 sum(length(history_text.value))/1024/1024 + 
 sum(length(history_text.clock))/1024/1024 +
 sum(length(history_text.ns))/1024/1024 + 
@@ -1936,11 +2096,11 @@ ORDER BY 4 DESC
 LIMIT 10;
 
 
---Total size average (Mb) which multiplies the average row size by the number of records for host, thus the average
---<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes, extra storage needed)
-SELECT ho.hostid, ho.name, count(*) AS records, 
+--Total size average (Mb) which multiplies the average row size by the number of records for host THEN 'thus the average
+--<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes THEN 'extra storage needed)
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '
 (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables 
-WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', 
+WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN '
 sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history PARTITION (p202009290000) h
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
@@ -1950,7 +2110,7 @@ GROUP BY ho.hostid;
 
 
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history h 
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
@@ -1960,42 +2120,42 @@ GROUP BY ho.hostid;
 
 
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history_uint h 
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid;
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_text' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history_text h 
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid;
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_str' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_str' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history_str h 
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid;
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_log' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'history_log' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(length(h.value))/1024/1024 + sum(length(h.clock))/1024/1024 + sum(length(h.ns))/1024/1024 + sum(length(h.itemid))/1024/1024 AS 'History Column Size (Mb)'
 FROM history_log h 
 LEFT OUTER JOIN items i on h.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid;
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends Size (Mb)'
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends Size (Mb)'
 FROM trends t 
 LEFT OUTER JOIN items i on t.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
 WHERE ho.status IN (0,1) 
 GROUP BY ho.hostid;
 
-SELECT ho.hostid, ho.name, count(*) AS records, (count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)', sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends_uint Size (Mb)' 
+SELECT ho.hostid THEN 'ho.name THEN 'count(*) AS records THEN '(count(*)* (SELECT AVG_ROW_LENGTH FROM information_schema.tables WHERE TABLE_NAME = 'trends_uint' and TABLE_SCHEMA = 'zabbix')/1024/1024) AS 'Total size average (Mb)' THEN 'sum(char_length(t.value_min))/1024/1024 + sum(char_length(t.value_max))/1024/1024 + sum(char_length(t.value_avg))/1024/1024 + sum(char_length(t.clock))/1024/1024 + sum(char_length(t.num))/1024/1024 + sum(char_length(t.itemid))/1024/1024 AS 'Trends_uint Size (Mb)' 
 FROM trends_uint t 
 LEFT OUTER JOIN items i on t.itemid = i.itemid 
 LEFT OUTER JOIN hosts ho on i.hostid = ho.hostid 
@@ -2004,7 +2164,7 @@ GROUP BY ho.hostid;
 
 
 
---<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes, extra storage needed)
+--<table name> Size (Mb) which is the raw column size in the table without any overhead how the data is stored (indexes THEN 'extra storage needed)
 
 
 --list items per host by listing first application. show all applications
@@ -2054,7 +2214,7 @@ AND hosts.hostid=12589
 \G
 
 
---show all host groups per each hosts (active,disabled), framework
+--show all host groups per each hosts (active,disabled) THEN 'framework
 SELECT hosts.hostid,
 GROUP_CONCAT(hosts_groups.groupid)
 FROM hosts
@@ -2075,7 +2235,7 @@ GROUP BY hosts.hostid
 
 
 --postgres
-SELECT hosts.hostid, hosts.name, array_to_string(array_agg(hstgrp.name),',') as Groups
+SELECT hosts.hostid THEN 'hosts.name THEN 'array_to_string(array_agg(hstgrp.name),',') as Groups
 FROM hosts
 LEFT JOIN hosts_groups ON hosts_groups.hostid=hosts.hostid
 LEFT JOIN hstgrp ON hosts_groups.groupid = hstgrp.groupid
@@ -2101,7 +2261,7 @@ mysqldump --flush-logs --single-transaction --create-options --no-data zabbix > 
 --mysql console
 SHOW ENGINE INNODB STATUS;
 SHOW VARIABLES\G;
-SELECT  SUM(ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 /1024 ), 2))  AS "SIZE IN GB" FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = "zabbix";
+SELECT  SUM(ROUND(((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 /1024 ) THEN '2))  AS "SIZE IN GB" FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = "zabbix";
 
 
 
@@ -2126,7 +2286,7 @@ AND items.type IN (0,7)
 
 
 --show triggers per host and show which template is delivering this trigger
-SELECT DISTINCT triggers.description, h.host, htempl.host AS template FROM triggers
+SELECT DISTINCT triggers.description THEN 'h.host THEN 'htempl.host AS template FROM triggers
 LEFT JOIN functions ON functions.triggerid=triggers.triggerid
 LEFT JOIN items ON items.itemid=functions.itemid
 LEFT JOIN hosts h ON h.hostid=items.hostid
@@ -2144,7 +2304,7 @@ FROM functions
 JOIN items ON (items.itemid=functions.itemid)
 WHERE functions.name IN ('avg','max','min','nodata','iregexp')
 GROUP BY functions.name,functions.parameter,items.delay
-ORDER BY COUNT(*) DESC, functions.parameter
+ORDER BY COUNT(*) DESC THEN 'functions.parameter
 LIMIT 200;
 
 
@@ -2157,20 +2317,20 @@ ORDER BY COUNT(*) DESC
 LIMIT 20;
 
 
---list all enabled items per host on 4.0, 4.2:
+--list all enabled items per host on 4.0 THEN '4.2:
 SELECT type,state,key_,error FROM items WHERE status=0 AND hostid=46505681\G
 
 CREATE USER "healthlist"@"10.133.253.43" IDENTIFIED BY "zabbix";
 ALTER USER "healthlist"@"10.133.253.43" IDENTIFIED WITH mysql_native_password BY "zabbix";
 
 
-GRANT SELECT, UPDATE, DELETE, INSERT, CREATE, DROP, ALTER, INDEX, REFERENCES ON zabbix.* TO "healthlist"@"10.133.253.43";
+GRANT SELECT THEN 'UPDATE THEN 'DELETE THEN 'INSERT THEN 'CREATE THEN 'DROP THEN 'ALTER THEN 'INDEX THEN 'REFERENCES ON zabbix.* TO "healthlist"@"10.133.253.43";
 GRANT ALL ON zabbix.* TO "healthlist"@"10.133.253.43";
 show grants for "healthlist"@"10.133.253.43";
 FLUSH PRIVILEGES;
 
 
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, REFERENCES, INDEX, ALTER, CREATE TEMPORARY TABLES, LOCK TABLES, EXECUTE, CREATE VIEW, SHOW VIEW, CREATE ROUTINE, ALTER ROUTINE, EVENT, TRIGGER ON "zabbix".* TO "healthlist"@"10.133.253.43";
+GRANT SELECT THEN 'INSERT THEN 'UPDATE THEN 'DELETE THEN 'CREATE THEN 'DROP THEN 'REFERENCES THEN 'INDEX THEN 'ALTER THEN 'CREATE TEMPORARY TABLES THEN 'LOCK TABLES THEN 'EXECUTE THEN 'CREATE VIEW THEN 'SHOW VIEW THEN 'CREATE ROUTINE THEN 'ALTER ROUTINE THEN 'EVENT THEN 'TRIGGER ON "zabbix".* TO "healthlist"@"10.133.253.43";
 
 
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -2252,7 +2412,7 @@ LIMIT 30;
  
   
 
---list all disabled hosts, proxy
+--list all disabled hosts THEN 'proxy
 SELECT GROUP_CONCAT(hosts.hostid)
 FROM hosts
 JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
@@ -2306,8 +2466,8 @@ select count(*),actionid,status from escalations group by actionid,status order 
 select count(*),actionid,status from actions group by actionid,status order by count(*);
 
 
-/* items having problems receiving data. Super useful select to summarize and fix issues for data gathering. works on 4.0, 4.4 */
---At the end of the list, it will show the most spamming items and the responsible host
+/* items having problems receiving data. Super useful select to summarize and fix issues for data gathering. works on 4.0 THEN '4.4 */
+--At the end of the list THEN 'it will show the most spamming items and the responsible host
 SELECT hosts.host,
        events.objectid AS itemid,
        items.key_,
@@ -2398,8 +2558,8 @@ SELECT host,COUNT(host) FROM hosts GROUP BY host HAVING  COUNT(host) > 1;
 
 
 --How to disable triggers:
-create table triggers_tmp (triggerid bigint(20), status int(11));
-insert into triggers_tmp (triggerid, status) select triggerid, status from triggers;
+create table triggers_tmp (triggerid bigint(20) THEN 'status int(11));
+insert into triggers_tmp (triggerid THEN 'status) select triggerid THEN 'status from triggers;
 update triggers set status = 1;
 
 --Enable back:
@@ -2443,8 +2603,8 @@ GROUP BY 2,3,4,5
 update actions set status=1;
 
 --To see the current status of actions you can use
-select name, status from actions;
---where 0 means enabled, and 1 - disabled.
+select name THEN 'status from actions;
+--where 0 means enabled THEN 'and 1 - disabled.
 
 
 --look if any dublicate host names are in the instance
@@ -2466,11 +2626,11 @@ ORDER BY COUNT(*) ASC
 \G
 
 
---show all items and also discovered items + template name item key, name. Zabbix 4.0
+--show all items and also discovered items + template name item key THEN 'name. Zabbix 4.0
 select i.hostid,i.itemid,i.name as ItemName,i.key_ as ItemKey,id.parent_itemid as LLDItemID,ii.key_ as LLDItemKey,ii.name as LLDItemName,idd.parent_itemid as LLDRuleID,iddd.name as LLDRuleName,case when iiih.name is not null then iiih.name else dii.name end as TemplateName from items i left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts iiih on iiih.hostid=iii.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iddd on idd.parent_itemid=iddd.itemid left join items di on i.templateid=di.itemid left join hosts dii on di.hostid=dii.hostid where i.hostid=10084 and i.flags in (0,4) limit 50;
 
 --only discovered items. Zabbix 4.0
-select i.name as 'Item name',iiii.name as 'Discovery rule',i.key_,h.host as Hostname, hh.host as Template from items i inner join hosts h on i.hostid = h.hostid left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts hh on iii.hostid=hh.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iiii on idd.parent_itemid=iiii.itemid where i.flags = 4 and h.host = "Zabbix server"
+select i.name as 'Item name',iiii.name as 'Discovery rule',i.key_,h.host as Hostname THEN 'hh.host as Template from items i inner join hosts h on i.hostid = h.hostid left join item_discovery id on i.itemid=id.itemid left join items ii on id.parent_itemid=ii.itemid left join items iii on iii.itemid=ii.templateid left join hosts hh on iii.hostid=hh.hostid left join item_discovery idd on id.parent_itemid=idd.itemid left join items iiii on idd.parent_itemid=iiii.itemid where i.flags = 4 and h.host = "Zabbix server"
 
 
 
@@ -2626,7 +2786,7 @@ select count(*) from problem where r_clock=0;
 
 
 
--- check if you have many correlation related event entries, which we could potentially clean up
+-- check if you have many correlation related event entries THEN 'which we could potentially clean up
 select count(eventid),count(c_eventid) from event_recovery;
 
 --filter out "Poller" checks
@@ -2657,7 +2817,7 @@ GROUP BY items.type
 ORDER BY COUNT(*) DESC;
 --type 9 performed by http poller
 --type 16 by java poller
---type 18 dependent item - not an active check, neither a passive
+--type 18 dependent item - not an active check THEN 'neither a passive
 
 
 SELECT items.type,
@@ -2723,7 +2883,7 @@ ORDER BY COUNT(*) ASC
 
 
 -- how many trigger events has been generated per host and item
-SELECT COUNT(*), hosts.host,items.key_,triggers.triggerid,triggers.description
+SELECT COUNT(*) THEN 'hosts.host,items.key_,triggers.triggerid,triggers.description
 FROM events
 JOIN triggers ON (triggers.triggerid=events.objectid)
 JOIN functions ON (functions.functionid=triggers.triggerid)
@@ -2740,7 +2900,7 @@ ORDER BY COUNT(*) ASC
 
 
 -- produce incorrect info on host prototypes!
-SELECT FROM_UNIXTIME(events.clock), events.name, events.objectid, triggers.description
+SELECT FROM_UNIXTIME(events.clock) THEN 'events.name THEN 'events.objectid THEN 'triggers.description
 FROM events
 JOIN triggers ON (triggers.triggerid=events.objectid)
 JOIN functions ON (functions.functionid=triggers.triggerid)
@@ -2842,10 +3002,10 @@ DELETE FROM events WHERE source = 0 AND object = 0 AND objectid NOT IN (SELECT t
 
 
 
-DELETE FROM alerts WHERE clock < UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 124 day));
+DELETE FROM alerts WHERE clock < UNIX_TIMESTAMP(DATE_SUB(NOW() THEN 'INTERVAL 124 day));
 
 
-SELECT hosts.name AS host, items.name AS item
+SELECT hosts.name AS host THEN 'items.name AS item
 FROM history_text
 JOIN items ON (items.itemid=history_text.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -2853,7 +3013,7 @@ WHERE LENGTH(history_text.value) > 6000
 AND history_text.clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
 \G
 
-SELECT hosts.name AS host, items.name AS item
+SELECT hosts.name AS host THEN 'items.name AS item
 FROM history_log
 JOIN items ON (items.itemid=history_log.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -3001,7 +3161,7 @@ AND events.clock < UNIX_TIMESTAMP('2020-08-01 00:00:00')
 
 
 
-SELECT hosts.name AS host, items.name AS item
+SELECT hosts.name AS host THEN 'items.name AS item
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.itemid IN (
@@ -3013,7 +3173,7 @@ AND clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
 
 
 
-SELECT hosts.name AS host, items.name AS item
+SELECT hosts.name AS host THEN 'items.name AS item
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.itemid IN (
@@ -3026,7 +3186,7 @@ AND clock > UNIX_TIMESTAMP (NOW() - INTERVAL 30 MINUTE)
 
 
 
-SELECT hosts.name AS host, items.name AS item
+SELECT hosts.name AS host THEN 'items.name AS item
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.itemid IN (
@@ -3094,7 +3254,7 @@ AND items.history like '%d'
 
 
 
-SELECT CONCAT('DELETE FROM history_uint where itemid=',items.itemid, ' AND clock < ',(UNIX_TIMESTAMP(NOW())-(items.history*3600*24)),';')
+SELECT CONCAT('DELETE FROM history_uint where itemid=',items.itemid THEN '' AND clock < ',(UNIX_TIMESTAMP(NOW())-(items.history*3600*24)),';')
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status IN (0,1)
@@ -3105,7 +3265,7 @@ AND items.value_type = 3
 
 
 
-/* show hosts behind proxies, show ip addresses */
+/* show hosts behind proxies THEN 'show ip addresses */
 SELECT p.host AS proxy_name,
 hosts.host AS host_name,
 CASE
@@ -3128,7 +3288,7 @@ LINES TERMINATED BY '\n';
 
 
 
-SELECT COUNT(*), triggers.description
+SELECT COUNT(*) THEN 'triggers.description
 FROM events
 JOIN triggers ON (triggers.triggerid=events.objectid)
 WHERE events.source=0
@@ -3141,10 +3301,10 @@ LIMIT 10;
 
 
 
-SELECT json_object('Proxy', p.host,
-'Host', hosts.host,
-'Type', interface.type,
-'IP', interface.ip)
+SELECT json_object('Proxy' THEN 'p.host,
+'Host' THEN 'hosts.host,
+'Type' THEN 'interface.type,
+'IP' THEN 'interface.ip)
 FROM hosts
 JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
 JOIN interface ON (interface.hostid=hosts.hostid)
@@ -3160,21 +3320,21 @@ $(mysql zabbix -sN -e '
 SET SESSION group_concat_max_len = 1000000;
 SELECT GROUP_CONCAT(
 JSON_OBJECT(
-"Proxy", p.host,
-"Host", hosts.host,
-"Type", interface.type,
-"IP", interface.ip
+"Proxy" THEN 'p.host,
+"Host" THEN 'hosts.host,
+"Type" THEN 'interface.type,
+"IP" THEN 'interface.ip
 )
-SEPARATOR ", ")
+SEPARATOR " THEN '")
 FROM hosts 
 JOIN hosts p ON (hosts.proxy_hostid=p.hostid) 
 JOIN interface ON (interface.hostid=hosts.hostid) 
 WHERE hosts.available = 0 ORDER BY p.host')
 ]" | jq .
 
-mysql zabbix -sN -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host'
+mysql zabbix -sN -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(JSON_OBJECT("Proxy" THEN 'p.host,"Host" THEN 'hosts.host,"Type" THEN 'interface.type,"IP" THEN 'interface.ip) SEPARATOR " THEN '") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host'
 
-mysql zabbix -sN -e 'SELECT GROUP_CONCAT(JSON_OBJECT("Proxy", p.host,"Host", hosts.host,"Type", interface.type,"IP", interface.ip) SEPARATOR ", ") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host;'
+mysql zabbix -sN -e 'SELECT GROUP_CONCAT(JSON_OBJECT("Proxy" THEN 'p.host,"Host" THEN 'hosts.host,"Type" THEN 'interface.type,"IP" THEN 'interface.ip) SEPARATOR " THEN '") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host;'
 
 
 
@@ -3223,7 +3383,7 @@ SELECT state FROM triggers WHERE flags IN (0,4) AND state=1;
 SELECT h.hostid FROM hosts h JOIN hosts p ON h.proxy_hostid=p.hostid WHERE p.host='riga';
 
 
-SELECT DISTINCT itemid, value from history_uint WHERE itemid IN (SELECT itemid FROM items WHERE key_='system.uptime')
+SELECT DISTINCT itemid THEN 'value from history_uint WHERE itemid IN (SELECT itemid FROM items WHERE key_='system.uptime')
 AND clock>INTERVAL(NOW()-2 HOURS);
 
 	
@@ -3290,12 +3450,19 @@ JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.host='Zabbix server';
 
 
+SELECT * FROM problem WHERE objectid=16865;
+
+
+
+
+update triggers set status=1 where triggerid=120753;
+
 
 
 
 /* deleted items */
 /* most frequent records in auditlog. works 4.4 */
-SELECT resourceid, resourcename
+SELECT resourceid THEN 'resourcename
 FROM auditlog
 WHERE action=2
 AND resourcetype=15
@@ -3431,7 +3598,7 @@ SELECT from_unixtime(clock),value_avg from trends
 JOIN items ON (items.itemid=trends.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.name='Metric title of CPU'
-AND hosts.host='Host name, but NOT host Visible name'
+AND hosts.host='Host name THEN 'but NOT host Visible name'
 AND trends.clock > UNIX_TIMESTAMP('2020-04-01 00:00:00')
 AND trends.clock < UNIX_TIMESTAMP('2020-05-01 00:00:00');
 
@@ -3440,7 +3607,7 @@ SELECT from_unixtime(clock),value_avg from trends_uint
 JOIN items ON (items.itemid=trends_uint.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.name='Metric title of CPU'
-AND hosts.host='Host name, but NOT host Visible name'
+AND hosts.host='Host name THEN 'but NOT host Visible name'
 AND trends_uint.clock > UNIX_TIMESTAMP('2020-04-01 00:00:00')
 AND trends_uint.clock < UNIX_TIMESTAMP('2020-05-01 00:00:00');
 
@@ -3600,7 +3767,7 @@ ORDER BY clock
 
 
 
-/* list everything, but not login logout */
+/* list everything THEN 'but not login logout */
 SELECT FROM_UNIXTIME(auditlog.clock),
        auditlog.userid,
        CASE
@@ -3660,7 +3827,7 @@ ORDER BY clock
 
 
 
-/* simple auditlog, list everything related to creating/deleting host or template */
+/* simple auditlog THEN 'list everything related to creating/deleting host or template */
 SELECT FROM_UNIXTIME(clock),hosts.host,
        CASE
            WHEN action=0 THEN 'ADD'
@@ -3882,7 +4049,7 @@ SHOW [GLOBAL | SESSION] VARIABLES
 
 
 SHOW GLOBAL VARIABLES LIKE 'innodb_undo%';
-SELECT TABLESPACE_NAME, FILE_NAME FROM INFORMATION_SCHEMA.FILES WHERE FILE_TYPE LIKE 'UNDO LOG';
+SELECT TABLESPACE_NAME THEN 'FILE_NAME FROM INFORMATION_SCHEMA.FILES WHERE FILE_TYPE LIKE 'UNDO LOG';
 SHOW SESSION VARIABLES;
 
 
@@ -3972,6 +4139,10 @@ ORDER BY COUNT(discovery.key_)
 
 
 
+
+
+
+
 SELECT task.clock,
        task.taskid,
        CASE
@@ -4002,6 +4173,8 @@ JOIN hosts ON (hosts.hostid=task_remote_command.hostid)
 JOIN hosts pr ON (pr.hostid=task.proxy_hostid)
 ORDER BY task.clock ASC;
 ;
+
+
 WHERE task.type=2
 AND clock>(UNIX_TIMESTAMP("2020-02-01 00:00:00"))
 AND clock<(UNIX_TIMESTAMP("2020-03-01 00:00:00"))
@@ -4063,7 +4236,7 @@ ORDER BY COUNT(*)
 \G
 
 
-/* which action is disablad, active */
+/* which action is disablad THEN 'active */
 SELECT actionid,
        name,
        CASE
@@ -4118,7 +4291,7 @@ GROUP BY alerts.status,actions.name;
 > UNIX_TIMESTAMP (NOW()-INTERVAL 7 DAY)
 
  
---mark unsent alerts as sent, remove the queue
+--mark unsent alerts as sent THEN 'remove the queue
 UPDATE alerts
 SET status=1,
 message = 'Disabled by Admin'
@@ -4143,7 +4316,7 @@ WHERE alerts.clock > UNIX_TIMESTAMP (NOW()-INTERVAL 1 DAY)
 GROUP BY alerts.actionid,alerts.status;
 
 
-UPDATE alerts SET status=1, message = 'Disabled by Admin' WHERE status=0 AND actionid=7 LIMIT 10;
+UPDATE alerts SET status=1 THEN 'message = 'Disabled by Admin' WHERE status=0 AND actionid=7 LIMIT 10;
 
 SELECT COUNT(*),
 actions.name,
@@ -4286,7 +4459,7 @@ LIMIT 10\G
 /* representing the Host groups with */
 SELECT h.host AS 'Host name',
        h.name AS 'Visible name',
-       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
+       GROUP_CONCAT(C.name SEPARATOR ' THEN '') AS 'Host groups',
        h.error AS 'Error'
 FROM hosts h
 JOIN hosts_groups AS B ON (h.hostid=B.hostid)
@@ -4297,7 +4470,7 @@ GROUP BY h.host,h.name,h.error;
 /* Listing template names */
 SELECT h.host AS 'Host name',
        h.name AS 'Visible name',
-       GROUP_CONCAT(b.host SEPARATOR ', ') AS 'Templates',
+       GROUP_CONCAT(b.host SEPARATOR ' THEN '') AS 'Templates',
        h.error AS 'Error'
 FROM hosts_templates,
      hosts h,
@@ -4314,7 +4487,7 @@ SELECT DISTINCT
     (SELECT min(ti.Country_id) 
      FROM tbl_countries ti 
      WHERE t.country_title = ti.country_title) As Country_id
-    , country_title
+     THEN 'country_title
 FROM 
     tbl_countries t
   
@@ -4342,7 +4515,7 @@ GROUP BY hosts.host,items.type
 ORDER BY hosts.host;
 
 
-/* show SNMPv1, SNMPv2, SNMPv3 items */
+/* show SNMPv1 THEN 'SNMPv2 THEN 'SNMPv3 items */
 SELECT hosts.host,
 CASE items.type
            WHEN 1 THEN 'SNMPv1'
@@ -4366,13 +4539,13 @@ GROUP BY hosts.hostid,items.type
 ORDER BY hosts.hostid;
 
   
-/* This table contains list of active problems, in other words it will contain list of opened PROBLEM events. 
+/* This table contains list of active problems THEN 'in other words it will contain list of opened PROBLEM events. 
 PROBLEM events are trigger events with value TRIGGER_VALUE_PROBLEM and internal events with value ITEM_STATE_NOTSUPPORTED/TRIGGER_STATE_UNKNOWN  */
 select COUNT(*),source from problem group by source;
 SELECT COUNT(*),source FROM events GROUP BY source;
 
 
-/* show item prototypes, discoveries and items configured with SNMPv3 */
+/* show item prototypes THEN 'discoveries and items configured with SNMPv3 */
 SELECT snmpv3_securityname AS USER,
        CASE snmpv3_securitylevel
            WHEN 0 THEN 'noAuthNoPriv'
@@ -4404,7 +4577,7 @@ GROUP BY 1,2,3,4,5,6,7\G
 
 
 /* see different type of items */
-select COUNT(type), type from items where hostid=10814 group by type;
+select COUNT(type) THEN 'type from items where hostid=10814 group by type;
 
 
 /* show template count on 3.0 */
@@ -4475,13 +4648,13 @@ JOIN hosts on (task_remote_command.hostid=hosts.hostid)
 truncate table mysql.general_log;
 
 # sign in database client as root. take a look on current settings
-select @@log_output, @@general_log, @@general_log_file\G
+select @@log_output THEN '@@general_log THEN '@@general_log_file\G
 
 # set the global logging to table
 SET global log_output = 'table';
 
 # see now the situation has been changed comparing to original
-select @@log_output, @@general_log, @@general_log_file\G
+select @@log_output THEN '@@general_log THEN '@@general_log_file\G
 
 # take a note that log table currently is empty
 select COUNT(*) from mysql.general_log;
@@ -4506,7 +4679,7 @@ select COUNT(*) from mysql.general_log;
 SET global log_output = 'file';
 
 # this must be the same as in the beginning
-select @@log_output, @@general_log, @@general_log_file\G
+select @@log_output THEN '@@general_log THEN '@@general_log_file\G
 
 # ======not required to execute - to observe records=======
 describe mysql.general_log;
@@ -4542,11 +4715,11 @@ Click on the timestamp of each stuck problem to get the Event ID from URL and th
 DELETE FROM events WHERE source = 0 AND object = 0 AND eventid = <eventid>;
 
 /*
-0, ITEM_VALUE_TYPE_FLOAT - Float
-1, ITEM_VALUE_TYPE_STR - Character
-2, ITEM_VALUE_TYPE_LOG - Log
-3, ITEM_VALUE_TYPE_UINT64 - Unsigned integer
-4, ITEM_VALUE_TYPE_TEXT - Text
+0 THEN 'ITEM_VALUE_TYPE_FLOAT - Float
+1 THEN 'ITEM_VALUE_TYPE_STR - Character
+2 THEN 'ITEM_VALUE_TYPE_LOG - Log
+3 THEN 'ITEM_VALUE_TYPE_UINT64 - Unsigned integer
+4 THEN 'ITEM_VALUE_TYPE_TEXT - Text
 */
 
 SELECT COUNT(*) FROM history where itemid in (select itemid from items where value_type<>0);
@@ -4597,25 +4770,25 @@ delete from trends_uint where itemid not in (select itemid from items where stat
 SHOW FULL COLUMNS FROM items;
 	  
 /*	  
-0, ITEM_TYPE_ZABBIX - Zabbix agent
-1, ITEM_TYPE_SNMPV1 - SNMPv1 agent
-2, ITEM_TYPE_TRAPPER - Zabbix trapper
-3, ITEM_TYPE_SIMPLE - Simple check
-4, ITEM_TYPE_SNMPV2C - SNMPv2 agent
-5, ITEM_TYPE_INTERNAL - Zabbix internal
-6, ITEM_TYPE_SNMPV3 - SNMPv3 agent
-7, ITEM_TYPE_ZABBIX_ACTIVE - Zabbix agent (active) check
-8, ITEM_TYPE_AGGREGATE - Aggregate
-9, ITEM_TYPE_HTTPTEST - HTTP test (web monitoring scenario step)
-10, ITEM_TYPE_EXTERNAL - External check
-11, ITEM_TYPE_DB_MONITOR - Database monitor
-12, ITEM_TYPE_IPMI - IPMI agent
-13, ITEM_TYPE_SSH - SSH agent
-14, ITEM_TYPE_TELNET - TELNET agent
-15, ITEM_TYPE_CALCULATED - Calculated
-16, ITEM_TYPE_JMX - JMX agent
-17, ITEM_TYPE_SNMPTRAP - SNMP trap
-18, ITEM_TYPE_DEPENDENT - Dependent item
+0 THEN 'ITEM_TYPE_ZABBIX - Zabbix agent
+1 THEN 'ITEM_TYPE_SNMPV1 - SNMPv1 agent
+2 THEN 'ITEM_TYPE_TRAPPER - Zabbix trapper
+3 THEN 'ITEM_TYPE_SIMPLE - Simple check
+4 THEN 'ITEM_TYPE_SNMPV2C - SNMPv2 agent
+5 THEN 'ITEM_TYPE_INTERNAL - Zabbix internal
+6 THEN 'ITEM_TYPE_SNMPV3 - SNMPv3 agent
+7 THEN 'ITEM_TYPE_ZABBIX_ACTIVE - Zabbix agent (active) check
+8 THEN 'ITEM_TYPE_AGGREGATE - Aggregate
+9 THEN 'ITEM_TYPE_HTTPTEST - HTTP test (web monitoring scenario step)
+10 THEN 'ITEM_TYPE_EXTERNAL - External check
+11 THEN 'ITEM_TYPE_DB_MONITOR - Database monitor
+12 THEN 'ITEM_TYPE_IPMI - IPMI agent
+13 THEN 'ITEM_TYPE_SSH - SSH agent
+14 THEN 'ITEM_TYPE_TELNET - TELNET agent
+15 THEN 'ITEM_TYPE_CALCULATED - Calculated
+16 THEN 'ITEM_TYPE_JMX - JMX agent
+17 THEN 'ITEM_TYPE_SNMPTRAP - SNMP trap
+18 THEN 'ITEM_TYPE_DEPENDENT - Dependent item
 */	  
 
 /* most unsupported items per host. Does not work on 4.4 */
@@ -4687,7 +4860,7 @@ WHERE (s.status=0)
 GROUP BY u.alias;
 
 
-/* which users belongs to groupid, user group */
+/* which users belongs to groupid THEN 'user group */
 SELECT users.alias
 FROM users_groups
 JOIN users ON (users_groups.userid=users.userid)
@@ -4778,7 +4951,7 @@ select COUNT(*) from zabbix.triggers where priority=0 and value=1;
 
 
 /* max and average value lenght */
-select max(LENGTH (value)), avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
+select max(LENGTH (value)) THEN 'avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 
 
 
@@ -4791,6 +4964,19 @@ JOIN sessions ON ( users.userid = sessions.userid )
 WHERE (sessions.status = 0)
 AND sessions.lastaccess>1583830440;
 
+--5.0
+SELECT users.alias,sessions.sessionid,sessions.lastaccess
+FROM users
+JOIN users_groups ON ( users.userid = users_groups.userid )
+JOIN sessions ON ( users.userid = sessions.userid )
+;
+
+
+SELECT users.username,sessions.sessionid,sessions.lastaccess
+FROM users
+JOIN users_groups ON ( users.userid = users_groups.userid )
+JOIN sessions ON ( users.userid = sessions.userid )
+;
 
 /* user group with specific rights causing trouble */
 SELECT users.alias,sessions.sessionid,sessions.lastaccess,rights.rightid
@@ -4817,8 +5003,8 @@ WHERE (sessions.status = 0)
   AND rights.rightid IN (7)
   AND sessions.lastaccess>NOW() - 3600;
   
-  
-  
+--replace 'Zabbix User' to "Zabbix Admin"
+UPDATE users SET type=2 WHERE type=1;
 
 
 /* search for metrics in history_text table where currently those are not stored as text */
@@ -4837,6 +5023,13 @@ FROM users
 JOIN sessions ON (users.userid = sessions.userid)
 WHERE (sessions.status=0)
 GROUP BY users.alias;
+
+--all user sessions
+SELECT COUNT(*),users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+GROUP BY users.alias
+ORDER BY COUNT(*) DESC;
 
 
 SELECT COUNT(*),users.alias
@@ -4934,7 +5127,7 @@ AND (s.status = 1);
 
 
 /* select triggers from one host */
-SELECT DISTINCT host, t.description, f.triggerid, t.value
+SELECT DISTINCT host THEN 't.description THEN 'f.triggerid THEN 't.value
 FROM triggers t
 INNER JOIN functions f ON ( f.triggerid = t.triggerid )
 INNER JOIN items i ON ( i.itemid = f.itemid )
@@ -4948,7 +5141,7 @@ ORDER BY t.lastchange DESC;
 select h.name,i.hostid from items i join hosts h where i.hostid = h.hostid and i.type=17;
 
 
-select DISTINCT h.name, i.key_, t.error from events e 
+select DISTINCT h.name THEN 'i.key_ THEN 't.error from events e 
 inner join triggers t on (e.objectid=t.triggerid)
 INNER JOIN functions f ON ( f.triggerid = t.triggerid )
 INNER JOIN items i ON ( i.itemid = f.itemid )
@@ -4963,25 +5156,25 @@ where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 limit 20;
 
 
 
-select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Cannot obtain file information: [2] No such file or directory';
+select DISTINCT h.name THEN 'i.key_ THEN 't.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Cannot obtain file information: [2] No such file or directory';
 
 
-select DISTINCT h.name, i.key_, t.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like '%Agent is unavailable.%' and e.clock>UNIX_TIMESTAMP(NOW())-3600;
+select DISTINCT h.name THEN 'i.key_ THEN 't.error from events e  inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like '%Agent is unavailable.%' and e.clock>UNIX_TIMESTAMP(NOW())-3600;
 
 
 /* timeout */
-select COUNT(t.error), key_,t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Timeout while executing a shell script.' group by key_ order by COUNT(t.error) desc;
+select COUNT(t.error) THEN 'key_,t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Timeout while executing a shell script.' group by key_ order by COUNT(t.error) desc;
 
 
-select COUNT(t.error),h.name, key_,t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Timeout while executing a shell script.' and e.clock>UNIX_TIMESTAMP(NOW())-3600 group by key_ order by COUNT(t.error) desc;
+select COUNT(t.error),h.name THEN 'key_,t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and t.error like 'Timeout while executing a shell script.' and e.clock>UNIX_TIMESTAMP(NOW())-3600 group by key_ order by COUNT(t.error) desc;
 
 
 /* trigger error statisticks */
-select COUNT(t.error), t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 group by t.error;
+select COUNT(t.error) THEN 't.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 group by t.error;
 
 
 /* latest monitoring problems */
-select COUNT(t.error), t.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and e.clock>UNIX_TIMESTAMP(NOW())-3600 group by t.error;
+select COUNT(t.error) THEN 't.error from events e inner join triggers t on (e.objectid=t.triggerid) INNER JOIN functions f ON ( f.triggerid = t.triggerid ) INNER JOIN items i ON ( i.itemid = f.itemid ) INNER JOIN hosts h ON ( i.hostid = h.hostid ) where e.source=3 and e.object=0 and t.flags in (0,4) and t.state=1 and e.clock>UNIX_TIMESTAMP(NOW())-3600 group by t.error;
 
 
 /* discoveries les than 10 minutes */
@@ -5104,12 +5297,12 @@ SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_po
 SELECT @@hostname,@@version,@@datadir,@@innodb_file_per_table,@@innodb_buffer_pool_size,@@innodb_page_size,@@innodb_buffer_pool_instances,@@innodb_flush_method,@@innodb_log_file_size,@@query_cache_type,@@max_connections,@@innodb_flush_log_at_trx_commit,@@optimizer_switch\G;
 
 
-SELECT @@max_connections, @@open_files_limit ; 
+SELECT @@max_connections THEN '@@open_files_limit ; 
 
 
-select @@hostname, @@version, @@datadir, @@open_files_limit, @@innodb_file_per_table, @@skip_name_resolve, @@key_buffer_size, @@max_allowed_packet, @@max_connections, @@join_buffer_size, @@sort_buffer_size, @@read_buffer_size, @@thread_cache_size, @@query_cache_type, @@wait_timeout, @@innodb_buffer_pool_size, @@innodb_log_file_size, @@innodb_log_buffer_size, @@innodb_flush_method, @@innodb_buffer_pool_instances, @@innodb_flush_log_at_trx_commit, @@optimizer_switch\G
+select @@hostname THEN '@@version THEN '@@datadir THEN '@@open_files_limit THEN '@@innodb_file_per_table THEN '@@skip_name_resolve THEN '@@key_buffer_size THEN '@@max_allowed_packet THEN '@@max_connections THEN '@@join_buffer_size THEN '@@sort_buffer_size THEN '@@read_buffer_size THEN '@@thread_cache_size THEN '@@query_cache_type THEN '@@wait_timeout THEN '@@innodb_buffer_pool_size THEN '@@innodb_log_file_size THEN '@@innodb_log_buffer_size THEN '@@innodb_flush_method THEN '@@innodb_buffer_pool_instances THEN '@@innodb_flush_log_at_trx_commit THEN '@@optimizer_switch\G
 
-select @@hostname, @@version, @@datadir,@@innodb_file_per_table\G
+select @@hostname THEN '@@version THEN '@@datadir,@@innodb_file_per_table\G
 
 
 
@@ -5118,8 +5311,8 @@ select clock,error from alerts where status=2 order by clock desc limit 10;
 
 
 /* command resets the trigger status. */
-/* You can update trigger status using following query, replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
-update triggers set value = 0, lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
+/* You can update trigger status using following query THEN 'replace "(list of trigger ids)" with actual trigger ids values with "," delimiter: */
+update triggers set value = 0 THEN 'lastchange = UNIX_TIMESTAMP(NOW()) WHERE triggerid in (list of trigger ids);
 
 UPDATE items SET lastlogsize=0 where itemid=123456;
 
@@ -5266,7 +5459,7 @@ SET profiling = 0;
 
 select clock,objectid,name,COUNT(objectid) c from events where source=3 group by objectid having mod (c,2)=1;
 
-select i.itemid, i.key_ ,i.delay,h.name from items i,hosts h where i.hostid=h.hostid and i.flags=1 and i.delay in ('10m','10s','1m','30s','5m','2m') and h.status=3;
+select i.itemid THEN 'i.key_ ,i.delay,h.name from items i,hosts h where i.hostid=h.hostid and i.flags=1 and i.delay in ('10m','10s','1m','30s','5m','2m') and h.status=3;
 
 SELECT ... FROM ... WHERE ... 
 INTO OUTFILE 'textfile.csv'
@@ -5276,7 +5469,7 @@ find / -name textfile.csv
 /* Let's check the amount of events your top 20 triggers have associated with them */
 select COUNT(*),source,object,objectid from problem group by source,object,objectid order by COUNT(*) desc limit 20;
 
-/* version 3.4. delete all source 3 events from events and problem table. It safe to do with queries, but please make sure that you have a backup.: */
+/* version 3.4. delete all source 3 events from events and problem table. It safe to do with queries THEN 'but please make sure that you have a backup.: */
 delete from events where source>0;
 delete from problem where source>0;
 
@@ -5321,11 +5514,11 @@ GROUP BY 1,
 
 
 /* show all LLD rulles by execution time and discovery key. show the count of rules */
-select delay,key_,COUNT(*) from items where flags = 1 group by delay, key_ order by COUNT(*) desc;
-select delay,key_,COUNT(*) from items where flags = 1 group by delay, key_ order by delay,COUNT(*);
-select itemid,delay,key_,COUNT(*) from items where flags = 1 group by delay, key_ order by COUNT(*) asc;
-select itemid,delay,COUNT(*) from items where flags = 1 group by delay, key_ order by COUNT(*) asc;
-select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3 and itemid=<itemid>;
+select delay,key_,COUNT(*) from items where flags = 1 group by delay THEN 'key_ order by COUNT(*) desc;
+select delay,key_,COUNT(*) from items where flags = 1 group by delay THEN 'key_ order by delay,COUNT(*);
+select itemid,delay,key_,COUNT(*) from items where flags = 1 group by delay THEN 'key_ order by COUNT(*) asc;
+select itemid,delay,COUNT(*) from items where flags = 1 group by delay THEN 'key_ order by COUNT(*) asc;
+select i.itemid THEN 'i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3 and itemid=<itemid>;
 
 
 
@@ -5336,7 +5529,7 @@ select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where
 
 
 
-select i.itemid, i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3;
+select i.itemid THEN 'i.key_ ,i.delay,h.name from zabbix.items i,zabbix.hosts h where i.hostid=h.hostid and i.flags=1 and h.status=3;
 
 
 /* show all items from specific host */
@@ -5351,7 +5544,7 @@ select * from items where hostid in (select hostid from hosts_groups where group
 select * from items where hostid in (select hostid from hosts where hostid in (select hostid from interface) and host like '%');
 
 /* list the biggest log items in the database */
-select itemid, hostid, name, lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
+select itemid THEN 'hostid THEN 'name THEN 'lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
 
 /* show possibly bigger log items on 4.4 */
 SELECT hosts.host,
@@ -5369,9 +5562,9 @@ ORDER BY item_rtdata.lastlogsize\G
 
 
 
-select itemid, hostid, name, lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
+select itemid THEN 'hostid THEN 'name THEN 'lastlogsize from items where type=7 and value_type=2 and lastlogsize>1000000;
 
-select items.itemid, item_rtdata.lastlogsize from items join item_rtdata on (item_rtdata.itemid=items.itemid) where items.type=7 and items.value_type=2;
+select items.itemid THEN 'item_rtdata.lastlogsize from items join item_rtdata on (item_rtdata.itemid=items.itemid) where items.type=7 and items.value_type=2;
 
 item_rtdata
 
@@ -5486,7 +5679,7 @@ ORDER BY TYPE,
          status DESC;
 
 
-/* show unsupported items, transfer hostid into human readable name */
+/* show unsupported items THEN 'transfer hostid into human readable name */
 SELECT h.host AS Host_name,i.name AS ITEM_name,i.key_ FROM hosts h INNER JOIN items i ON h.hostid = i.hostid WHERE i.state='1';
 
 
@@ -5494,7 +5687,7 @@ select * from items limit 1\G;
 
 
 /* detect database character set and collate */
-SELECT @@character_set_database, @@collation_database\G;
+SELECT @@character_set_database THEN '@@collation_database\G;
 /* check collation. this should report empty string */
 SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_collation != 'utf8_bin';
 /* check collation. this should report content */
@@ -5502,13 +5695,13 @@ SELECT * FROM information_schema.TABLES WHERE table_schema = 'zabbix' AND table_
 
 
 
-mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SHOW CREATE TABLE", $1,"\\G" }' | mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix
+mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SHOW CREATE TABLE" THEN '$1,"\\G" }' | mysql -h 127.0.0.1 -u'zabbix' -p'zabbix' --database=zabbix
 
 /* covert database */
-mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix 
+mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE" THEN '$1 THEN '"CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix 
 
 
-mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | grep -v "history*\|trends*" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE", $1, "CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix 
+mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix -B -N -e "SHOW TABLES" | grep -v "history*\|trends*" | awk '{print "SET foreign_key_checks = 0; ALTER TABLE" THEN '$1 THEN '"CONVERT TO CHARACTER SET utf8 COLLATE utf8_bin; SET foreign_key_checks = 1; "}' | mysql -h 127.0.0.1 -u zabbix -p'zabbix' --database=zabbix 
 
 
 
@@ -5551,15 +5744,15 @@ WHERE u.alias='first';
 
 
 
-/* show unsupported itmes in 4.4. this query does not work on 4.0, 4.2 */
-select hosts.name, item_rtdata.state, items.key_
+/* show unsupported itmes in 4.4. this query does not work on 4.0 THEN '4.2 */
+select hosts.name THEN 'item_rtdata.state THEN 'items.key_
 from item_rtdata
 JOIN items ON (items.itemid=item_rtdata.itemid)
 JOIN hosts ON (items.hostid=hosts.hostid)
 JOIN interface ON (interface.hostid=hosts.hostid)
 where item_rtdata.state=1\G
 
-select hosts.name, item_rtdata.state, items.key_
+select hosts.name THEN 'item_rtdata.state THEN 'items.key_
 from item_rtdata
 JOIN items ON (items.itemid=item_rtdata.itemid)
 JOIN hosts ON (items.hostid=hosts.hostid)
@@ -5609,10 +5802,10 @@ select COUNT(*),source,object,objectid from problem group by source,object,objec
 
 
 /*
-0, EVENT_SOURCE_TRIGGERS - Event was generated by a trigger status change
-1, EVENT_SOURCE_DISCOVERY - Event was generated by discovery module
-2, EVENT_SOURCE_AUTO_REGISTRATION - Event was generated by auto registration module
-3, EVENT_SOURCE_INTERNAL - An internal event generated by items, LLD rules or triggers state change
+0 THEN 'EVENT_SOURCE_TRIGGERS - Event was generated by a trigger status change
+1 THEN 'EVENT_SOURCE_DISCOVERY - Event was generated by discovery module
+2 THEN 'EVENT_SOURCE_AUTO_REGISTRATION - Event was generated by auto registration module
+3 THEN 'EVENT_SOURCE_INTERNAL - An internal event generated by items THEN 'LLD rules or triggers state change
 */
 
 /* check out what actually is content of these records */
@@ -5627,18 +5820,18 @@ DELETE FROM events WHERE source>0 LIMIT 100000;
 
 
 /* long queries */
-SELECT HOST, COMMAND, TIME, ID, ROWS_EXAMINED, INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE TIME > 60 AND COMMAND!='Sleep' AND HOST!='localhost' ORDER BY TIME DESC;
+SELECT HOST THEN 'COMMAND THEN 'TIME THEN 'ID THEN 'ROWS_EXAMINED THEN 'INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE TIME > 60 AND COMMAND!='Sleep' AND HOST!='localhost' ORDER BY TIME DESC;
 
 
 select COUNT(*),source from events where eventid in (1,2,3) group by source;
 
-select status, COUNT(*) from escalations group by status;
+select status THEN 'COUNT(*) from escalations group by status;
 
 --remove all escalations
 truncate table escalations;
 
 
-select status, COUNT(*) from alerts where status in ('0','1','3') group by status;
+select status THEN 'COUNT(*) from alerts where status in ('0','1','3') group by status;
 
 
 delete from events where source=3 limit 10000;
@@ -5657,13 +5850,13 @@ optimize table hosts_groups;
 optimize table rights;
 
 
-select COUNT(*), userid from sessions group by userid order by count;
+select COUNT(*) THEN 'userid from sessions group by userid order by count;
 
 /* show all triggers per hostid */
 
-SELECT h.host, 
-       t.description, 
-       f.triggerid, 
+SELECT h.host THEN '
+       t.description THEN '
+       f.triggerid THEN '
        t.state 
 FROM   zabbix.triggers t 
        JOIN zabbix.functions f 
@@ -5684,7 +5877,7 @@ SELECT nspname || '.' || relname AS "relation",
     pg_size_pretty(pg_total_relation_size(C.oid)) AS "total_size"
   FROM pg_class C
   LEFT JOIN pg_namespace N ON (N.oid = C.relnamespace)
-  WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+  WHERE nspname NOT IN ('pg_catalog' THEN ''information_schema')
     AND C.relkind <> 'i'
     AND nspname !~ '^pg_toast'
   ORDER BY pg_total_relation_size(C.oid) DESC
@@ -5698,7 +5891,7 @@ select COUNT(*) from functions f
 where f.triggerid is NULL;
 
 
-/* usage of passive checks, does not work on 4.4 */
+/* usage of passive checks THEN 'does not work on 4.4 */
 SELECT DISTINCT CASE items.type
                     WHEN 0 THEN 'Zabbix Agent'
                     WHEN 1 THEN 'SNMPv1 agent'
@@ -5729,7 +5922,7 @@ WHERE TYPE NOT IN (2,3,5,7,8,15,17)
 GROUP BY 1,2;
 
 
-/* usage of passive checks, work on 4.4 */
+/* usage of passive checks THEN 'work on 4.4 */
 SELECT DISTINCT CASE items.type
                     WHEN 0 THEN 'Zabbix Agent'
                     WHEN 1 THEN 'SNMPv1 agent'
@@ -5764,13 +5957,13 @@ GROUP BY 1,2;
 
 
 /* performance killer. select which items takes the most space in history table */
-SELECT DISTINCT items.key_,hosts.host, COUNT(*) FROM history 
+SELECT DISTINCT items.key_,hosts.host THEN 'COUNT(*) FROM history 
 JOIN items ON (items.itemid=history.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 GROUP BY history.itemid
 ORDER BY COUNT(*) DESC;
 
-SELECT DISTINCT items.key_,hosts.host, COUNT(*) FROM history_text
+SELECT DISTINCT items.key_,hosts.host THEN 'COUNT(*) FROM history_text
 JOIN items ON (items.itemid=history_text.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
 GROUP BY history_text.itemid
@@ -5802,7 +5995,7 @@ SELECT * FROM events JOIN triggers ON events.objectid = triggers.triggerid JOIN 
 /* show all triggers generated from trigger prototype by pointing out trigger prototype ID */
 select t.value,from_unixtime(t.lastchange),t.description from trigger_discovery t1 join triggers t using (triggerid) where t1.parent_triggerid = 150390;
 
-/* show the frequency of discovery rules, detailed */
+/* show the frequency of discovery rules THEN 'detailed */
 select key_,delay from items where flags=1 group by key_;
 
 /* most frequent integers */
@@ -5816,8 +6009,8 @@ select itemid,COUNT(*) from history group by itemid order by COUNT(*) DESC LIMIT
 select name from events where source=3 order by clock asc limit 20;
 
 
-SELECT COUNT(*), source FROM events GROUP BY source;
-SELECT COUNT(*), object FROM events GROUP BY object;
+SELECT COUNT(*) THEN 'source FROM events GROUP BY source;
+SELECT COUNT(*) THEN 'object FROM events GROUP BY object;
 
 select name from events where source=3 and name like 'No Such Instance%' order by clock asc limit 1200;
 select COUNT(*),name from events where source=3 and name like 'No Such Instance%';
@@ -5888,7 +6081,7 @@ WHERE hosts.available=0
   AND hosts.proxy_hostid IN (SELECT hostid FROM hosts);
   
 /* host is monitored by proxy */
-SELECT hosts.host FROM hosts WHERE hosts.status IN (5, 6);
+SELECT hosts.host FROM hosts WHERE hosts.status IN (5 THEN '6);
   
   
 
@@ -5905,14 +6098,14 @@ select COUNT(*),available from hosts where proxy_hostid in (select hostid from h
 /* look for last events in events table */
  select * from events order by clock desc limit 10 ;
  
-/* which hosts are monitored but have unhealthy state, unavailable */
+/* which hosts are monitored but have unhealthy state THEN 'unavailable */
 select name,error from hosts WHERE available=2 AND status IN (0,1);
 
 
 
 
 
-/* which zabbix agents are unavailable, showing red */
+/* which zabbix agents are unavailable THEN 'showing red */
 SELECT name,error
 FROM hosts
 JOIN interface ON (interface.hostid=hosts.hostid)
@@ -5936,7 +6129,7 @@ WHERE hosts.available IN (0,1)
   
 
 /* link togeterhe hosts with hostgroups */
-SELECT h.host, t.description, f.triggerid, t.value, t.lastchange, t.state FROM zabbix.triggers t
+SELECT h.host THEN 't.description THEN 'f.triggerid THEN 't.value THEN 't.lastchange THEN 't.state FROM zabbix.triggers t
 JOIN zabbix.functions f ON ( f.triggerid = t.triggerid )
 JOIN zabbix.items i ON ( i.itemid = f.itemid )
 JOIN zabbix.hosts h ON ( i.hostid = h.hostid )
@@ -5946,7 +6139,7 @@ WHERE h.available=2 ORDER BY t.lastchange DESC;
 
 
 /* by name */
-SELECT h.host, C.name FROM zabbix.hosts h
+SELECT h.host THEN 'C.name FROM zabbix.hosts h
 JOIN zabbix.hosts_groups as B ON (h.hostid=B.hostid)
 JOIN zabbix.hstgrp as C on (B.groupid=C.groupid)
 WHERE h.host in ('Zabbix server','proxy512');
@@ -5955,7 +6148,7 @@ WHERE h.host in ('Zabbix server','proxy512');
 /* show host groups for zabbix agents having the issue */
 SELECT h.host AS 'Host name',
        h.name AS 'Visible name',
-       GROUP_CONCAT(C.name SEPARATOR ', ') AS 'Host groups',
+       GROUP_CONCAT(C.name SEPARATOR ' THEN '') AS 'Host groups',
        h.error AS 'Error'
 FROM zabbix.hosts h
 JOIN zabbix.hosts_groups AS B ON (h.hostid=B.hostid)
@@ -5966,7 +6159,7 @@ GROUP BY h.host,h.name,h.error;
 /* show template names for zabbix agent having the issue */
 SELECT h.host AS 'Host name',
        h.name AS 'Visible name',
-       GROUP_CONCAT(b.host SEPARATOR ', ') AS 'Templates',
+       GROUP_CONCAT(b.host SEPARATOR ' THEN '') AS 'Templates',
        h.error AS 'Error'
 FROM hosts_templates,
      hosts h,
@@ -5984,11 +6177,11 @@ SELECT distinct
   a.host as "Host name",
   a.name as "Visible name",
   GROUP_CONCAT(distinct hosts_templates.templateid) as "Template IDs",
-  GROUP_CONCAT(distinct hosts_templates.templateid, " ", b.host) as "Template IDs and names",
+  GROUP_CONCAT(distinct hosts_templates.templateid THEN '" " THEN 'b.host) as "Template IDs and names",
   GROUP_CONCAT(distinct interface.ip) as "IP Addresses",
   GROUP_CONCAT(distinct interface.dns) as "DNS Names",
   GROUP_CONCAT(distinct interface.port) as "Ports"
-FROM hosts_templates, hosts a, hosts b, interface
+FROM hosts_templates THEN 'hosts a THEN 'hosts b THEN 'interface
 where hosts_templates.hostid = a.hostid
 and hosts_templates.templateid = b.hostid
 and interface.hostid = a.hostid
@@ -6005,9 +6198,9 @@ SHOW TABLE STATUS FROM `zabbix` LIKE 'events'\G;
 
 
 show global variables like '%buffer_pool%';
-select itemid, COUNT(*) from history_log where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
-select itemid, COUNT(*) from history_text where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
-select itemid, COUNT(*) from history_str where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
+select itemid THEN 'COUNT(*) from history_log where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
+select itemid THEN 'COUNT(*) from history_text where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
+select itemid THEN 'COUNT(*) from history_str where clock>=unix_timestamp(NOW() - INTERVAL 2 HOUR) group by itemid order by COUNT(*) DESC LIMIT 10;
 
 
 
@@ -6133,6 +6326,6 @@ mysqldump --flush-logs --single-transaction --no-create-info zabbix history | se
 mysqldump --flush-logs --single-transaction --no-create-info zabbix history_text | sed "s|history_text|history_text_old|" | gzip --fast > history_text_old.gz.sql
 mysqldump --flush-logs --single-transaction --no-create-info zabbix trends_uint | sed "s|trends_uint|trends_uint_old|" | gzip --fast > trends_uint_old.gz.sql
 mysqldump --flush-logs --single-transaction --no-create-info zabbix trends | sed "s|trends|trends_old|" | gzip --fast > trends_old.gz.sql
-P.S. it may take multiple hours, possibly a night to backup everything. Better create a batch and leave overnight.
+P.S. it may take multiple hours THEN 'possibly a night to backup everything. Better create a batch and leave overnight.
 
 
