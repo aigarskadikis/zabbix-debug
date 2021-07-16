@@ -3,6 +3,57 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+
+SELECT triggerid,actionid FROM escalations;
+DELETE FROM escalations WHERE triggerid=12345;
+DELETE FROM escalations WHERE actionid=12345; 
+DELETE FROM escalations;
+
+
+--frequently used count functions 4.0,4.2,4.4,5.0
+SELECT `functions`.`name`,
+parameter,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+GROUP BY 1,2 
+ORDER BY 2;
+
+
+--This will list all aggregated items and calculated items and parameters used for aggregation:
+SELECT CASE items.type WHEN 8 THEN 'Aggregate' WHEN 15 THEN 'Calculated' END AS "type",
+items.params,
+items.key_,
+COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND items.type IN (8,15)
+GROUP BY 1,2,3\G
+
+--This will list all trigger functions and what kind of arguments has been used
+SELECT `functions`.`name`,
+parameter,
+COUNT(*)
+FROM functions
+JOIN items ON (items.itemid=`functions`.`itemid`)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+GROUP BY 1,2 
+ORDER BY 2;
+
+
+
+CASE items.type WHEN 8 THEN 'Aggregate' WHEN 15 THEN 'Calculated' END AS "type",
+
+
+
+
 --Zabbix 4.4 THEN 'close event manually
 UPDATE triggers SET value=0 WHERE value=1 AND triggerid=16865;
 
@@ -12,6 +63,17 @@ SELECT eventid,objectid,clock,ns,r_eventid,r_clock,r_ns,correlationid,userid  FR
 SELECT status,value,lastchange,type,state,flags FROM triggers WHERE triggerid=16865 ORDER BY lastchange ASC;
 SELECT status,value,lastchange,type,state,flags FROM triggers ORDER BY lastchange ASC;
 SELECT status,value,lastchange,type,state,flags FROM triggers WHERE lastchange>0 ORDER BY lastchange ASC;
+
+SET SESSION SQL_LOG_BIN=0; 
+DELETE FROM events WHERE source=0 AND object=0 AND objectid=100709
+AND clock > UNIX_TIMESTAMP(NOW()-INTERVAL 7 DAY);
+
+
+select actionid, count(*) from escalations group by 1;
+DELETE FROM escalations;
+
+
+SELECT actionid, triggerid, status, COUNT(*) FROM escalations WHERE status<3 GROUP BY 1,2,3 ORDER BY status;
 
 
 --zabbix 4.4
@@ -34,10 +96,49 @@ END AS "status"
 FROM task
 GROUP BY 2,3
 ORDER BY COUNT(*) DESC;
+--Zabbix 4.4. some tasks are in a hanged state. Let's examine what are those:
+SELECT FROM_UNIXTIME(task.clock),events.objectid,events.name
+FROM task
+JOIN task_close_problem ON (task_close_problem.taskid=task.taskid)
+JOIN acknowledges ON (acknowledges.acknowledgeid=task_close_problem.acknowledgeid)
+JOIN events ON (events.eventid=acknowledges.eventid)
+WHERE task.type=1 AND task.status=1
+AND events.source=0 AND events.object=0
+ORDER BY task.clock DESC;
+--Zabbix 4.4. Note down what tasks will be removed, then we can remove all 'CLOSE_PROBLEM' tasks that are in status 'NEW':
+DELETE FROM task WHERE type=1 AND status=1;
 
 
 
 
+
+
+SELECT count(a.eventid) FROM task_close_problem tcp LEFT JOIN acknowledges a ON tcp.acknowledgeid=a.acknowledgeid LEFT JOIN events e ON a.eventid=e.eventid WHERE e.eventid IN (SELECT eventid FROM events WHERE object = 0 AND source=0 AND clock>0 AND objectid NOT IN (SELECT triggerid FROM triggers));
+
+
+
+DELETE FROM task
+JOIN task_close_problem ON (task_close_problem.taskid=task.taskid)
+JOIN acknowledges ON (acknowledges.acknowledgeid=task_close_problem.acknowledgeid)
+WHERE task.type=1
+AND task.status=1;
+
+
+DELETE FROM task WHERE type=1 AND status=1 AND clock BETWEEN 1562567891 AND 1562568473;
+
+
+DELETE FROM task WHERE type=1 AND status=1;
+
+
+
+SELECT FROM_UNIXTIME(task.clock),events.objectid,events.name
+FROM task
+JOIN task_close_problem ON (task_close_problem.taskid=task.taskid)
+JOIN acknowledges ON (acknowledges.acknowledgeid=task_close_problem.acknowledgeid)
+JOIN events ON (events.eventid=acknowledges.eventid)
+WHERE task.type=1 AND task.status=1
+AND events.source=0 AND events.object=0
+ORDER BY task.clock DESC;
 
 
 
@@ -2929,6 +3030,9 @@ ORDER BY COUNT(hosts.host) ASC
 
 -- events generated per one trigger
 select FROM_UNIXTIME(clock),name,objectid from events where source=0 and object=0 and objectid=724990;
+
+
+DELETE FROM events WHERE source=0 AND object=0 AND objectid=100709;
 
 
 FROM_UNIXTIME(clock),name,objectid from events where source=0 and object=0 and name like '%unsupported items now';

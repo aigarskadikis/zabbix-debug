@@ -1,5 +1,11 @@
 
 
+# According to https://access.redhat.com/solutions/69271, we can install 'sysstat' package to utilize 'pidstat' utility to generate debugging information to understand which process holds the most context switches:
+pidstat -w 3 10 > /tmp/pidstat.out
+pidstat -wt 3 10 > /tmp/pidstat-t.out
+strace -c -f -p <pid of process/thread>
+
+
 
 mysql -sN --batch zabbix -e "
 SELECT items.name,

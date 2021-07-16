@@ -20,6 +20,27 @@ JOIN hosts ON (hosts.hostid = items.hostid)
 WHERE LENGTH(value)>60000;
 
 
+SELECT hosts.host,
+items.key_,
+SUM(LENGTH(value))
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+GROUP BY 1,2
+ORDER BY 3 DESC LIMIT 10;
+
+--which hosts and item keys are passing the most data to central server
+SELECT hosts.host,
+items.key_,
+items.flags,
+SUM(LENGTH(value))
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+GROUP BY 1,2,3
+ORDER BY 4 DESC LIMIT 20; 
+
+
 
 SELECT hosts.host,items.key_
 FROM proxy_history 
