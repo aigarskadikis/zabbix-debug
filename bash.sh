@@ -8,6 +8,20 @@ strace -c -f -p <pid of process/thread>
 
 mysql -sN --batch -e "
 SELECT
+FROM_UNIXTIME(repercussion.clock),
+repercussion.name,
+FROM_UNIXTIME(rootCause.clock),
+rootCause.name
+FROM events repercussion
+JOIN event_recovery ON (event_recovery.eventid=repercussion.eventid)
+JOIN events rootCause ON (rootCause.eventid=event_recovery.c_eventid)
+WHERE event_recovery.c_eventid IS NOT NULL
+ORDER BY repercussion.clock ASC;
+" zabbix > /tmp/all.events.by.global.correlation.tsv
+
+
+mysql -sN --batch -e "
+SELECT
 hosts.host,
 items.name,
 items.key_,
