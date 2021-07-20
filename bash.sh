@@ -6,6 +6,20 @@ pidstat -wt 3 10 > /tmp/pidstat-t.out
 strace -c -f -p <pid of process/thread>
 
 
+mysql -sN --batch -e "
+SELECT
+hosts.host,
+items.name,
+items.key_,
+items.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+ORDER BY 1,2,3,4;
+" zabbix > /tmp/all.enabled.items.tsv
+
+
 
 mysql -sN --batch zabbix -e "
 SELECT items.name,

@@ -4,6 +4,80 @@
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
 
+
+--clean up old events from correlation rules
+SELECT repercussion.clock,
+repercussion.name AS "repercussion",
+rootCause.clock,
+rootCause.name AS "rootCause"
+FROM events repercussion
+JOIN event_recovery ON (event_recovery.eventid=repercussion.eventid)
+JOIN events rootCause ON (rootCause.eventid=event_recovery.c_eventid)
+WHERE event_recovery.c_eventid IS NOT NULL
+\G
+
+
+--discovery feed
+SELECT 
+FROM_UNIXTIME(events.clock) AS "reported",
+dservices.ip,
+dservices.dns,
+dservices.lastup AS "service last up",
+dservices.lastdown AS "service last down",
+CASE dservices.status WHEN 0 THEN 'Service UP' WHEN 1 THEN 'Service DOWN' END AS "service status",
+dservices.value,
+CASE dhosts.status WHEN 0 THEN 'Host is UP' WHEN 1 THEN 'Host is DOWN' END AS "host status",
+dhosts.lastup AS "host last up",
+dhosts.lastdown AS "host last down"
+FROM events 
+JOIN dhosts ON (dhosts.dhostid=events.objectid)
+JOIN dservices ON (dservices.dserviceid=events.objectid)
+WHERE events.source=1 AND events.object IN (1,2)
+ORDER BY events.clock DESC LIMIT 3\G
+
+
+SELECT 
+events.clock AS "reported",
+dservices.ip,
+dservices.dns,
+dservices.lastup AS "service last up",
+dservices.lastdown AS "service last down",
+CASE dservices.status WHEN 0 THEN 'Service UP' WHEN 1 THEN 'Service DOWN' END AS "service status",
+dservices.value,
+CASE dhosts.status WHEN 0 THEN 'Host is UP' WHEN 1 THEN 'Host is DOWN' END AS "host status",
+dhosts.lastup AS "host last up",
+dhosts.lastdown AS "host last down"
+FROM events 
+JOIN dhosts ON (dhosts.dhostid=events.objectid)
+JOIN dservices ON (dservices.dserviceid=events.objectid)
+WHERE events.source=1 AND events.object IN (1,2)
+ORDER BY events.clock DESC LIMIT 3;
+
+--Zabbix 5.4. user sessions
+SELECT sessions.lastaccess,
+sessions.status,
+users.userid,
+users.autologin,
+users.autologout,
+users.refresh,
+users.attempt_failed,
+users.attempt_clock,
+usrgrp.gui_access
+FROM sessions
+JOIN users ON (users.userid=sessions.userid)
+JOIN users_groups ON (users_groups.userid=users.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid=users_groups.usrgrpid);
+
+
+
+
+
+0, DOBJECT_STATUS_UP - Service UP
+1, DOBJECT_STATUS_DOWN - Service DOWN
+
+
+
+
 SELECT triggerid,actionid FROM escalations;
 DELETE FROM escalations WHERE triggerid=12345;
 DELETE FROM escalations WHERE actionid=12345; 
@@ -21,6 +95,21 @@ WHERE hosts.status=0
 AND items.status=0
 GROUP BY 1,2 
 ORDER BY 2;
+
+
+
+
+SELECT clock,itemid,COUNT(*) FROM proxy_history GROUP BY 1,2 HAVING COUNT(*)>1 ;
+
+SELECT clock,itemid,COUNT(*) FROM proxy_history GROUP BY 1,2 HAVING COUNT(*)>1 ORDER BY clock DESC;
+
+SELECT hosts.host,proxy_history.clock,items.type,items.key_,COUNT(*)
+FROM proxy_history 
+JOIN items ON (items.itemid=proxy_history.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+GROUP BY 1,2,3,4 HAVING COUNT(*)=1 ORDER BY clock DESC;
+
+
 
 
 --This will list all aggregated items and calculated items and parameters used for aggregation:
