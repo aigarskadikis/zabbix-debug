@@ -1,5 +1,18 @@
 
 
+
+
+
+
+
+# A command to check SSL connection:
+openssl s_client -connect host.hello.world.com -port 10051 -psk `cat /etc/zabbix/ssl/private/zabbix_agentd.psk` -psk_identity "PSK 001"
+
+
+
+
+
+
 # According to https://access.redhat.com/solutions/69271, we can install 'sysstat' package to utilize 'pidstat' utility to generate debugging information to understand which process holds the most context switches:
 pidstat -w 3 10 > /tmp/pidstat.out
 pidstat -wt 3 10 > /tmp/pidstat-t.out

@@ -5,6 +5,19 @@
 
 
 
+--analyze live proxy data
+SELECT hosts.host,
+items.key_,
+items.flags,
+SUM(LENGTH(value))
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+GROUP BY 1,2,3
+ORDER BY 4 DESC LIMIT 20; 
+
+
+
 --clean up old events from correlation rules
 SELECT
 FROM_UNIXTIME(repercussion.clock) AS "time of repercussion",
@@ -24,7 +37,11 @@ SELECT events.name FROM events JOIN event_recovery ON (event_recovery.eventid=ev
 SELECT events.eventid FROM events JOIN event_recovery ON (event_recovery.eventid=events.eventid) WHERE event_recovery.c_eventid IS NOT NULL;
 
 --delete the previous output
-DELETE e FROM events e LEFT JOIN event_recovery ON (event_recovery.eventid=e.eventid) WHERE event_recovery.c_eventid IS NOT NULL;
+DELETE e FROM events e
+LEFT JOIN event_recovery ON (event_recovery.eventid=e.eventid)
+WHERE event_recovery.c_eventid IS NOT NULL
+AND e.clock < UNIX_TIMESTAMP(NOW() - INTERVAL 30 DAY)
+LIMIT 10;
 
 
 
