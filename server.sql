@@ -4496,6 +4496,22 @@ JOIN actions ON (alerts.actionid=actions.actionid)
 WHERE alerts.clock > EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00'))
 GROUP BY alerts.status,actions.name;
 
+SELECT COUNT(*),
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status,
+actions.name,
+actions.actionid
+FROM alerts
+JOIN actions ON (alerts.actionid=actions.actionid)
+GROUP BY alerts.status,actions.name,actions.actionid
+ORDER BY COUNT(*) DESC;
+
+
+
 --for mysql
 SELECT COUNT(*),CASE alerts.status
            WHEN 0 THEN 'NOT_SENT'
