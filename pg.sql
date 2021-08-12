@@ -7,6 +7,9 @@ SELECT itemid,SUM(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(epoch FR
 
 
 
+echo "SELECT * FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE hosts.host='hostTitleHere';" | psql -t -A -F"TabSep" nameOfZabbixDB | sed "s%TabSep%\t%g" > /tmp/23217.tsv
+
+
 --copy host names, host groups, IPs to CSV. Zabbix 5.0. It works only as a one line:
 \copy (SELECT hosts.host AS host,hstgrp.name AS host_group,interface.ip AS IP FROM hosts JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid) JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.status IN (0,1))  TO '/tmp/hosts.hg.ips.csv' WITH CSV
 

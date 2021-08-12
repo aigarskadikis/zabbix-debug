@@ -5,6 +5,88 @@
 
 
 
+
+--internal events, discovery events, auto-registration events, trigger events:
+SELECT COUNT(*),object,source,objectid FROM events
+WHERE clock >= UNIX_TIMESTAMP("2021-08-11 17:00:00")
+AND clock < UNIX_TIMESTAMP("2021-08-11 18:00:00")
+GROUP BY object,source,objectid
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+--only trigger events:
+SELECT COUNT(*),hosts.host,triggers.description,events.objectid FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.clock >= UNIX_TIMESTAMP("2021-08-11 17:00:00")
+AND events.clock < UNIX_TIMESTAMP("2021-08-11 18:00:00")
+AND events.source=0 AND events.object=0
+GROUP BY hosts.host,triggers.description,events.objectid
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+
+UPDATE usrgrp SET gui_access=1 WHERE usrgrpid IN (
+SELECT usrgrpid FROM users_groups WHERE userid IN (
+SELECT userid FROM users WHERE alias='Admin'
+)
+)
+
+
+--convert all LDAP groups to use internal
+UPDATE usrgrp SET gui_access=1 WHERE gui_access=2;
+
+--force default authorization to be internal
+UPDATE config SET authentication_type=0;
+
+
+
+--list of alerts in progress and sent. Zabbix 5.0
+SELECT COUNT(*),
+alerts.actionid,
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status
+FROM alerts
+JOIN events ON (events.eventid=alerts.eventid)
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source IN (0,3) AND events.object = 0
+GROUP BY alerts.actionid,alerts.status
+ORDER BY alerts.status,COUNT(*);
+
+
+
+
+SELECT hosts.host,
+triggers.triggerid,
+alerts.actionid,
+CASE alerts.status
+WHEN 0 THEN 'NOT_SENT'
+WHEN 1 THEN 'SENT'
+WHEN 2 THEN 'FAILED'
+WHEN 3 THEN 'NEW'
+END AS status
+FROM alerts
+JOIN events ON (events.eventid=alerts.eventid)
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source IN (0,3) AND events.object = 0
+;
+
+
+
+
 --analyze live proxy data
 SELECT hosts.host,
 items.key_,
@@ -15,6 +97,50 @@ JOIN items ON (items.itemid = proxy_history.itemid)
 JOIN hosts ON (hosts.hostid = items.hostid)
 GROUP BY 1,2,3
 ORDER BY 4 DESC LIMIT 20; 
+
+
+--select active and passive proxies
+SELECT host,hostid FROM hosts WHERE status IN (5,6);
+
+
+SET SESSION SQL_LOG_BIN=0; DELETE FROM events WHERE source IN (1,2,3) AND clock < UNIX_TIMESTAMP(NOW() - INTERVAL 7 DAY) LIMIT 10;
+
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 00:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 01:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 01:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 02:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 02:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 03:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 03:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 04:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 04:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 05:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 05:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 06:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 06:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 07:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 07:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 08:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 08:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 09:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 09:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 10:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 10:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 11:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 11:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 12:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 12:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 13:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 13:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 14:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 14:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 15:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 15:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 16:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 16:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 17:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 17:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 18:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 18:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 19:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 19:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 20:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 20:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 21:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 21:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 22:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 22:00:00") AND clock < UNIX_TIMESTAMP("2021-08-11 23:00:00");
+SELECT COUNT(*) FROM events WHERE clock >= UNIX_TIMESTAMP("2021-08-11 23:00:00") AND clock < UNIX_TIMESTAMP("2021-08-12 00:00:00");
+
+
+
+
+
+
+
+SELECT COUNT(*) FROM alerts WHERE clock >= UNIX_TIMESTAMP("2021-06-28 00:00:00") AND clock < UNIX_TIMESTAMP("2021-06-29 00:00:00");
+SELECT COUNT(*) FROM alerts WHERE clock >= UNIX_TIMESTAMP("2021-06-29 00:00:00") AND clock < UNIX_TIMESTAMP("2021-06-30 00:00:00");
+SELECT COUNT(*) FROM alerts WHERE clock >= UNIX_TIMESTAMP("2021-06-30 00:00:00") AND clock < UNIX_TIMESTAMP("2021-06-31 00:00:00");
+SELECT COUNT(*) FROM alerts WHERE clock >= UNIX_TIMESTAMP("2021-06-31 00:00:00") AND clock < UNIX_TIMESTAMP("2021-07-01 00:00:00");
+SELECT COUNT(*) FROM alerts WHERE clock >= UNIX_TIMESTAMP("2021-07-01 00:00:00") AND clock < UNIX_TIMESTAMP("2021-07-02 00:00:00");
 
 
 
@@ -215,6 +341,12 @@ END AS "status"
 FROM task
 GROUP BY 2,3
 ORDER BY COUNT(*) DESC;
+
+
+
+
+
+
 --Zabbix 4.4. some tasks are in a hanged state. Let's examine what are those:
 SELECT FROM_UNIXTIME(task.clock),events.objectid,events.name
 FROM task
@@ -224,6 +356,8 @@ JOIN events ON (events.eventid=acknowledges.eventid)
 WHERE task.type=1 AND task.status=1
 AND events.source=0 AND events.object=0
 ORDER BY task.clock DESC;
+
+
 --Zabbix 4.4. Note down what tasks will be removed, then we can remove all 'CLOSE_PROBLEM' tasks that are in status 'NEW':
 DELETE FROM task WHERE type=1 AND status=1;
 
@@ -460,24 +594,9 @@ SELECT COUNT(*),source FROM events GROUP BY source;
 
 
 
-SELECT hosts.host,
-triggers.triggerid,
-FROM_UNIXTIME(alerts.clock) AS 'clock',
-alerts.actionid,
-CASE alerts.status
-WHEN 0 THEN 'NOT_SENT'
-WHEN 1 THEN 'SENT'
-WHEN 2 THEN 'FAILED'
-WHEN 3 THEN 'NEW'
-END AS status
-FROM alerts
-JOIN events ON (events.eventid=alerts.eventid)
-JOIN triggers ON (triggers.triggerid=events.objectid)
-JOIN functions ON (functions.triggerid=triggers.triggerid)
-JOIN items ON (items.itemid=functions.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE events.source IN (0,3) AND events.object = 0
-ORDER BY alerts.clock ASC;
+
+
+
 
 
 
@@ -761,7 +880,7 @@ LIMIT 10;
 
 
 SELECT COUNT(*),
-actions.name THEN '
+actions.name,
 actions.actionid 
 FROM events
 JOIN alerts ON (alerts.eventid=events.eventid)
@@ -3817,6 +3936,9 @@ ORDER BY COUNT(*)
 
 
 
+
+
+
 SELECT from_unixtime(clock),value_avg from trends
 JOIN items ON (items.itemid=trends.itemid)
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -5716,6 +5838,8 @@ delete from problem where source>0;
 
 
 
+
+
 SELECT snmpv3_securityname AS USER,
        CASE snmpv3_securitylevel
            WHEN 0 THEN 'noAuthNoPriv'
@@ -5952,17 +6076,17 @@ show variables where Variable_name like 'innodb_file_per_table';
 
 /* Show session count opened per each user */
 SELECT sessions.userid,
-       users.alias,
-       COUNT(*)
+users.alias,
+COUNT(*)
 FROM sessions
 INNER JOIN users ON sessions.userid = users.userid
 GROUP BY sessions.userid,
-         users.alias;
+users.alias
+ORDER BY COUNT(*) ASC;
 
 
 
-SELECT u.alias,
-       r.rightid,
+SELECT r.rightid,
        hgr.name,
        CASE
            WHEN r.permission=0 THEN 'DENY'

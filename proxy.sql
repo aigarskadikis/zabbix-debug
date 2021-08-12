@@ -51,7 +51,6 @@ WHERE items.itemid in (select itemid from items where flags=1);
 
 
 
-
 SELECT COUNT(*),CASE
 WHEN items.type=0 THEN 'ZABBIX'
 WHEN items.type=2 THEN 'TRAPPER'

@@ -2,13 +2,14 @@
 
 
 
-
+mysql -sN --batch zabbixdb -e "show variables;" > /tmp/mysql.live.variables.tsv
 
 
 # A command to check SSL connection:
 openssl s_client -connect host.hello.world.com -port 10051 -psk `cat /etc/zabbix/ssl/private/zabbix_agentd.psk` -psk_identity "PSK 001"
 
 
+while (sleep 10) do mysql -h'127.0.0.1' -u'zabbix' -p'zabbix' zabbix -e "DELETE FROM event_recovery WHERE eventid NOT IN (SELECT eventid FROM events) LIMIT 100;"; done
 
 
 
@@ -251,6 +252,9 @@ while (sleep 3) do lsof | grep ^java | wc -l; done
 while (sleep 30) do lsof | grep ^java | wc -l; done
 
 
+
+while (sleep 3) do echo 1; done
+
 # list of open files:
 lsof -p $(pidof mysqld) > /tmp/mysqld.list.open.files.txt
 lsof > /tmp/list.open.files.txt
@@ -401,6 +405,10 @@ CPU information (cat /proc/cpuinfo).
 RAM information (free -h).
 Storage information (Disk types - SSD, HDD, SAS) (RAID info).
 Housekeeper or partitioning used for removing old data. 
+
+free -h > /tmp/db.server.free.memory.log
+cat /proc/cpuinfo > /tmp/db.server.cpu.info.log
+sar -d -wp 1 10 >> /tmp/sar.output
 
 
 e9eec97e9c670fbc37658710bfadd61e
