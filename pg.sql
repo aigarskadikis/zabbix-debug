@@ -7,11 +7,33 @@ SELECT itemid,SUM(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(epoch FR
 
 
 
+SELECT * FROM pg_stat_activity LIMIT 1
+\gx
+
+
+--see the new LLD comming in in the proxy
+SELECT FROM_UNIXTIME(clock), hosts.host, items.key_, LENGTH(value), value FROM proxy_history JOIN items ON (items.itemid = proxy_history.itemid) JOIN hosts ON (hosts.hostid = items.hostid) WHERE items.flags=1;
+
+
+--active query
+\o /tmp/20.minutes.txt
+SELECT
+pid,
+now() - pg_stat_activity.query_start AS duration,
+query,
+state
+FROM pg_stat_activity
+WHERE (now() - pg_stat_activity.query_start) > interval '20 minutes';
+\o
+
+
+
 echo "SELECT * FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE hosts.host='hostTitleHere';" | psql -t -A -F"TabSep" nameOfZabbixDB | sed "s%TabSep%\t%g" > /tmp/23217.tsv
 
 
 --copy host names, host groups, IPs to CSV. Zabbix 5.0. It works only as a one line:
 \copy (SELECT hosts.host AS host,hstgrp.name AS host_group,interface.ip AS IP FROM hosts JOIN hosts_groups ON (hosts_groups.hostid=hosts.hostid) JOIN hstgrp ON (hstgrp.groupid=hosts_groups.groupid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.status IN (0,1))  TO '/tmp/hosts.hg.ips.csv' WITH CSV
+
 
 
 
@@ -187,14 +209,7 @@ LIMIT 10
 
 
 
---active query
-SELECT
-pid,
-now() - pg_stat_activity.query_start AS duration,
-query,
-state
-FROM pg_stat_activity
-WHERE (now() - pg_stat_activity.query_start) > interval '20 minutes';
+
 
 
 --biggest metrics on postgres
@@ -782,7 +797,7 @@ SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
 WHERE n_dead_tup > 0
 ORDER BY n_dead_tup DESC;
-\p
+\o
 
 select itemid, count(*) from history_log where clock>=EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00' - INTERVAL '1 HOUR')) group by itemid order by count(*) DESC LIMIT 20;
 

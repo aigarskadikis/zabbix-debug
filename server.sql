@@ -3,7 +3,66 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+--postgres, mysql, Zabbix 5.0, detect incorrect trigger arguments
+SELECT COUNT(*),
+functions.name,
+functions.parameter
+FROM functions
+JOIN triggers ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.status=0
+AND triggers.status=0
+AND hosts.status=0
+GROUP BY 2,3
+ORDER BY functions.name;
 
+SELECT hosts.host,
+items.name,
+functions.name,
+functions.parameter
+FROM functions
+JOIN triggers ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.status=0
+AND triggers.status=0
+AND hosts.status=0
+
+
+
+--trigger top 100
+SELECT e.objectid, t.description, count(distinct e.eventid) AS cnt_event FROM triggers t,events e WHERE t.triggerid=e.objectid AND e.source=0 AND e.object=0 AND t.flags IN (0,4) GROUP BY e.objectid ORDER BY cnt_event DESC LIMIT 100;
+
+--users online
+SELECT COUNT(*),users.userid FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY users.userid;
+SELECT COUNT(*),users.userid FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > EXTRACT(epoch FROM NOW()-INTERVAL '1 HOUR') GROUP BY users.userid;
+
+
+
+--list maintenance periods, mainenance name and ID. Zabbix 5.0
+SELECT
+maintenances.name,
+maintenances.maintenanceid,
+timeperiods.timeperiodid,
+timeperiods.timeperiod_type,
+timeperiods.every,
+timeperiods.month,
+timeperiods.dayofweek,
+timeperiods.day,
+timeperiods.start_time,
+timeperiods.period,
+timeperiods.start_date
+FROM timeperiods
+JOIN maintenances_windows ON (maintenances_windows.timeperiodid=timeperiods.timeperiodid)
+JOIN maintenances ON (maintenances.maintenanceid=maintenances_windows.maintenanceid)
+\G
+
+
+SELECT * FROM maintenance_tag WHERE maintenanceid='';
+SELECT * FROM maintenances_groups WHERE maintenanceid='';
+SELECT * FROM maintenances_hosts WHERE maintenanceid='';
+SELECT * maintenances_windows WHERE maintenanceid='';
 
 
 --internal events, discovery events, auto-registration events, trigger events:
@@ -42,6 +101,8 @@ UPDATE usrgrp SET gui_access=1 WHERE gui_access=2;
 --force default authorization to be internal
 UPDATE config SET authentication_type=0;
 
+--unlock all acounts
+UPDATE users SET attempt_clock=0 WHERE attempt_clock>0;
 
 
 --list of alerts in progress and sent. Zabbix 5.0
@@ -676,26 +737,13 @@ JOIN hosts h2 ON (h2.hostid=i2.hostid)
 WHERE i1.delay<>i2.delay\G
 
 
---item update frequency
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.delay THEN 'h2.host AS differesFromTemplate THEN 'i2.delay FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.delay<>i2.delay\G
---save history for n days
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.history THEN 'h2.host AS differesFromTemplate THEN 'i2.history FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.history<>i2.history\G
---keep trends
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.trends THEN 'h2.host AS differesFromTemplate THEN 'i2.trends FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.trends<>i2.trends\G
---item disable or enabled
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.status THEN 'h2.host AS differesFromTemplate THEN 'i2.status FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.status<>i2.status\G
---credentials
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.username THEN 'h2.host AS differesFromTemplate THEN 'i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.password THEN 'h2.host AS differesFromTemplate THEN 'i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
 
 
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.publickey THEN 'h2.host AS differesFromTemplate THEN 'i2.publickey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.publickey<>i2.publickey\G
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.privatekey THEN 'h2.host AS differesFromTemplate THEN 'i2.privatekey FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.privatekey<>i2.privatekey\G
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.description THEN 'h2.host AS differesFromTemplate THEN 'i2.description FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.description<>i2.description\G
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.discover THEN 'h2.host AS differesFromTemplate THEN 'i2.discover FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.discover<>i2.discover\G
+--username
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.username, h2.host AS differesFromTemplate, i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
+--password
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.password, h2.host AS differesFromTemplate, i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
 
---different lifetime on LLD rule
-SELECT h1.host AS exceptionInstalled THEN 'i1.name THEN 'i1.key_ THEN 'i1.lifetime THEN 'h2.host AS differesFromTemplate THEN 'i2.lifetime FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.lifetime<>i2.lifetime\G
 
 
 --different username
@@ -1414,6 +1462,8 @@ GROUP BY 1,2
 ORDER BY 2;
 
 
+
+
 --host level mapping+templates
 SELECT `functions`.`name`,
 hostmacro.value,
@@ -1425,6 +1475,9 @@ JOIN hostmacro ON (hostmacro.macro=functions.parameter)
 WHERE functions.parameter LIKE '{%'
 GROUP BY 1,2
 ORDER BY 2;
+
+
+
 
 --global level mapping
 SELECT `functions`.`name`,
@@ -2641,19 +2694,31 @@ AND h.hostid=12025
 SELECT COUNT(*),items.delay,functions.name,functions.parameter
 FROM functions
 JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.itemid)
 WHERE functions.name IN ('avg','max','min','nodata','iregexp')
+AND functions.parameter='3'
 GROUP BY functions.name,functions.parameter,items.delay
-ORDER BY COUNT(*) DESC THEN 'functions.parameter
+ORDER BY COUNT(*) DESC
 LIMIT 200;
 
 
 
+select hosts.host,
+items.name,
+functions.name,
+functions.parameter
+FROM functions 
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.itemid)
+WHERE functions.name='avg'
+AND functions.parameter='3';
+
+
+
 --possibilities to grow
-select COUNT(*),name,parameter
-FROM functions
-GROUP BY name,parameter
-ORDER BY COUNT(*) DESC
-LIMIT 20;
+select COUNT(*),name,parameter FROM functions GROUP BY name,parameter ORDER BY name;
+
+
 
 
 --list all enabled items per host on 4.0 THEN '4.2:
@@ -5208,8 +5273,14 @@ select itemid,COUNT(*) from history_text where clock> UNIX_TIMESTAMP(now()-INTER
 SELECT COUNT(*) FROM sessions;
 
 
+
 DELETE FROM sessions WHERE (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600);
 OPTIMIZE TABLE sessions;
+
+--postgres
+DELETE FROM sessions WHERE lastaccess < EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'));
+
+
 
 
 SELECT COUNT(u.alias),
@@ -5406,12 +5477,12 @@ SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = 
 
 --users online in last 5 minutes
 SELECT COUNT(*),
-       users.alias
+       users.userid
 FROM users
 JOIN sessions ON (users.userid = sessions.userid)
 WHERE (sessions.status=0)
   AND (sessions.lastaccess > UNIX_TIMESTAMP(NOW()- INTERVAL 1 HOUR))
-GROUP BY users.alias;
+GROUP BY users.userid;
 
 
 

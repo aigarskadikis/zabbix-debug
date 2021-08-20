@@ -20,6 +20,21 @@ JOIN hosts ON (hosts.hostid = items.hostid)
 WHERE LENGTH(value)>60000;
 
 
+
+
+SELECT clock,
+hosts.host,
+items.key_,
+LENGTH(value)
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE items.flags=1
+AND LENGTH(value)>6000;
+
+
+
+
 SELECT hosts.host,
 items.key_,
 SUM(LENGTH(value))
