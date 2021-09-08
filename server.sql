@@ -3,6 +3,90 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+
+
+--enabled trigger functions
+SELECT COUNT(*),functions.name,functions.parameter FROM functions
+JOIN triggers ON (triggers.triggerid=functions.triggerid) JOIN items ON (items.itemid=functions.itemid) JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.status=0 AND triggers.status=0 AND hosts.status=0 GROUP BY 2,3 ORDER BY functions.name;
+
+
+
+--calculated items
+SELECT COUNT(*),items.params
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=15
+AND hosts.status=0
+AND items.status=0
+GROUP BY items.params;
+
+
+
+--data collection. Show information about enabled hosts, enabled items. Zabbix 5.0
+SELECT
+CASE items.type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 7 THEN 'Zabbix agent (active) check'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'HTTP test (web monitoring scenario step)'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+END as type,COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+GROUP BY type
+ORDER BY COUNT(*) DESC;
+
+
+--Zabbix 5.0. List all maintenance windows
+select m.name,case when m.maintenance_type=1 then 'With data collection' else 'No data collection' end Type,FROM_UNIXTIME(m.active_since) Active_since,FROM_UNIXTIME(m.active_till) Active_till,case when m.active_till > m.active_since then 'Active' else 'Expired' end State, m.description, GROUP_CONCAT(DISTINCT hg.name) Hostgroups, count(distinct hg.name) Hostgroups_count, GROUP_CONCAT(DISTINCT h.name) Hosts, count(distinct h.name) Hosts_count
+FROM maintenances m
+LEFT JOIN maintenances_groups mg on m.maintenanceid=mg.maintenanceid
+LEFT JOIN maintenances_hosts mh on m.maintenanceid=mh.maintenanceid
+LEFT JOIN hstgrp hg on mg.groupid=hg.groupid
+LEFT JOIN hosts h on mh.hostid=h.hostid
+GROUP BY 1,2,3,4,5,6;
+
+
+
+SELECT maintenances.name,
+CASE
+WHEN maintenances.maintenance_type=1 THEN 'With data collection'
+ELSE 'No data collection'
+END TYPE,
+FROM_UNIXTIME(maintenances.active_since) Active_since,
+FROM_UNIXTIME(maintenances.active_till) Active_till,
+CASE
+WHEN maintenances.active_till > maintenances.active_since THEN 'Active'
+ELSE 'Expired'
+END State,
+maintenances.description,
+GROUP_CONCAT(DISTINCT hstgrp.name) Hostgroups,
+GROUP_CONCAT(DISTINCT hosts.name) Hosts
+FROM maintenances
+JOIN maintenances_groups ON (maintenances_groups.maintenanceid=maintenances.maintenanceid)
+JOIN hstgrp ON (hstgrp.groupid=maintenances_groups.groupid)
+JOIN maintenances_hosts ON (maintenances_hosts.maintenanceid=maintenances.maintenanceid)
+JOIN hosts ON (hosts.hostid=maintenances_hosts.hostid)
+GROUP BY 1,2,3,4,5,6;
+
+
+
 --postgres, mysql, Zabbix 5.0, detect incorrect trigger arguments
 SELECT COUNT(*),
 functions.name,
@@ -34,9 +118,12 @@ AND hosts.status=0
 --trigger top 100
 SELECT e.objectid, t.description, count(distinct e.eventid) AS cnt_event FROM triggers t,events e WHERE t.triggerid=e.objectid AND e.source=0 AND e.object=0 AND t.flags IN (0,4) GROUP BY e.objectid ORDER BY cnt_event DESC LIMIT 100;
 
---users online
+--users online, mysql
 SELECT COUNT(*),users.userid FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY users.userid;
+SELECT COUNT(*),users.alias FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY users.alias;
+--postgres
 SELECT COUNT(*),users.userid FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > EXTRACT(epoch FROM NOW()-INTERVAL '1 HOUR') GROUP BY users.userid;
+SELECT COUNT(*),users.alias FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > EXTRACT(epoch FROM NOW()-INTERVAL '1 HOUR') GROUP BY users.alias;
 
 
 
@@ -4394,7 +4481,7 @@ GROUP BY items.key_,
 ORDER BY COUNT(items.key_);
 
 
-/* unsupported items. show problems related to items. works on 4.4 */
+/* unsupported items. show problems related to items. works on 4.4, 5.0 */
 SELECT COUNT(items.key_),
        hosts.host,
        items.key_,
@@ -5274,8 +5361,7 @@ SELECT COUNT(*) FROM sessions;
 
 
 
-DELETE FROM sessions WHERE (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600);
-OPTIMIZE TABLE sessions;
+DELETE FROM sessions WHERE (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600); OPTIMIZE TABLE sessions;
 
 --postgres
 DELETE FROM sessions WHERE lastaccess < EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'));

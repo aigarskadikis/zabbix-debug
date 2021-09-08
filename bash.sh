@@ -5,6 +5,18 @@
 mysql -sN --batch zabbixdb -e "show variables;" > /tmp/mysql.live.variables.tsv
 
 
+
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history_uint;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history_str;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history_text;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history_log;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
+
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE trends_uint;" | grep -c "$(date --date='TZ="UTC" 00:00 next Month' "+p%Y_%m")"
+mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE trends;" | grep -c "$(date --date='TZ="UTC" 00:00 next Month' "+p%Y_%m")"
+
+
+
 # A command to check SSL connection:
 openssl s_client -connect host.hello.world.com -port 10051 -psk `cat /etc/zabbix/ssl/private/zabbix_agentd.psk` -psk_identity "PSK 001"
 
@@ -491,9 +503,9 @@ free -h
 # does all you systems are supposed to be online 24/7. if yes we can replace 
 
 # on centos/red hat
-sudo rpm -qa | grep zabbix
+sudo rpm -qa | grep "zabbix\|php"
 # ubuntu/debian
-sudo apt list --installed | grep zabbix
+sudo apt list --installed | grep "zabbix\|php"
 
 
 /usr/sbin/mysqld --verbose --help | grep -A 1 "Default options"
@@ -547,6 +559,9 @@ watch -n.1 "innotop -h'ros' -P'3306' -u'root' -p'zabbix' --count 1 -d 1 -n --mod
 watch -n1 'ps aux|grep "[t]rapper #"'
 
 watch -n1 'ps auxww | grep "[z]abbix_server: trapper #"'
+
+watch -n1 'ps auxww | grep "[z]abbix_server: history syncer #"'
+
 
 watch -n.1 'ps auxww | grep "^zabbix.*[z]abbix_server: trapper #"'
 
