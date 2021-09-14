@@ -29,9 +29,7 @@ ORDER BY COUNT(*) ASC
 to_char(date(to_timestamp(clock)),'YYYY-MM-DD'),
 
 
-SELECT TO_CHAR(DATE(TO_TIMESTAMP(clock)),'YYYY-MM-DD HH:mm'),name FROM events
-WHERE source=3 AND object=4 AND LENGTH(name)>0
-ORDER BY clock ASC;
+SELECT TO_CHAR(DATE(TO_TIMESTAMP(clock)),'YYYY-MM-DD HH:mm'),name FROM events WHERE source=3 AND object=4 AND LENGTH(name)>0 AND objectid=156451 ORDER BY clock ASC;
 
 
 SELECT FROM_UNIXTIME(clock),name FROM events
