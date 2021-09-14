@@ -10,6 +10,11 @@ SELECT itemid,SUM(LENGTH(value)) FROM history_log WHERE clock > EXTRACT(epoch FR
 SELECT * FROM pg_stat_activity LIMIT 1
 \gx
 
+--clock, from_unixtime
+SELECT TO_CHAR(DATE(TO_TIMESTAMP(clock)),'YYYY-MM-DD HH:mm'),name FROM events
+WHERE source=3 AND object=4 AND LENGTH(name)>0
+ORDER BY clock ASC;
+
 
 --see the new LLD comming in in the proxy
 SELECT FROM_UNIXTIME(clock), hosts.host, items.key_, LENGTH(value), value FROM proxy_history JOIN items ON (items.itemid = proxy_history.itemid) JOIN hosts ON (hosts.hostid = items.hostid) WHERE items.flags=1;

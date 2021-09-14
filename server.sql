@@ -11,6 +11,44 @@ JOIN triggers ON (triggers.triggerid=functions.triggerid) JOIN items ON (items.i
 WHERE items.status=0 AND triggers.status=0 AND hosts.status=0 GROUP BY 2,3 ORDER BY functions.name;
 
 
+--trigger internal messages
+SELECT COUNT(*),objectid,name FROM events
+WHERE source=3 AND object=0 AND LENGTH(name)>0
+GROUP BY objectid,name
+ORDER BY COUNT(*) ASC
+\G
+
+--item internal messages
+SELECT COUNT(*),objectid,name FROM events
+WHERE source=3 AND object=4 AND LENGTH(name)>0
+GROUP BY objectid,name
+ORDER BY COUNT(*) ASC
+\G
+
+
+to_char(date(to_timestamp(clock)),'YYYY-MM-DD'),
+
+
+SELECT TO_CHAR(DATE(TO_TIMESTAMP(clock)),'YYYY-MM-DD HH:mm'),name FROM events
+WHERE source=3 AND object=4 AND LENGTH(name)>0
+ORDER BY clock ASC;
+
+
+SELECT FROM_UNIXTIME(clock),name FROM events
+WHERE source=3 AND object=0 AND LENGTH(name)>0
+AND objectid=12345
+ORDER BY clock DESC
+LIMIT 20\G
+
+
+
+--item messages
+SELECT FROM_UNIXTIME(clock),name FROM events
+WHERE source=3 AND object=4 AND LENGTH(name)>0
+GROUP BY
+ORDER BY clock DESC
+LIMIT 20\G
+
 
 --calculated items
 SELECT COUNT(*),items.params
