@@ -1,8 +1,19 @@
 
 
 
+# If next time happens the same try to prepare debugging for us using strace and gdb output for processes. It can be done using this commands(strace and gdb must be installed by that time):
+
+mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/gdb.ps.log | awk '{ print "gdb -batch -ex bt -ex q -p "$1" > /tmp/zbx/gdb."$1".log 2>&1 &" }' | sh
+mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/strace.ps.log | awk '{ print "timeout 60s strace -ttt -f -s500 -o /tmp/zbx/strace."$1".log -p "$1"&" }' | sh
+# This log file can be archived and sent to us:
+tar -cvJf debug.log.tar.xz /tmp/zbx
+
 
 mysql -sN --batch zabbixdb -e "show variables;" > /tmp/mysql.live.variables.tsv
+
+
+
+watch -n.1 'grep ":0050\|:01BB" /proc/net/tcp'
 
 
 

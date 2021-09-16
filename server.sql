@@ -3,6 +3,10 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+--how many active problems:
+SELECT COUNT(*),source,object,severity FROM problem GROUP BY 2,3,4 ORDER BY severity;
+
+--check SNMPv2 credential missconfiguration. Zabbix 4.4 and before.
 
 
 --enabled trigger functions

@@ -1,5 +1,10 @@
 
 
+
+SELECT * FROM ids WHERE table_name LIKE 'auditlog';
+
+
+
 --biggest metrics
 SELECT itemid,SUM(LENGTH(value)) FROM history_text WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '5 MINUTE') GROUP BY itemid ORDER BY SUM(LENGTH(value)) DESC LIMIT 5;
 SELECT itemid,SUM(LENGTH(value)) FROM history_str WHERE clock > EXTRACT(epoch FROM NOW()-INTERVAL '5 MINUTE') GROUP BY itemid ORDER BY SUM(LENGTH(value)) DESC LIMIT 5;
