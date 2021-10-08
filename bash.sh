@@ -1,6 +1,17 @@
 
 
 
+systemctl -a | awk '/php/ {print $1}' | xargs systemctl status | grep -i master
+
+
+
+zabbix_get -s host -k 'system.run[psql -dzabbix -Atf /tmp/query.sql]'
+
+'system.run["ip addr show | awk -F'[/ ]+' 'BEGIN {ORG=\",\"} $2==\"inet\" && $3!~\"^127.0.0.\" {print $3}'"]'
+'system.run[cat /proc/meminfo | grep MemTotal | cut -d: -f2 | tr -d ' '\k\B]'
+
+
+
 # If next time happens the same try to prepare debugging for us using strace and gdb output for processes. It can be done using this commands(strace and gdb must be installed by that time):
 
 mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/gdb.ps.log | awk '{ print "gdb -batch -ex bt -ex q -p "$1" > /tmp/zbx/gdb."$1".log 2>&1 &" }' | sh
@@ -9,12 +20,50 @@ mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | 
 tar -cvJf debug.log.tar.xz /tmp/zbx
 
 
-mysql -sN --batch zabbixdb -e "show variables;" > /tmp/mysql.live.variables.tsv
+# gdb backtrace on all zabbix_server processes
+mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/gdb.ps.log | awk '{ print "gdb -batch -ex bt -ex q -p "$1" > /tmp/zbx/gdb."$1".log 2>&1 &" }' | sh
+
+# strace on all zabbix_Server processes for 60s
+mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/strace.ps.log | awk '{ print "timeout 60s strace -ttt -f -s500 -o /tmp/zbx/strace."$1".log -p "$1"&" }' | sh
+
+
+
+
+awk -v matchfile=/tmp/matchfile.log -v nomatchfile=/tmp/nomatchfile.log '/sending configuration/ {print > matchfile; next} {print > nomatchfile}' /var/log/zabbix/zabbix_server.log
+
+awk -v matchfile=/tmp/matchfile.log -v nomatchfile=/tmp/nomatchfile.log '/sending configuration/ {print > matchfile; next} {print > nomatchfile}' /var/log/zabbix/zabbix_server.log
+
+
+awk -v matchfile=yes.log -v nomatchfile=next.log "/cannot send list of active checks/ {print > matchfile; next} {print > nomatchfile}"
+
+
+mkdir -p /tmp/zabbixServer && cd /var/log/zabbix && for pid in $(pidof zabbix_server); do grep "$pid:$(date +%Y%m%d):" zabbix_server.log > /tmp/zabbixServer/$pid.log; done
+mkdir -p /tmp/zabbixProxy && cd /var/log/zabbix && for pid in $(pidof zabbix_proxy); do grep "$pid:$(date +%Y%m%d):" zabbix_proxy.log > /tmp/zabbixProxy/$pid.log; done
+# explained
+mkdir -p /tmp/zabbixServer
+for pid in $(
+pidof zabbix_server
+)
+do grep "$pid:$(date +%Y%m%d):" zabbix_server.log > /tmp/zabbixServer/$pid.log
+done
+
+
+
+
+
+mkdir /tmp/zabbix
+for pid in $(
+pidof zabbix_server
+)
+do grep "$pid:$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log > /tmp/zabbix/$pid.log
+done
 
 
 
 watch -n.1 'grep ":0050\|:01BB" /proc/net/tcp'
 
+
+while (sleep 1) do echo -e "\n$(date)" >> /tmp/port.80.443.log; grep ":0050\|:01BB" /proc/net/tcp >> /tmp/port.80.443.log; done
 
 
 mysql zabbix --defaults-file=/var/lib/zabbix/.my.cnf --batch -e "SHOW CREATE TABLE history_uint;" | grep -c "$(date --date="2 day" "+p%Y_%m_%d")"
@@ -295,6 +344,7 @@ timedatectl
 # Could you please also upload system log 
 # /var/log/messages on RHEL/CentOS 
 # or /var/log/syslog on Debian/Ubuntu?
+dmesg > /tmp/dmesg.txt
 
 
 for i in `seq 225 230`; do ping -c1 10.$(ip a | grep -oP "inet 10\.\K\d+\.\d+").$i; done;
@@ -513,9 +563,9 @@ free -h
 
 # does all you systems are supposed to be online 24/7. if yes we can replace 
 
-# on centos/red hat
+# On Centos/Red Hat
 sudo rpm -qa | grep "zabbix\|php"
-# ubuntu/debian
+# On Ubuntu/Debian
 sudo apt list --installed | grep "zabbix\|php"
 
 
@@ -534,6 +584,7 @@ sudo tar -zcvf /tmp/etc.tar.gz /etc
 
 sudo tar -zcvf /tmp/httpd.tar.gz /etc/httpd
 
+sudo tar -zcvf /tmp/zabbix_proxy.log.tar.gz /var/log/zabbix/zabbix_proxy.log
 
 
 sudo tar -zcvf /tmp/mysqld.conf.tar.gz ~/mysql.txt /var/log/mysqld.log 
@@ -602,6 +653,9 @@ sar -dp -w 1 10 >> /tmp/disk.activity.txt
 
 # Usage of swap:
 for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done >> /tmp/swap.usage.txt
+
+
+
 
 # CPU info:
 cat /proc/cpuinfo >> /tmp/cpu.info.txt

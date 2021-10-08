@@ -3,10 +3,100 @@
 --Kernel for the CentOS 7 is quite old and storage subsystem (multi queue/nvme THEN 'etc) THEN 'file system code and other critical internal design is much better in 4.X or 5.X kernels provided by fresh operation systems.
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
+
+
+--When Zabbix ignores actual value of a trigger and do not add new OK event (with value = 0). That means that Zabbix server actually knows that trigger was processed and has OK status. But if DB contains different information, such behaviour can be because of a few reasons:
+--1. DB SQL insert errors (related to events, problem) tables;
+--2. Internal Zabbix error when Zabbix switched trigger to OK status, but did not add new event. For example because of internal exceptions;
+--3. DB issue when you have DB High-Availability and inconsistent data in DB after switch failover.
+
+
+
+--list the problems that should have been closed
+select p.eventid,p.objectid,p.name,h.host from problem p 
+left join triggers t on p.objectid=t.triggerid
+left join functions f on t.triggerid=f.triggerid
+left join items i on f.itemid=i.itemid
+left join hosts h on i.hostid=h.hostid
+where p.r_eventid is null and 
+p.source=0 and
+t.value=0;
+
+
+
+--
+
+SELECT COUNT(*),functions.itemid
+FROM functions
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE hosts.status=0 AND items.status=0
+GROUP BY functions.itemid
+ORDER BY COUNT(*) DESC
+LIMIT 30
+;
+
+
+SELECT COUNT(*),functions.itemid
+FROM functions
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE hosts.status=0 AND items.status=0
+AND functions.name='nodata'
+GROUP BY functions.itemid
+ORDER BY COUNT(*) DESC
+LIMIT 30
+;
+
+
+
+
+SELECT macro,value FROM hostmacro WHERE macro like '%PERIOD%';
+
+
+
+--check data time settings on particular machine. query failed: [1526] Table has no partition for value
+SELECT proxy.host AS Proxy,hosts.host,hosts.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid=315907;
+
+
 --how many active problems:
 SELECT COUNT(*),source,object,severity FROM problem GROUP BY 2,3,4 ORDER BY severity;
 
+
+SELECT proxy.host AS Proxy,CASE items.type WHEN 0 THEN 'Passive' WHEN 7 THEN 'Active' END AS type, COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.type IN (0,7)
+GROUP BY 1,2;
+
+
+
+--4.0
+
+
+UPDATE usrgrp SET users_status=0 WHERE usrgrpid IN (SELECT usrgrpid FROM users_groups WHERE userid=6);
+
+
+
+
+
+users_status
+
+
 --check SNMPv2 credential missconfiguration. Zabbix 4.4 and before.
+
+-- host-wise the metrics
+SELECT COUNT(*), hosts.host
+FROM history_uint
+JOIN items ON (items.itemid=history_uint.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 MINUTE)
+GROUP BY hosts.host ORDER BY 1 ASC;
 
 
 --enabled trigger functions
@@ -156,7 +246,31 @@ AND hosts.status=0
 
 
 --trigger top 100
-SELECT e.objectid, t.description, count(distinct e.eventid) AS cnt_event FROM triggers t,events e WHERE t.triggerid=e.objectid AND e.source=0 AND e.object=0 AND t.flags IN (0,4) GROUP BY e.objectid ORDER BY cnt_event DESC LIMIT 100;
+SELECT e.objectid, t.description, COUNT(DISTINCT e.eventid) AS cnt_event FROM triggers t,events e
+WHERE t.triggerid=e.objectid AND e.source=0 AND e.object=0 AND t.flags IN (0,4)
+GROUP BY e.objectid ORDER BY cnt_event DESC LIMIT 100;
+
+--trigger top 100 with host groups. Zabbix 5.0
+SELECT hstgrp.name, events.objectid, triggers.description, COUNT(DISTINCT events.eventid) AS cnt_event FROM triggers
+JOIN events ON (triggers.triggerid=events.objectid)
+LEFT JOIN functions on triggers.triggerid=functions.triggerid
+LEFT JOIN items on functions.itemid=items.itemid
+LEFT JOIN hosts on items.hostid=hosts.hostid
+LEFT JOIN hosts_groups on hosts.hostid=hosts_groups.hostid
+LEFT JOIN hstgrp on hosts_groups.groupid=hstgrp.groupid
+WHERE events.source=0 AND events.object=0 AND triggers.flags IN (0,4)
+GROUP BY 1,2,3
+ORDER BY cnt_event DESC
+LIMIT 100;
+
+
+SELECT events.objectid, triggers.description, COUNT(DISTINCT events.eventid) AS cnt_event FROM triggers
+JOIN events ON (triggers.triggerid=events.objectid)
+WHERE events.source=0 AND events.object=0 AND triggers.flags IN (0,4)
+GROUP BY 1,2
+ORDER BY cnt_event DESC
+LIMIT 100;
+
 
 --users online, mysql
 SELECT COUNT(*),users.userid FROM users JOIN sessions ON (users.userid = sessions.userid) WHERE sessions.status=0 AND sessions.lastaccess > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY users.userid;
@@ -592,7 +706,6 @@ WHERE task.type = 1 AND task.status = 1 AND problem.source=0 AND problem.object=
 select triggerid from triggers where status=0
 )
 );
-
 
 
 
@@ -2987,6 +3100,10 @@ SELECT @@hostname,
 @@optimizer_switch\G
 
 
+
+
+
+
 SELECT @@hostname,
 @@version,
 @@datadir,
@@ -3387,6 +3504,7 @@ JOIN users_groups ON (users.userid = users_groups.userid)
 JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
 JOIN rights ON (usrgrp.usrgrpid = rights.groupid)
 JOIN hstgrp ON (rights.id=hstgrp.groupid)
+;
 WHERE users.userid='1'
 ;
 
@@ -3695,6 +3813,11 @@ AND events.clock < UNIX_TIMESTAMP('2020-08-01 00:00:00')
 
 
 
+
+
+
+
+
 SELECT hosts.name AS host THEN 'items.name AS item
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -3847,6 +3970,9 @@ ORDER BY p.host
 ;
 
 select hostid from [hosts] FOR JSON AUTO;
+
+mysql --defaults-file=/var/lib/zabbix/my.root.cnf -sN --batch zabbix -e "SELECT TIME,STATE,COMMAND,INFO FROM information_schema.processlist WHERE command != 'Sleep' and time>1 and user != 'event_scheduler' ORDER BY time DESC, id"
+mysql --defaults-file=/var/lib/zabbix/my.root.cnf -sN --batch zabbix -e "SELECT INFO FROM information_schema.processlist WHERE COMMAND != 'Sleep' and TIME > 1 and USER != 'event_scheduler' AND STATE='executing' ORDER BY TIME DESC, id"
 
 
 echo "[
@@ -6031,7 +6157,7 @@ select COUNT(*),source,object,objectid from problem group by source,object,objec
 delete from events where source>0;
 delete from problem where source>0;
 
-
+SELECT source,object,COUNT(*) FROM events GROUP BY 1,2 ORDER BY 1,2;
 
 
 
