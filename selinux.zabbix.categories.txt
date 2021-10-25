@@ -1,0 +1,19 @@
+grep "denied.*mysqladmin.*zabbix_agent_t" /var/log/audit/audit.log
+grep "denied.*mysqladmin.*zabbix_agent_t" /var/log/audit/audit.log | audit2allow -M mysqladmin_zabbix_agent_t
+semodule -i mysqladmin_zabbix_agent_t.pp
+
+grep "denied.*mysql.*zabbix_agent_t" /var/log/audit/audit.log
+grep "denied.*mysql.*zabbix_agent_t" /var/log/audit/audit.log | audit2allow -M mysql_zabbix_agent_t
+semodule -i mysql_zabbix_agent_t.pp
+
+grep "denied.*zabbix_server.*zabbix_script_t" /var/log/audit/audit.log
+grep "denied.*zabbix_server.*zabbix_script_t" /var/log/audit/audit.log | audit2allow -M zabbix_server_zabbix_script_t
+semodule -i zabbix_server_zabbix_script_t.pp
+
+grep "comm.*zabbix_server.*zabbix_t" /var/log/audit/audit.log
+grep "comm.*zabbix_server.*zabbix_t" /var/log/audit/audit.log | audit2allow -M comm_zabbix_server_zabbix_t
+semodule -i comm_zabbix_server_zabbix_t.pp
+
+grep "denied.*zabbix_agentd.*zabbix_agent_t" /var/log/audit/audit.log
+grep "denied.*zabbix_agentd.*zabbix_agent_t" /var/log/audit/audit.log | audit2allow -M zabbix_agentd_zabbix_agent_t
+semodule -i zabbix_agentd_zabbix_agent_t.pp

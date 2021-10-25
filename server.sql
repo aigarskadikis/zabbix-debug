@@ -11,6 +11,60 @@
 --3. DB issue when you have DB High-Availability and inconsistent data in DB after switch failover.
 
 
+SELECT * FROM items WHERE itemid=346879\G
+
+-- item.flags
+-- 0x00, ZBX_FLAG_DISCOVERY_NORMAL - Normal item
+-- 0x01, ZBX_FLAG_DISCOVERY - Discovery rule
+-- 0x02, ZBX_FLAG_DISCOVERY_PROTOTYPE - Item prototype
+-- 0x04, ZBX_FLAG_DISCOVERY_CREATED - Auto-created item
+
+
+SELECT hosts.hostid,items.itemid,items.master_itemid,items.flags,l2.key_
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items l2 ON (items.master_itemid=l2.itemid)
+WHERE hosts.hostid=12795
+AND items.flags=4
+AND items.master_itemid IS NOT NULL;
+
+--which item gives a liffting on preprocessor
+SELECT COUNT(*),hosts.hostid,items.master_itemid,items.flags,l2.key_,l2.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items l2 ON (items.master_itemid=l2.itemid)
+WHERE items.flags=4
+AND items.master_itemid IS NOT NULL
+GROUP BY 2,3,4,5
+HAVING COUNT(*) > 1
+ORDER BY COUNT(*) ASC;
+
+
+
+SELECT COUNT(*),hosts.hostid,items.master_itemid,items.flags,l2.key_,l2.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items l2 ON (items.master_itemid=l2.itemid)
+WHERE items.flags=4
+AND items.master_itemid IS NOT NULL
+GROUP BY 2,3,4,5
+HAVING COUNT(*) > 1
+ORDER BY COUNT(*) DESC
+LIMIT 20\G
+
+
+
+SELECT COUNT(*),hosts.host,items.master_itemid,items.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=18
+AND items.master_itemid > 0
+AND hosts.status IN (0,1)
+GROUP BY 2,3,4
+HAVING COUNT(*) > 1
+\G
+
+
 
 --list the problems that should have been closed
 select p.eventid,p.objectid,p.name,h.host from problem p 
@@ -242,6 +296,8 @@ JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE items.status=0
 AND triggers.status=0
 AND hosts.status=0
+
+
 
 
 

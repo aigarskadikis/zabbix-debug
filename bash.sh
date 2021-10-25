@@ -4,6 +4,14 @@
 systemctl -a | awk '/php/ {print $1}' | xargs systemctl status | grep -i master
 
 
+while (sleep 1) do timeout 18s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%Y%m%d%H%M%S).pcap ; done
+while (sleep 1) do timeout 1800s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%Y%m%d%H%M%S).pcap ; done
+
+$(date +%Y%m%d)
+
+
+while (sleep 1) do echo -e "\n$(date)" >> /tmp/port.80.443.log; grep ":0050\|:01BB" /proc/net/tcp >> /tmp/port.80.443.log; done
+
 
 zabbix_get -s host -k 'system.run[psql -dzabbix -Atf /tmp/query.sql]'
 
