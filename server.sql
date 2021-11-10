@@ -11,6 +11,83 @@
 --3. DB issue when you have DB High-Availability and inconsistent data in DB after switch failover.
 
 
+
+select * from triggers where triggerid=748820\G
+
+--identify trigger overrides between nested VS parent templates. Between host and template
+SELECT triggers.description,triggers.triggerid AS nested,asParent.triggerid AS parent,hosts.host AS nestedName,hosts2.host AS parentName
+FROM triggers
+JOIN triggers asParent ON (asParent.triggerid=triggers.templateid)
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (functions.itemid=items.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN functions functions2 ON (asParent.triggerid=functions2.triggerid)
+JOIN items items2 ON (functions2.itemid=items2.itemid)
+JOIN hosts hosts2 ON (items2.hostid=hosts2.hostid)
+WHERE triggers.templateid IS NOT NULL
+AND asParent.priority<>triggers.priority;
+
+
+SELECT triggers.description,triggers.triggerid AS nested,asParent.triggerid AS parent,hosts.host AS nestedName,hosts2.host AS parentName
+FROM triggers
+JOIN triggers asParent ON (asParent.triggerid=triggers.templateid)
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (functions.itemid=items.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN functions functions2 ON (asParent.triggerid=functions2.triggerid)
+JOIN items items2 ON (functions2.itemid=items2.itemid)
+JOIN hosts hosts2 ON (items2.hostid=hosts2.hostid)
+WHERE triggers.templateid IS NOT NULL
+AND asParent.priority<triggers.priority;
+
+
+SELECT triggers.description,triggers.triggerid AS nested,asParent.triggerid AS parent,hosts.host AS nestedName,hosts2.host AS parentName
+FROM triggers
+JOIN triggers asParent ON (asParent.triggerid=triggers.templateid)
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (functions.itemid=items.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN functions functions2 ON (asParent.triggerid=functions2.triggerid)
+JOIN items items2 ON (functions2.itemid=items2.itemid)
+JOIN hosts hosts2 ON (items2.hostid=hosts2.hostid)
+WHERE triggers.templateid IS NOT NULL
+AND asParent.priority>triggers.priority;
+
+
+triggers.triggerid=748820
+
+
+--unsupported items. 5.0
+SELECT hosts.host,items.key_,item_rtdata.error
+FROM item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(item_rtdata.error)>0
+;
+
+
+--unsupported java items. 5.0
+SELECT hosts.host,items.key_,item_rtdata.error
+FROM item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(item_rtdata.error)>0
+AND items.type=16
+;
+
+
+SELECT COUNT(*),hosts.host
+FROM item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE LENGTH(item_rtdata.error)>0
+AND items.type=16
+GROUP BY hosts.host
+ORDER BY COUNT(*) DESC
+LIMIT 20;
+
+
+
 SELECT * FROM items WHERE itemid=346879\G
 
 -- item.flags
@@ -18,6 +95,14 @@ SELECT * FROM items WHERE itemid=346879\G
 -- 0x01, ZBX_FLAG_DISCOVERY - Discovery rule
 -- 0x02, ZBX_FLAG_DISCOVERY_PROTOTYPE - Item prototype
 -- 0x04, ZBX_FLAG_DISCOVERY_CREATED - Auto-created item
+
+-- if multiple hosts with a same ip address is behind proxy
+SELECT proxy.host AS Proxy,hosts.host,hosts.name
+FROM interface
+JOIN hosts ON (interface.hostid=hosts.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE interface.ip='192.168.88.1';
+
 
 
 SELECT hosts.hostid,items.itemid,items.master_itemid,items.flags,l2.key_
@@ -2358,10 +2443,37 @@ SELECT FROM_UNIXTIME(clock) AS 'time',
 FROM events
 WHERE source=0
   AND object=0
-  ORDER BY clock ASC
+  ORDER BY clock DESC
   LIMIT 10\G
 
-  
+--historical events + host name
+SELECT hosts.host,FROM_UNIXTIME(events.clock) AS 'time',
+       CASE events.severity
+           WHEN 0 THEN 'NOT_CLASSIFIED'
+           WHEN 1 THEN 'INFORMATION'
+           WHEN 2 THEN 'WARNING'
+           WHEN 3 THEN 'AVERAGE'
+           WHEN 4 THEN 'HIGH'
+           WHEN 5 THEN 'DISASTER'
+       END AS severity,
+	   CASE events.acknowledged
+           WHEN 0 THEN 'NO'
+           WHEN 1 THEN 'YES'
+       END AS events,
+	   CASE events.value
+           WHEN 0 THEN 'OK'
+           WHEN 1 THEN 'PROBLEM '
+       END AS trigger_status,
+       events.name
+FROM events
+JOIN triggers ON (triggers.triggerid=events.objectid)
+JOIN functions ON (functions.triggerid=triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE events.source=0
+AND events.object=0
+ORDER BY events.clock DESC
+LIMIT 10\G
   
 --historical event + action name. 5.0
 SELECT FROM_UNIXTIME(events.clock) AS 'time',

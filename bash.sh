@@ -10,6 +10,9 @@ while (sleep 1) do timeout 1800s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%
 $(date +%Y%m%d)
 
 
+journalctl -u sshd | tail -100
+
+
 while (sleep 1) do echo -e "\n$(date)" >> /tmp/port.80.443.log; grep ":0050\|:01BB" /proc/net/tcp >> /tmp/port.80.443.log; done
 
 
@@ -556,7 +559,7 @@ a=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeout
 
 a=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeouto);b=$(grep ":$(date +%Y%m%d):" /var/log/zabbix/zabbix_server.log | grep -c Timeout);echo "$b,$a" | grep "^0" > 2&>1; if [ $? -eq 0 ]; then echo "$b,$a" | grep -Eo "[0-9]+$" ; else echo no; fi
 
-
+date +%s
 
 # common info from DB server
 top -n1 -b >> /tmp/top.output
