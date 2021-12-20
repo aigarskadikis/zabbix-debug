@@ -1,6 +1,55 @@
 
 
 
+
+
+
+
+
+
+# backup only data in the table partitions
+pg_dump --host="localhost" --username="postgres" --dbname=zabbix --format=plain --blobs --verbose --data-only --table=partitions.'alerts*' --file=alerts.sql
+
+# backup everything from the schema 'public', this will not contain partitions. It's a plain and readable backup
+/usr/bin/pg_dump -U postgres -n public zabbix > /pgdata_archive/Backup_Zabbix_Database/dump_zabbix_public_schema
+
+# almost the same command as before but be are backuping everything which comes from schema 'partitions'. in practice practically it's schema 'public'
+/usr/local/bin/pg_dump --host="localhost" --username="postgres" --exclude-schema="partitions" 
+
+
+
+
+# dump database but don't include any data which is inside partitions regarding history and trends
+pg_dump \
+--dbname=zabbix \
+--username="postgres" \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table=partitions.'history*' \
+--exclude-table=partitions.'trends*' \
+--file=zabbixDB.without.history.trends.dump
+
+# create new DB which belongs to user 'postgres'
+createdb -O postgres zabbix20211203
+
+# cd /path/to/dump/which was using using 'format=custom' (it's acompressed file)
+pg_restore \
+--dbname=zabbix20211203 \
+--username="postgres" \
+--format=custom \
+--verbose \
+zabbixDB.without.history.trends.dump
+
+cd /tmp
+wget https://cdn.zabbix.com/zabbix/sources/stable/5.0/zabbix-5.0.18.tar.gz
+tar xvf zabbix-5.0.18.tar.gz
+cd /tmp/zabbix-5.0.18/database/postgresql
+grep "ALTER TABLE.*events" /tmp/zabbix-5.0.18/database/postgresql/schema.sql
+grep "ALTER TABLE.*alerts" /tmp/zabbix-5.0.18/database/postgresql/schema.sql
+
+
+
 SELECT * FROM ids WHERE table_name LIKE 'auditlog';
 
 
@@ -54,6 +103,40 @@ DELETE FROM events WHERE source > 0 AND clock IN (SELECT clock FROM events WHERE
 DELETE FROM events WHERE source IN (1,2,3) AND clock IN (SELECT clock FROM events WHERE source IN (1,2,3) LIMIT 1 OFFSET 0);
 
 
+pg_dump \
+--dbname=z50 \
+--file=zabbix50.dump \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table-data '*.history*' \
+--exclude-table-data '*.trends*'
+
+
+
+pg_dump \
+--dbname=z50 \
+--format=plain \
+--blobs \
+--verbose \
+--data-only \
+--exclude-table '*.history*' \
+--exclude-table '*.trends*' \
+--file=z50.without.history.sql
+
+
+pg_dump \
+--dbname=zabbix \
+--format=custom \
+--blobs \
+--verbose \
+--exclude-table=partitions.'history*' \
+--exclude-table=partitions.'trends*' \
+--file=zabbixDB.without.history.trends.dump
+
+
+
+
 --configuration backup
 
 pg_dump --host=pg \
@@ -76,6 +159,9 @@ pg_dump --host=pg \
 z44 > z44.sql
 
 
+
+
+
 --Backup postgres, ignore hyper tables, hypertables
 
 pg_dump \
@@ -94,6 +180,7 @@ pg_dump \
 
 
 
+INSERT INTO mycopy(colA, colB) SELECT col1, col2 FROM mytable;
 
 
 
@@ -874,6 +961,12 @@ pg_restore \
 /tmp/zabbix30.pg.dump
 
 
+
+pg_restore \
+--dbname=second \
+--no-owner \
+--format=c \
+/tmp/zabbix30.pg.dump
 
 pg_restore \
 --dbname=z30 \

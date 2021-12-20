@@ -9,6 +9,28 @@ AND items.delay='1h';
 
 
 
+
+SELECT COUNT(*),hostid
+FROM items
+GROUP BY hostid;
+
+
+select hostid,host from hosts where status = 0 and hostid not in (select hostid from hosts_templates);
+
+
+
+systemctl stop zabbix-proxy
+su - postgres
+psql zabbix_proxy
+truncate table proxy_history; truncate table ids;
+exit
+exit
+systemctl start zabbix-proxy
+
+
+
+
+
 -- This will show which hosts and items which are receiving big metrics:
 SELECT clock,
 hosts.host,

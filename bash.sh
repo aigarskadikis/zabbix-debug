@@ -10,7 +10,38 @@ while (sleep 1) do timeout 1800s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%
 $(date +%Y%m%d)
 
 
+
+watch -n1 'ps auxww | grep "[t]rapper #"'
+
+watch -n1 'ps auxww | grep "[t]rapper #.*waiting for connection"'
+
+
+grep -Er "memory_limit|max_execution_time" /etc 
+
+
+
+# Let's grab poller number 11 and record what it's doing. Please do 2 times:
+zabbix_proxy -R log_level_increase="poller",11
+#Execute command:
+grep "log level" /var/log/zabbix/zabbix_server.log
+# The last line should say "log level has been increased to 5".
+# Keep this for 15 minutes. Extract last lines:
+tail -1000000 /var/log/zabbix/zabbix_proxy.log | gzip --best > /tmp/zabbix_proxy.$(date +%Y%m%d).log.gz
+# Return log level back - run 2 times:
+zabbix_proxy -R log_level_decrease="poller",11
+grep "log level" /var/log/zabbix/zabbix_server.log
+# The last line should say "log level has been increased to 3".
+
+
+cat /var/log/zabbix/zabbix_proxy.log | gzip --best > /tmp/zabbix_proxy.$(date +%Y%m%d).log.gz
+
+
+ps auxww --sort -%mem > /tmp/processes.mem.txt
+ps auxww --sort -%cpu > /tmp/processes.cpu.txt
+
+
 journalctl -u sshd | tail -100
+
 
 
 while (sleep 1) do echo -e "\n$(date)" >> /tmp/port.80.443.log; grep ":0050\|:01BB" /proc/net/tcp >> /tmp/port.80.443.log; done
@@ -194,6 +225,7 @@ grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | gre
 
 # vmware statistics
 grep vmware /var/log/zabbix/zabbix_server.log | grep "Performance counter data" | cut -d '[' -f1 | cut -d ":" -f4 | sort | uniq -c
+
 
 
 
@@ -580,6 +612,9 @@ sudo rpm -qa | grep "zabbix\|php"
 sudo apt list --installed | grep "zabbix\|php"
 
 
+
+
+
 /usr/sbin/mysqld --verbose --help | grep -A 1 "Default options"
 
 
@@ -606,6 +641,7 @@ sudo tar -zcvf /tmp/snmpsim.gz /usr/share/snmpsim
 
 
 sudo tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
+sudo tar -zcvf /tmp/log.nginx.tar.gz /var/log/nginx
 sudo tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2 
 
 sudo tar -zcvf /tmp/archive.jmxterm.tar.gz /tmp/jmx*

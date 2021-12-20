@@ -12,21 +12,189 @@
 
 
 
+SHOW GLOBAL VARIABLES LIKE '%packet%';
+SHOW GLOBAL VARIABLES LIKE '%max%';
+
+
+--Zabbix 3.0. Hosts that are not assigned to Linux servers or Windows servers group
+SELECT DISTINCT hosts.host
+FROM hosts_groups
+JOIN hosts ON (hosts.hostid=hosts_groups.hostid)
+WHERE hosts.status=0
+AND hosts.hostid NOT IN (
+SELECT hostid FROM hosts_groups WHERE groupid IN (2,8)
+);
+
+
+--prints clean hosts which is either in one group or in another
+SELECT hosts_groups.hostid,COUNT(*)
+FROM hosts_groups
+JOIN hosts ON (hosts.hostid=hosts_groups.hostid)
+WHERE hosts_groups.groupid IN (2,8)
+GROUP BY hosts_groups.hostid
+HAVING COUNT(*) = 1;
+
+--show all clean hosts
+SELECT hosts.host FROM hosts_groups
+JOIN hosts ON (hosts.hostid=hosts_groups.hostid)
+WHERE hosts.hostid IN (
+SELECT hosts_groups.hostid
+FROM hosts_groups
+JOIN hosts ON (hosts.hostid=hosts_groups.hostid)
+WHERE hosts.status=0
+GROUP BY hosts_groups.hostid
+HAVING COUNT(*) = 1
+)
+AND hosts_groups.groupid IN (2,8);
+
+
+
+--show all item types on the host objects which is montitored
+SELECT items.type,COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+GROUP BY items.type
+ORDER BY items.type ASC;
+
+
+
+--items overloading the system
+SELECT COUNT(*),itemid FROM history_text WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR) GROUP BY itemid ORDER BY COUNT(*) DESC LIMIT 10;
+
+SELECT COUNT(*),itemid FROM history_str WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR) GROUP BY itemid ORDER BY COUNT(*) DESC LIMIT 10;
+
+SELECT COUNT(*),itemid FROM history_log WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR) GROUP BY itemid ORDER BY COUNT(*) DESC LIMIT 10;
+
+SELECT COUNT(*),itemid FROM history_uint WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR) GROUP BY itemid ORDER BY COUNT(*) DESC LIMIT 10;
+
+SELECT COUNT(*),itemid FROM history WHERE clock > UNIX_TIMESTAMP (NOW() - INTERVAL 1 HOUR) GROUP BY itemid ORDER BY COUNT(*) DESC LIMIT 10;
+
+
+
+SELECT itemid,COUNT(*),MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_log WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY itemid ORDER BY AVG(LENGTH(value)) DESC LIMIT 10;
+
+SELECT itemid,COUNT(*),MAX(LENGTH(value)),AVG(LENGTH(value)) FROM history_text WHERE clock > UNIX_TIMESTAMP(NOW()-INTERVAL 1 HOUR) GROUP BY itemid ORDER BY AVG(LENGTH(value)) DESC LIMIT 10;
+
+
+--what are those items
+SELECT items.name,
+items.key_,
+items.type,
+hosts.host,
+hosts.hostid
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN (350099,334718);
+
+
+
+
+
+0, GROUP_GUI_ACCESS_SYSTEM - Use default authorization method set for Zabbix GUI
+1, GROUP_GUI_ACCESS_INTERNAL - User of this group will be authorised against Zabbix database regardless of system settings
+2, GROUP_GUI_ACCESS_LDAP - Users of this group will be authorized against LDAP
+3, GROUP_GUI_ACCESS_DISABLED - Users of this group do not have access to Zabbix GUI
+
+
+--determine if user is using LDAP, Internal auth
+SELECT users.userid,users.alias,usrgrp.usrgrpid,usrgrp.gui_access
+FROM users
+JOIN users_groups ON (users_groups.userid=users.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid=users_groups.usrgrpid);
+--0, GROUP_GUI_ACCESS_SYSTEM - Use default authorization method set for Zabbix GUI
+--1, GROUP_GUI_ACCESS_INTERNAL - User of this group will be authorised against Zabbix database regardless of system settings
+--2, GROUP_GUI_ACCESS_LDAP - Users of this group will be authorized against LDAP
+--3, GROUP_GUI_ACCESS_DISABLED - Users of this group do not have access to Zabbix GUI
+
+
+WHERE LOWER(users.alias)=LOWER('admin')
+;
+
+
+
+SELECT FROM_UNIXTIME(trends_uint.clock) AS clock, hosts.host, items.name, trends_uint.num,trends_uint.value_min, trends_uint.value_avg, trends_uint.value_max
+FROM trends_uint
+JOIN items ON (items.itemid=trends_uint.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE trends_uint.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 110 MINUTE)
+ORDER BY trends_uint.clock DESC
+LIMIT 20\G
+
+
+
+--Oracle
+SELECT DISTINCT h.host FROM hosts h INNER JOIN items i ON h.hostid = i.hostid INNER JOIN functions f ON i.itemid = f.itemid INNER JOIN triggers t ON f.triggerid = t.triggerid WHERE h.status = 3 and t.description like '%Master%';
+
+
+
+
+SELECT DISTINCT(itemid),value FROM history_uint
+WHERE itemid IN (
+SELECT i.itemid FROM items i, hosts h
+WHERE i.hostid=h.hostid
+AND i.name like '%Operational%'
+AND h.status=0
+AND i.status=0
+)
+AND clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 MINUTE);
+
+
+
+
+SELECT FROM_UNIXTIME(clock),value FROM history_uint
+WHERE itemid=549479 AND clock IN (
+SELECT max(clock) FROM history_uint WHERE itemid=549479
+);
+
+
+
+SELECT FROM_UNIXTIME(clock),value FROM history_uint
+WHERE itemid IN (
+SELECT i.itemid FROM items i, hosts h
+WHERE i.hostid=h.hostid
+AND i.name like '%Operational%'
+AND h.status=0
+AND i.status=0
+)
+AND clock IN (
+SELECT max(clock) FROM history_uint WHERE itemid=549479
+);
+
+
+
+SELECT i.itemid FROM items i, hosts h
+WHERE i.hostid=h.hostid
+AND i.name like '%Operational%'
+AND h.status=0
+AND i.status=0;
+
+
+
+SELECT
+events.clock,
+events.name,
+events.value
+FROM events 
+JOIN triggers ON (triggers.triggerid=events.objectid)
+WHERE source IN (0,3) AND object = 0 AND triggers.flags IN (0, 4);
+
+
+
 select * from triggers where triggerid=748820\G
 
 --identify trigger overrides between nested VS parent templates. Between host and template
-SELECT triggers.description,triggers.triggerid AS nested,asParent.triggerid AS parent,hosts.host AS nestedName,hosts2.host AS parentName
-FROM triggers
-JOIN triggers asParent ON (asParent.triggerid=triggers.templateid)
-JOIN functions ON (triggers.triggerid=functions.triggerid)
-JOIN items ON (functions.itemid=items.itemid)
-JOIN hosts ON (items.hostid=hosts.hostid)
-JOIN functions functions2 ON (asParent.triggerid=functions2.triggerid)
-JOIN items items2 ON (functions2.itemid=items2.itemid)
-JOIN hosts hosts2 ON (items2.hostid=hosts2.hostid)
-WHERE triggers.templateid IS NOT NULL
-AND asParent.priority<>triggers.priority;
-
+select distinct(triggers.triggerid) as nested,asparent.triggerid as parent,hosts.host as nestedname,hosts2.host as parentname,triggers.description, asparent.priority as parentpriority, triggers.priority as nestedpriority
+from triggers
+join triggers asparent on (asparent.triggerid=triggers.templateid)
+join functions on (triggers.triggerid=functions.triggerid)
+join items on (functions.itemid=items.itemid)
+join hosts on (items.hostid=hosts.hostid)
+join functions functions2 on (asparent.triggerid=functions2.triggerid)
+join items items2 on (functions2.itemid=items2.itemid)
+join hosts hosts2 on (items2.hostid=hosts2.hostid)
+where triggers.templateid is not null
+and asparent.priority<>triggers.priority;
 
 SELECT triggers.description,triggers.triggerid AS nested,asParent.triggerid AS parent,hosts.host AS nestedName,hosts2.host AS parentName
 FROM triggers
@@ -612,6 +780,15 @@ WHERE event_recovery.c_eventid IS NOT NULL
 AND e.clock < UNIX_TIMESTAMP(NOW() - INTERVAL 30 DAY)
 LIMIT 10;
 
+
+SELECT
+items.key_,
+items.type,
+delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0 AND items.status=0
+AND hosts.host='pg.gnt.ros.do.lan';
 
 
 
@@ -2525,7 +2702,7 @@ LIMIT 10;
 
 
 --critical attributes per overloaded database
-SELECT @@hostname THEN '@@version THEN '@@datadir THEN '@@innodb_file_per_table;
+SELECT @@hostname, @@version, @@datadir, @@innodb_file_per_table;
 
 
 --list action names which reference the 'email' delivery only. solution is based in existing records in database. zabbix 5.0
@@ -2564,6 +2741,15 @@ ORDER BY 1,2
 \G
 
 
+--zabbix 5.0 identify dashboard based on itemid in classic graph
+SELECT name FROM dashboard WHERE dashboardid IN (
+SELECT dashboardid FROM widget WHERE widgetid IN (
+SELECT widgetid FROM widget_field WHERE value_graphid IN (
+SELECT graphid FROM graphs_items WHERE itemid=137127
+)
+)
+);
+
 
 --widget refresh rate configured inside widget
 SELECT
@@ -2580,6 +2766,9 @@ AND widget_field.name='rf_rate'
 ;
 
 --reset dashboard global settings to 15m
+
+SELECT * FROM widget_field WHERE name='rf_rate';
+
 UPDATE widget_field SET value_int=900 WHERE name='rf_rate';
 --dashboard never reloads
 UPDATE widget_field SET value_int=0 WHERE name='rf_rate';
@@ -3658,6 +3847,7 @@ WHERE usrgrp.usrgrpid=0;
 
 
 --list all permissions for the user type "User" or "Zabbix Admin". This sample is suitable when a customer does not to expose the titles:
+-- works on 4.0
 SELECT users.userid,
        users_groups.usrgrpid as user_group_id,
        rights.rightid,
@@ -3673,6 +3863,8 @@ JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
 JOIN rights ON (usrgrp.usrgrpid = rights.groupid)
 JOIN hstgrp ON (rights.id=hstgrp.groupid)
 ;
+
+
 WHERE users.userid='1'
 ;
 
@@ -5077,6 +5269,10 @@ SELECT actionid,
 FROM actions
 WHERE eventsource=0;
 
+
+
+
+
 /* which action is causing the most trouble (NOT_SENT) */
 SELECT COUNT(*),CASE alerts.status
            WHEN 0 THEN 'NOT_SENT'
@@ -5103,6 +5299,9 @@ FROM alerts
 JOIN actions ON (alerts.actionid=actions.actionid)
 WHERE alerts.clock > EXTRACT(EPOCH FROM (timestamp '2020-07-07 05:00:00'))
 GROUP BY alerts.status,actions.name;
+
+
+
 
 SELECT COUNT(*),
 CASE alerts.status
@@ -5711,6 +5910,19 @@ WHERE (s.status=0)
   AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
 GROUP BY u.alias;
 
+
+
+SELECT COUNT(u.alias),
+       u.alias
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+  AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
+GROUP BY u.alias;
+
+
+
+SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0) AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300) GROUP BY u.alias;
 
 /* which users belongs to groupid THEN 'user group */
 SELECT users.alias
@@ -6745,6 +6957,9 @@ select COUNT(*) from functions f
 where f.triggerid is NULL;
 
 
+
+
+
 /* usage of passive checks THEN 'does not work on 4.4 */
 SELECT DISTINCT CASE items.type
                     WHEN 0 THEN 'Zabbix Agent'
@@ -6774,6 +6989,17 @@ WHERE TYPE NOT IN (2,3,5,7,8,15,17)
   AND items.state=0
   AND hosts.status=0
 GROUP BY 1,2;
+
+
+
+SELECT COUNT(*),items.type
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type NOT IN (2,3,5,7,8,15,17)
+AND items.status=0
+AND hosts.status=0
+GROUP BY items.type;
+
 
 
 /* usage of passive checks THEN 'work on 4.4 */
