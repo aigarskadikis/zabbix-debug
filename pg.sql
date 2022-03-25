@@ -1,8 +1,26 @@
 
 
 
+--should figure out which slow SQLs are originated first, i.e. which one likely causes locks and delays for other queries.
+--Try to use these to show running queries (PG 9.2+):
+SELECT pid, state, age(clock_timestamp(), query_start), usename, CHAR_LENGTH(query) AS q_len, LEFT(query, 200) AS query
+FROM pg_stat_activity
+WHERE state NOT LIKE '%idle%' AND query NOT ILIKE '%pg_stat_activity%'
+ORDER BY query_start desc;
+
+--the same but also includes information about transactions:
+SELECT a.pid, a.state, age(clock_timestamp(), a.query_start), a.usename, l.mode, a.backend_xmin, CHAR_LENGTH(a.query) AS q_len, LEFT(a.query, 200) AS query
+FROM pg_stat_activity a
+JOIN pg_locks l ON l.pid = a.pid
+WHERE a.state NOT LIKE '%idle%' AND a.query NOT ILIKE '%pg_stat_activity%'
+ORDER BY a.query_start desc;
 
 
+SELECT CONCAT( '/host_discovery.php?form=update&itemid=', itemid) AS "URL" FROM items where flags=1 and delay='1h';
+
+
+--autovacuum for a specific table
+alter table zabbix.public.item_discovery set (autovacuum_vacuum_cost_limit = 300);
 
 
 
@@ -165,17 +183,368 @@ z44 > z44.sql
 --Backup postgres, ignore hyper tables, hypertables
 
 pg_dump \
---dbname=z44 \
---file=zabbix44.dump \
+--dbname=z50 \
+--file=zabbix50.dump \
 --format=custom \
 --blobs \
 --verbose \
---exclude-schema=_timescaledb_internal \
---exclude-schema=_timescaledb_cache \
---exclude-schema=_timescaledb_catalog \
---exclude-schema=_timescaledb_config \
+--table=users \
+--table=maintenances \
+--table=hosts \
+--table=hstgrp \
+--table=group_prototype \
+--table=group_discovery \
+--table=screens \
+--table=screens_items \
+--table=screen_user \
+--table=screen_usrgrp \
+--table=slideshows \
+--table=slideshow_user \
+--table=slideshow_usrgrp \
+--table=slides \
+--table=drules \
+--table=dchecks \
+--table=applications \
+--table=httptest \
+--table=httpstep \
+--table=interface \
+--table=valuemaps \
+--table=items \
+--table=httpstepitem \
+--table=httptestitem \
+--table=media_type \
+--table=media_type_param \
+--table=media_type_message \
+--table=usrgrp \
+--table=users_groups \
+--table=scripts \
+--table=actions \
+--table=operations \
+--table=opmessage \
+--table=opmessage_grp \
+--table=opmessage_usr \
+--table=opcommand \
+--table=opcommand_hst \
+--table=opcommand_grp \
+--table=opgroup \
+--table=optemplate \
+--table=opconditions \
+--table=conditions \
+--table=config \
+--table=triggers \
+--table=trigger_depends \
+--table=functions \
+--table=graphs \
+--table=graphs_items \
+--table=graph_theme \
+--table=globalmacro \
+--table=hostmacro \
+--table=hosts_groups \
+--table=hosts_templates \
+--table=items_applications \
+--table=mappings \
+--table=media \
+--table=rights \
+--table=services \
+--table=services_links \
+--table=services_times \
+--table=icon_map \
+--table=icon_mapping \
+--table=sysmaps \
+--table=sysmaps_elements \
+--table=sysmaps_links \
+--table=sysmaps_link_triggers \
+--table=sysmap_element_url \
+--table=sysmap_url \
+--table=sysmap_user \
+--table=sysmap_usrgrp \
+--table=maintenances_hosts \
+--table=maintenances_groups \
+--table=timeperiods \
+--table=maintenances_windows \
+--table=regexps \
+--table=expressions \
+--table=ids \
+--table=alerts \
+--table=history \
+--table=history_uint \
+--table=history_str \
+--table=history_log \
+--table=history_text \
+--table=proxy_history \
+--table=proxy_dhistory \
+--table=events \
+--table=trends \
+--table=trends_uint \
+--table=acknowledges \
+--table=auditlog \
+--table=auditlog_details \
+--table=service_alarms \
+--table=autoreg_host \
+--table=proxy_autoreg_host \
+--table=dhosts \
+--table=dservices \
+--table=escalations \
+--table=globalvars \
+--table=graph_discovery \
+--table=host_inventory \
+--table=housekeeper \
+--table=images \
+--table=item_discovery \
+--table=host_discovery \
+--table=interface_discovery \
+--table=profiles \
+--table=sessions \
+--table=trigger_discovery \
+--table=application_template \
+--table=item_condition \
+--table=item_rtdata \
+--table=application_prototype \
+--table=item_application_prototype \
+--table=application_discovery \
+--table=opinventory \
+--table=trigger_tag \
+--table=event_tag \
+--table=problem \
+--table=problem_tag \
+--table=tag_filter \
+--table=event_recovery \
+--table=correlation \
+--table=corr_condition \
+--table=corr_condition_tag \
+--table=corr_condition_group \
+--table=corr_condition_tagpair \
+--table=corr_condition_tagvalue \
+--table=corr_operation \
+--table=task \
+--table=task_close_problem \
+--table=item_preproc \
+--table=task_remote_command \
+--table=task_remote_command_result \
+--table=task_data \
+--table=task_result \
+--table=task_acknowledge \
+--table=sysmap_shape \
+--table=sysmap_element_trigger \
+--table=httptest_field \
+--table=httpstep_field \
+--table=dashboard \
+--table=dashboard_user \
+--table=dashboard_usrgrp \
+--table=widget \
+--table=widget_field \
+--table=task_check_now \
+--table=event_suppress \
+--table=maintenance_tag \
+--table=lld_macro_path \
+--table=host_tag \
+--table=config_autoreg_tls \
+--table=module \
+--table=interface_snmp \
+--table=lld_override \
+--table=lld_override_condition \
+--table=lld_override_operation \
+--table=lld_override_opstatus \
+--table=lld_override_opdiscover \
+--table=lld_override_opperiod \
+--table=lld_override_ophistory \
+--table=lld_override_optrends \
+--table=lld_override_opseverity \
+--table=lld_override_optag \
+--table=lld_override_optemplate \
+--table=lld_override_opinventory \
+--table=dbversion \
 --exclude-table-data '*.history*' \
 --exclude-table-data '*.trends*'
+
+
+
+grep "^CREATE TABLE" schema.sql | sed "s| (| \\\|g" | sed "s|CREATE TABLE |--table=|"
+
+
+pg_dump \
+--dbname=z50 \
+--file=zabbix50.dump \
+--format=custom \
+--blobs \
+--verbose \
+--include-table=users \
+--include-table=maintenances \
+--include-table=hosts \
+--include-table=hstgrp \
+--include-table=group_prototype \
+--include-table=group_discovery \
+--include-table=screens \
+--include-table=screens_items \
+--include-table=screen_user \
+--include-table=screen_usrgrp \
+--include-table=slideshows \
+--include-table=slideshow_user \
+--include-table=slideshow_usrgrp \
+--include-table=slides \
+--include-table=drules \
+--include-table=dchecks \
+--include-table=applications \
+--include-table=httptest \
+--include-table=httpstep \
+--include-table=interface \
+--include-table=valuemaps \
+--include-table=items \
+--include-table=httpstepitem \
+--include-table=httptestitem \
+--include-table=media_type \
+--include-table=media_type_param \
+--include-table=media_type_message \
+--include-table=usrgrp \
+--include-table=users_groups \
+--include-table=scripts \
+--include-table=actions \
+--include-table=operations \
+--include-table=opmessage \
+--include-table=opmessage_grp \
+--include-table=opmessage_usr \
+--include-table=opcommand \
+--include-table=opcommand_hst \
+--include-table=opcommand_grp \
+--include-table=opgroup \
+--include-table=optemplate \
+--include-table=opconditions \
+--include-table=conditions \
+--include-table=config \
+--include-table=triggers \
+--include-table=trigger_depends \
+--include-table=functions \
+--include-table=graphs \
+--include-table=graphs_items \
+--include-table=graph_theme \
+--include-table=globalmacro \
+--include-table=hostmacro \
+--include-table=hosts_groups \
+--include-table=hosts_templates \
+--include-table=items_applications \
+--include-table=mappings \
+--include-table=media \
+--include-table=rights \
+--include-table=services \
+--include-table=services_links \
+--include-table=services_times \
+--include-table=icon_map \
+--include-table=icon_mapping \
+--include-table=sysmaps \
+--include-table=sysmaps_elements \
+--include-table=sysmaps_links \
+--include-table=sysmaps_link_triggers \
+--include-table=sysmap_element_url \
+--include-table=sysmap_url \
+--include-table=sysmap_user \
+--include-table=sysmap_usrgrp \
+--include-table=maintenances_hosts \
+--include-table=maintenances_groups \
+--include-table=timeperiods \
+--include-table=maintenances_windows \
+--include-table=regexps \
+--include-table=expressions \
+--include-table=ids \
+--include-table=alerts \
+--include-table=history \
+--include-table=history_uint \
+--include-table=history_str \
+--include-table=history_log \
+--include-table=history_text \
+--include-table=proxy_history \
+--include-table=proxy_dhistory \
+--include-table=events \
+--include-table=trends \
+--include-table=trends_uint \
+--include-table=acknowledges \
+--include-table=auditlog \
+--include-table=auditlog_details \
+--include-table=service_alarms \
+--include-table=autoreg_host \
+--include-table=proxy_autoreg_host \
+--include-table=dhosts \
+--include-table=dservices \
+--include-table=escalations \
+--include-table=globalvars \
+--include-table=graph_discovery \
+--include-table=host_inventory \
+--include-table=housekeeper \
+--include-table=images \
+--include-table=item_discovery \
+--include-table=host_discovery \
+--include-table=interface_discovery \
+--include-table=profiles \
+--include-table=sessions \
+--include-table=trigger_discovery \
+--include-table=application_template \
+--include-table=item_condition \
+--include-table=item_rtdata \
+--include-table=application_prototype \
+--include-table=item_application_prototype \
+--include-table=application_discovery \
+--include-table=opinventory \
+--include-table=trigger_tag \
+--include-table=event_tag \
+--include-table=problem \
+--include-table=problem_tag \
+--include-table=tag_filter \
+--include-table=event_recovery \
+--include-table=correlation \
+--include-table=corr_condition \
+--include-table=corr_condition_tag \
+--include-table=corr_condition_group \
+--include-table=corr_condition_tagpair \
+--include-table=corr_condition_tagvalue \
+--include-table=corr_operation \
+--include-table=task \
+--include-table=task_close_problem \
+--include-table=item_preproc \
+--include-table=task_remote_command \
+--include-table=task_remote_command_result \
+--include-table=task_data \
+--include-table=task_result \
+--include-table=task_acknowledge \
+--include-table=sysmap_shape \
+--include-table=sysmap_element_trigger \
+--include-table=httptest_field \
+--include-table=httpstep_field \
+--include-table=dashboard \
+--include-table=dashboard_user \
+--include-table=dashboard_usrgrp \
+--include-table=widget \
+--include-table=widget_field \
+--include-table=task_check_now \
+--include-table=event_suppress \
+--include-table=maintenance_tag \
+--include-table=lld_macro_path \
+--include-table=host_tag \
+--include-table=config_autoreg_tls \
+--include-table=module \
+--include-table=interface_snmp \
+--include-table=lld_override \
+--include-table=lld_override_condition \
+--include-table=lld_override_operation \
+--include-table=lld_override_opstatus \
+--include-table=lld_override_opdiscover \
+--include-table=lld_override_opperiod \
+--include-table=lld_override_ophistory \
+--include-table=lld_override_optrends \
+--include-table=lld_override_opseverity \
+--include-table=lld_override_optag \
+--include-table=lld_override_optemplate \
+--include-table=lld_override_opinventory \
+--include-table=dbversion 
+
+
+
+pg_dump \
+--dbname=z52 \
+--file=zabbix52.dump \
+--format=custom \
+--blobs \
+--verbose \
+--table='public.events' \
+--table='public.alerts'
 
 
 
@@ -639,7 +1008,9 @@ LIMIT 2
 ;
 
 
---size of biggest tables, hypertables, 
+ oid | table_schema | table_name | row_estimate | total_bytes | index_bytes | toast_bytes | table_bytes | total | index | toast | table
+
+--size of biggest tables, hypertables, order by table name (useful if timescaleDB used)
 \o /tmp/biggest.tables.log
 SELECT *, pg_size_pretty(total_bytes) AS total , pg_size_pretty(index_bytes) AS index ,
        pg_size_pretty(toast_bytes) AS toast , pg_size_pretty(table_bytes) AS table
@@ -655,11 +1026,45 @@ FROM
              pg_total_relation_size(reltoastrelid) AS toast_bytes
       FROM pg_class c
       LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE relkind = 'r' ) a) a;
+      WHERE relkind = 'r' ) a) a
+	  ORDER BY 3;
 \o
 \gx
 
+--more primitive
+SELECT table_schema, table_name, table_bytes, pg_size_pretty(total_bytes) AS total 
+FROM
+  (SELECT *, total_bytes-index_bytes-coalesce(toast_bytes, 0) AS table_bytes
+   FROM
+     (SELECT c.oid,
+             nspname AS table_schema,
+             relname AS table_name ,
+             c.reltuples AS row_estimate ,
+             pg_total_relation_size(c.oid) AS total_bytes ,
+             pg_indexes_size(c.oid) AS index_bytes ,
+             pg_total_relation_size(reltoastrelid) AS toast_bytes
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE relkind = 'r' ) a) a
+	  ORDER BY 1,2;
 
+
+--oder by size
+SELECT table_name, table_bytes, pg_size_pretty(total_bytes) AS total 
+FROM
+  (SELECT *, total_bytes-index_bytes-coalesce(toast_bytes, 0) AS table_bytes
+   FROM
+     (SELECT c.oid,
+             nspname AS table_schema,
+             relname AS table_name ,
+             c.reltuples AS row_estimate ,
+             pg_total_relation_size(c.oid) AS total_bytes ,
+             pg_indexes_size(c.oid) AS index_bytes ,
+             pg_total_relation_size(reltoastrelid) AS toast_bytes
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE relkind = 'r' ) a) a
+	  ORDER BY 2 DESC;
 
 
 SELECT *, pg_size_pretty(total_bytes) AS total , pg_size_pretty(index_bytes) AS index ,
@@ -690,6 +1095,9 @@ SELECT * FROM problem
 WHERE clock >= EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-03 00:00:00'))
 AND clock < EXTRACT(EPOCH FROM (TIMESTAMP '2020-03-05 00:00:00'))
 AND name LIKE ('Trigger name%'); 
+
+DELETE FROM housekeeper WHERE housekeeperid IN (SELECT housekeeperid FROM housekeeper where tablename != 'events' LIMIT 1);
+
 
 
 --delete events. ordering by eventid (and not the clock) required because recovery event will always be after problem event
@@ -911,7 +1319,7 @@ select name, setting, source, short_desc from pg_settings where name like '%auto
 
 
 
--- when the last time the table received a vacuum
+--when the last time the table received a vacuum
 \o /tmp/zabbix.autovacuum.txt
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
@@ -1263,6 +1671,7 @@ pg_dump \
 --verbose \
 --exclude-table-data '*.history*' \
 --exclude-table-data '*.trends*'
+
 /* Replace <user>, <host>, <database>. The 'custom' format is already compressed. You can influence the compress ratio with an external '--compress=9' argument for maximum compression. */
  
 /* To restore: */

@@ -1,11 +1,60 @@
 /* How many values is in the backlog. does not work on oracle proxy becuase of LIMIT */
 select max(id)-(select nextid from ids where table_name = "proxy_history" limit 1) from proxy_history;
 
-select DISTINCT items.key_,hosts.host
-FROM items 
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.flags=1 
-AND items.delay='1h';
+--Optimal query to identify data overload
+SELECT itemid, COUNT(*), AVG(LENGTH(value)) FROM proxy_history 
+WHERE proxy_history.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR)
+GROUP BY 1 ORDER BY 2,3 DESC;
+
+
+--which hosts and item keys are passing the most data to central server
+SELECT hosts.host, items.key_, items.flags, SUM(LENGTH(value)) FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE proxy_history.clock > UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR)
+GROUP BY 1,2,3 ORDER BY 4 DESC LIMIT 10;
+
+
+SELECT itemid, SUM(LENGTH(value)) FROM proxy_history GROUP BY 1 ORDER BY 2 ASC;
+
+
+
+
+SELECT proxy_history.itemid, SUM(LENGTH(value)) FROM proxy_history 
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+GROUP BY 1 ORDER BY 2 ASC;
+
+
+
+
+
+
+SELECT hosts.host, items.key_
+FROM items
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE items.key_ like 'log%';
+
+
+SELECT hosts.host, items.key_, SUM(LENGTH(value))
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE items.key_ like 'log%'
+GROUP BY 1,2;
+
+
+
+SELECT DISTINCT
+ items.key_,hosts.host
+FROM
+ items
+ JOIN
+  hosts
+  ON (hosts.hostid=items.hostid)
+WHERE
+ items.flags    =1
+ AND items.delay='1h';
 
 
 
@@ -43,6 +92,32 @@ WHERE LENGTH(value)>60000;
 
 
 
+SELECT LENGTH(value),
+CONCAT('history.php?itemids%5B0%5D=',proxy_history.itemid ,'&action=showlatest' ) AS 'URL'
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE LENGTH(value)>60000;
+
+
+SELECT LENGTH(value),
+CONCAT('history.php?itemids%5B0%5D=',proxy_history.itemid ,'&action=showlatest' ) AS 'URL'
+FROM proxy_history
+JOIN items ON (items.itemid = proxy_history.itemid)
+JOIN hosts ON (hosts.hostid = items.hostid)
+WHERE LENGTH(value)>60000
+ORDER BY LENGTH(value) ASC;
+
+
+
+
+
+CONCAT('history.php?itemids%5B0%5D=',proxy_history.itemid ,'&action=showlatest' ) AS 'URL'
+
+/history.php?itemids%5B0%5D=10073&action=showlatest
+
+
+
 
 SELECT clock,
 hosts.host,
@@ -66,16 +141,7 @@ JOIN hosts ON (hosts.hostid = items.hostid)
 GROUP BY 1,2
 ORDER BY 3 DESC LIMIT 10;
 
---which hosts and item keys are passing the most data to central server
-SELECT hosts.host,
-items.key_,
-items.flags,
-SUM(LENGTH(value))
-FROM proxy_history
-JOIN items ON (items.itemid = proxy_history.itemid)
-JOIN hosts ON (hosts.hostid = items.hostid)
-GROUP BY 1,2,3
-ORDER BY 4 DESC LIMIT 20; 
+
 
 
 

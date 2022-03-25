@@ -1,5 +1,66 @@
 
 
+cd /var/lib/mysql/future && watch -n1 'ls -Rltr | tail -10'
+
+
+watch -n1 'ps auxww | grep -Eo "[:] trapper #.*"'
+
+watch -n1 'ps auxww | grep -Eo "[:] trapper #.*waiting for connection"' 
+
+
+dmesg > /tmp/dmesg.txt
+tail -1000000 /var/log/messages > /tmp/messages.txt
+tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
+rpm -qa > /tmp/all.installed.packages.txt
+df -h > /tmp/disk.space.txt
+free -h > /tmp/memory.txt
+ps auxww > /tmp/process.list.txt
+ipcs -a > /tmp/shared.memory.segments.and.semaphore.arrays.txt
+
+
+
+# mysql backup with progress
+db_size=$(mysql  -h"$DB_HOST" \
+    -u"$DB_USERNAME" \
+    -p"$DB_PASSWORD" \
+    --silent \--skip-column-names \-e "SELECT ROUND(SUM(data_length) / 1024 / 1024, 0) \
+        FROM information_schema.TABLES \
+        WHERE table_schema='$DB_NAME';")
+mysqldump "workaround" for size, [:|||||:]
+
+mysqldump -h"$DB_HOST" \
+    -u"$DB_USERNAME" \
+    -p"$DB_PASSWORD" \
+    --single-transaction \--order-by-primary \--compress \
+    $DB_NAME | pv --progress --size "$db_size"m > "$(date +%Y%m%d)"_backup.sql
+
+
+--tcp --port=10051
+
+
+
+
+# report in MySQL
+echo "SELECT alias,
+attempt_failed,
+attempt_ip,
+FROM_UNIXTIME(attempt_clock)
+FROM users" | mysql \
+--host='158.101.218.248' \
+--user='root' \
+--password='zabbix' \
+--database='zabbix' \
+--silent \
+--skip-column-names \
+--batch > /tmp/queue.tsv
+
+
+
+ipcs -a > /tmp/semaphores.txt
+df -h > /tmp/disk.space.txt
+free -h > /tmp/memory.txt
+sysctl -a > /tmp/live.kernel.settings.txt
+
 
 systemctl -a | awk '/php/ {print $1}' | xargs systemctl status | grep -i master
 
@@ -8,6 +69,14 @@ while (sleep 1) do timeout 18s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%Y%
 while (sleep 1) do timeout 1800s tcpdump -i any host 127.0.0.1 -w /tmp/$(date +%Y%m%d%H%M%S).pcap ; done
 
 $(date +%Y%m%d)
+
+
+
+for i in `seq 1 10`; do date >> /tmp/ss_za2.txt; netstat -tulpan >> /tmp/ss_za2.txt; ss --processes --numeric --all | grep agent2 >> /tmp/ss_za2.txt; echo ====== >> /tmp/ss_za2.txt; sleep 5; done
+
+
+
+
 
 
 
@@ -42,6 +111,8 @@ ps auxww --sort -%cpu > /tmp/processes.cpu.txt
 
 journalctl -u sshd | tail -100
 
+
+cd /usr/lib/zabbix && mkdir -p ~/backup${PWD} && cp -a * ~/backup${PWD}
 
 
 while (sleep 1) do echo -e "\n$(date)" >> /tmp/port.80.443.log; grep ":0050\|:01BB" /proc/net/tcp >> /tmp/port.80.443.log; done
@@ -90,7 +161,7 @@ do grep "$pid:$(date +%Y%m%d):" zabbix_server.log > /tmp/zabbixServer/$pid.log
 done
 
 
-
+tail -1000000 /var/log/zabbix/zabbix_server.log | gzip > /tmp/
 
 
 mkdir /tmp/zabbix
@@ -216,6 +287,8 @@ for x in {1..5}; do ps aux | sort -nrk 3,3 | head -n 10; sleep 5; done >> /tmp/p
 for x in {1..5}; do ps ax | grep zabbix; sleep 5; done >> /tmp/zabbix.txt
 
 
+for x in {1..50}; do ; done
+
 
 
 grep -B1 tm_try_task_close_problem.*FAIL /var/log/zabbix/zabbix_server.log | grep -oP 'tcp.taskid=\K\d+'
@@ -242,6 +315,8 @@ zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"2fbf06f496529
 # put ID's in file:
 zabbix_get -s 127.0.0.1 -p 15251 -k '{"request":"queue.get","sid":"3d54c84d71f9f214e2108c91a2b38ea5","type":"details","limit":"999999"}' > /tmp/queue.json
 zabbix_get -s 127.0.0.1 -p 10051 -k '{"request":"queue.get","sid":"2fbf06f496529c68bce2c94f94a0531a","type":"details","limit":"999999"}' > /tmp/queue.json
+
+
 
 
 # count of items
@@ -409,6 +484,12 @@ for i in `seq 1 11`; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream 
 for i in `seq 1 11`; do echo 1;sleep 1; done 
 
 
+for i in `seq 1 10`; do echo 1;sleep 6; done 
+
+
+
+
+
 
 while :; do zabbix_sender -z 127.0.0.1 -p 14051 -s stream -k stream -o "$(grep -m1 -ao '[0-9][0-9]' /dev/urandom | sed s/0/10/ | head -n1)"; done
 
@@ -462,7 +543,7 @@ cat /proc/16819/cmdline
 
 
 # on zabbix master server
-tail -999999 /var/log/zabbix/zabbix_server.log | gzip > /tmp/zabbix_server.log.$(date "+%Y%m%d%H%M").gz
+tail -1000000 /var/log/zabbix/zabbix_server.log | gzip > /tmp/zabbix_server.log.$(date "+%Y%m%d%H%M").gz
 # on zabbix proxy server
 tail -999999 /var/log/zabbix/zabbix_proxy.log | gzip > /tmp/zabbix_proxy.log.$(date "+%Y%m%d%H%M").gz 
 
@@ -624,7 +705,7 @@ ps auxww
 # proxy poller health
 
 # compress gzip 
-sudo tar -zcvf /tmp/httpd/conf.d.tar.gz /etc/httpd/conf.d
+sudo tar -zcvf /tmp/httpd.conf.d.tar.gz /etc/httpd/conf.d
 # or better the whole etc
 sudo tar -zcvf /tmp/etc.tar.gz /etc
 
@@ -857,7 +938,7 @@ done
 
 
 # Provide information about shared memory segments and semaphore arrays:
-ipcs -a > /tmp/memory.segments.txt
+ipcs -a > /tmp/shared.memory.segments.and.semaphore.arrays.txt
 # Process list:
 ps aux > /tmp/process.list.txt
 # Netstat:

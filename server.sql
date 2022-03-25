@@ -4,12 +4,415 @@
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
 
+--check what SQLs are executed at the time when you are waiting for page loading
+--maybe some related SQL is too slow? or other unrelated SQL has hanged and slowing everything down?
+SELECT LEFT(info, 200), LENGTH(info), time, state FROM INFORMATION_SCHEMA.PROCESSLIST where time>0 and command<>"Sleep" ORDER BY time;
+
+--get created Template and/or deleted Template during the last 24h ? deleted templates
+select FROM_UNIXTIME(clock), resourceid, resourcename, action from auditlog where action in (0,2) and resourcetype=30 and from_unixtime(clock) > DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY FROM_UNIXTIME(clock) DESC;
+select FROM_UNIXTIME(clock), resourceid, resourcename, action from auditlog where action in (2) and resourcetype=4 and from_unixtime(clock) > DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY FROM_UNIXTIME(clock) DESC; 
+
+
 
 --When Zabbix ignores actual value of a trigger and do not add new OK event (with value = 0). That means that Zabbix server actually knows that trigger was processed and has OK status. But if DB contains different information, such behaviour can be because of a few reasons:
 --1. DB SQL insert errors (related to events, problem) tables;
 --2. Internal Zabbix error when Zabbix switched trigger to OK status, but did not add new event. For example because of internal exceptions;
 --3. DB issue when you have DB High-Availability and inconsistent data in DB after switch failover.
 
+--Zabbix removes old events based on time and status of the event (active or not).
+--Zabbix uses the following SQL queries to remove old data
+DELETE FROM events WHERE events.source=0 AND events.source=0
+AND NOT EXISTS (
+SELECT NULL FROM problem WHERE events.eventid=problem.eventid
+) AND NOT EXISTS (
+SELECT NULL FROM problem WHERE events.eventid=problem.r_eventid
+) LIMIT 5;
+
+
+
+--disabled items
+SELECT hosts.host,
+CASE items.type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 1 THEN 'SNMPv1 agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 4 THEN 'SNMPv2 agent'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 6 THEN 'SNMPv3 agent'
+WHEN 7 THEN 'Zabbix agent (active)'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'web monitoring scenario'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+END AS "type",
+CASE items.status
+WHEN 0 THEN 'active' 
+WHEN 1 THEN 'disabled' 
+END AS "status"
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=1
+ORDER BY 1;
+
+--List disable items and discovery rules at host level. AKA exceptions at hosts level
+SELECT hosts.host,
+items.type,
+items.flags,
+items.status
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=1
+ORDER BY 1;
+
+--Extract disabled item IDs at host level
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(items.itemid) FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE hosts.status=0 AND items.status=1;
+
+--Force item to be disabled
+UPDATE items SET items.status=1 WHERE itemid IN (
+--Put all item IDs here
+)
+
+--List disabled triggers at host level. AKA exceptions at hosts level
+SELECT DISTINCT triggers.triggerid, triggers.description, hosts.host
+FROM triggers
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND triggers.status=1;
+
+--Extract disabled trigger IDs at host level
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(DISTINCT triggers.triggerid)
+FROM triggers
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND triggers.status=1;
+
+--Force trigger to be in disabled state
+UPDATE triggers SET triggers.status=1 WHERE triggerid IN (
+--Put all trigger IDs here
+)
+
+
+
+--events older than. 'value=1' just show problem event, not recovery event
+SELECT DISTINCT hosts.name, events.name, triggers.state
+FROM events
+JOIN triggers ON (events.objectid=triggers.triggerid)
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE events.source=0
+  AND events.object=0
+  AND events.value=1
+  AND events.clock < UNIX_TIMESTAMP(NOW()- INTERVAL 90 DAY)
+  \G
+  
+  
+--search and clean events manually (can do only for enabled triggers which are not in problem state)
+--There is a very important part 'triggers.status=0' and 'triggers.value=0', which describe and enabled (active) trigger, and the trigger is not in a problem state now. (We can safely erase problem events from the database for the triggers which are enabled and not in problem state at the moment)
+--The query will highlight a host object which was having the problem events 90 days ago. If query will report nothing, then it means that you have some events onboard where the age is longer than 90 days.
+SELECT DISTINCT hosts.host,events.name,triggers.triggerid,COUNT(*)
+FROM events
+JOIN triggers ON (events.objectid=triggers.triggerid)
+JOIN functions ON (functions.triggerid = triggers.triggerid)
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+WHERE triggers.value=0
+AND triggers.status=0
+AND triggers.flags IN (0,4)
+AND events.source=0
+AND events.object=0
+AND events.clock < UNIX_TIMESTAMP(NOW()- INTERVAL 90 DAY)
+GROUP BY 1,2,3
+LIMIT 10;
+  
+  
+  
+  
+  AND triggers.flags IN (0,4)
+  AND triggers.state=1;
+
+
+
+
+
+
+
+--how many records need to delete per category
+SELECT COUNT(*),tablename FROM housekeeper GROUP BY tablename ORDER BY 1 ASC;
+
+
+DELETE FROM housekeeper where tablename != 'events' LIMIT 1;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 10;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 100;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 1000;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 10000;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 100000;
+DELETE FROM housekeeper where tablename != 'events' LIMIT 1000000;
+
+
+
+
+
+
+
+--measure min time for event groups:
+select from_unixtime(min(clock)),source,object from events group by source, object ;
+
+
+
+--find out if there is something hiding from maintenance view
+SELECT
+maintenances.maintenanceid,
+maintenances.name,
+maintenances_hosts.hostid
+FROM maintenances 
+JOIN maintenances_hosts ON (maintenances.maintenanceid=maintenances_hosts.maintenanceid)
+WHERE maintenances.name IN ("abc","efg");
+
+
+
+--blotted houskeeper table
+create table housekeeper_tmp like housekeeper; 
+insert into housekeeper_tmp select * from housekeeper where tablename = 'events'; 
+select count(*) from housekeeper_tmp; 
+truncate table housekeeper; 
+insert into housekeeper select * from housekeeper_tmp;
+
+
+
+/* which action is causing the most trouble */
+SELECT COUNT(*),actions.name,escalations.status
+FROM escalations
+JOIN actions ON (actions.actionid=escalations.actionid)
+GROUP BY actions.name,escalations.status
+ORDER BY COUNT(*) DESC
+LIMIT 10;
+
+
+-- postgres. print URL of trigger ID which involded in escalation
+SELECT CONCAT( '/triggers.php?form=update&triggerid=', triggers.triggerid) AS "URL", COUNT(*) FROM escalations
+LEFT JOIN triggers ON (escalations.triggerid=triggers.triggerid)
+GROUP BY 1
+ORDER BY 1 DESC;
+
+
+
+
+
+--Zabbix 4.0, active problems
+SELECT COUNT(*),source,object,objectid FROM problem GROUP BY 2,3,4 ORDER BY 1 DESC LIMIT 20;
+
+
+
+SELECT COUNT(*),
+items.type,
+items.delay
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND items.flags IN (0,1,4)
+AND hosts.host='c8.gnt.lan'
+GROUP BY 2,3
+ORDER BY 2,3;
+
+
+--items without a template. items which are installed directly into host
+SELECT hosts.host,items.key_
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND hosts.flags=0
+AND items.templateid IS NULL;
+
+--list macros at host level
+SELECT hosts.host, hostmacro.macro, hostmacro.value
+FROM hostmacro
+JOIN hosts ON (hosts.hostid=hostmacro.hostid)
+WHERE hosts.status=0
+AND hosts.flags=0
+ORDER BY 1,2,3;
+
+
+
+SELECT hostmacro.macro, hostmacro.value
+FROM hostmacro, hosts h, hosts t
+WHERE h.hostid=hostmacro.hostid
+AND h.status=0
+AND h.flags=0;
+
+
+
+
+
+
+SELECT
+items.value_type,
+items.history
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+GROUP BY 1,2
+ORDER BY 1,2;
+
+
+--print triggers. show triggers. no template
+SELECT DISTINCT triggers.description, triggers.expression,
+CASE triggers.priority
+WHEN 0 THEN 'Not classified'
+WHEN 1 THEN 'Information'
+WHEN 2 THEN 'Warning'
+WHEN 3 THEN 'Average'
+WHEN 4 THEN 'High'
+WHEN 5 THEN 'Disaster'
+END AS "severity",
+h.host
+FROM triggers
+LEFT JOIN functions ON functions.triggerid=triggers.triggerid
+LEFT JOIN items ON items.itemid=functions.itemid
+LEFT JOIN hosts h ON h.hostid=items.hostid
+LEFT JOIN hosts_templates ht ON ht.hostid=h.hostid
+LEFT JOIN hosts htempl ON htempl.hostid=ht.templateid
+WHERE h.status=0
+AND h.flags IN (0,4)
+AND triggers.flags<>2
+LIMIT 5\G
+
+--0, TRIGGER_SEVERITY_NOT_CLASSIFIED - Not classified
+--1, TRIGGER_SEVERITY_INFORMATION - Information
+--2, TRIGGER_SEVERITY_WARNING - Warning
+--3, TRIGGER_SEVERITY_AVERAGE - Average
+--4, TRIGGER_SEVERITY_HIGH - High
+--5, TRIGGER_SEVERITY_DISASTER - Disaster
+
+
+
+--Host objects having errors:
+SELECT hosts.host,
+       interface.ip,
+       interface.dns,
+       interface.useip,
+       CASE hosts.available
+           WHEN 0 THEN 'unknown'
+           WHEN 1 THEN 'available'
+           WHEN 2 THEN 'down'
+       END AS "status",
+       CASE interface.type
+           WHEN 1 THEN 'ZBX'
+           WHEN 2 THEN 'SNMP'
+           WHEN 3 THEN 'IPMI'
+           WHEN 4 THEN 'JMX'
+       END AS "type",
+       hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+WHERE hosts.status=0
+  AND interface.main=1
+  AND LENGTH(hosts.error)>0\G
+
+
+
+
+
+DELETE FROM trends WHERE itemid NOT IN (SELECT itemid FROM items); DELETE FROM history_text WHERE itemid NOT IN (SELECT itemid FROM items); DELETE FROM history_str WHERE itemid NOT IN (SELECT itemid FROM items); DELETE FROM history_log WHERE itemid NOT IN (SELECT itemid FROM items); DELETE FROM history WHERE itemid NOT IN (SELECT itemid FROM items);
+
+SELECT DISTINCT(hosts.host),history_str.value
+FROM history_str
+JOIN items ON (items.itemid=history_str.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE history_str.clock > UNIX_TIMESTAMP(NOW()-INTERVAL 2 HOUR)
+AND hosts.status=0
+AND items.status=0
+AND items.key_='system.uname';
+
+
+
+SELECT hosts.host, items.name, items.key_
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.itemid IN ()
+
+
+--zabbix 5.4. incomming autoregistration events
+SELECT events.eventid,
+events.objectid,
+events.clock,
+autoreg_host.proxy_hostid,
+autoreg_host.listen_ip,
+autoreg_host.listen_port,
+autoreg_host.listen_dns,
+autoreg_host.host_metadata,
+autoreg_host.tls_accepted,
+autoreg_host.flags
+FROM events
+JOIN autoreg_host ON (autoreg_host.autoreg_hostid=events.objectid)
+WHERE events.source=2
+AND events.object=3
+AND autoreg_host.host='host.title';
+
+
+SELECT COUNT(*),items.type,items.delay
+FROM items
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE hosts.status = 0
+AND items.status = 0
+GROUP BY 2,3
+ORDER BY 2,3;
+
+SELECT COUNT(*),items.type
+FROM items
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE hosts.status = 0
+AND items.status = 0
+GROUP BY 2
+ORDER BY 2;
+
+
+--show items by proxy
+SELECT COUNT(*),proxy.host AS 'proxy',items.type
+FROM items
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE hosts.status = 0
+AND items.status = 0
+AND proxy.status IN (5,6)
+GROUP BY 2,3
+ORDER BY 2,3;
+
+
+
+--how proxy is used in monitoring
+SELECT COUNT(*),items.type, items.delay, items.flags
+FROM items
+JOIN hosts ON (items.hostid=hosts.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE hosts.status = 0
+AND items.status = 0
+AND proxy.status IN (5,6)
+AND proxy.host = 'samba'
+GROUP BY 2,3,4
+ORDER BY 2,3,4;
 
 
 SHOW GLOBAL VARIABLES LIKE '%packet%';
@@ -24,6 +427,7 @@ WHERE hosts.status=0
 AND hosts.hostid NOT IN (
 SELECT hostid FROM hosts_groups WHERE groupid IN (2,8)
 );
+
 
 
 --prints clean hosts which is either in one group or in another
@@ -56,6 +460,10 @@ JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status=0
 GROUP BY items.type
 ORDER BY items.type ASC;
+
+
+SELECT COUNT(*),type FROM items GROUP BY type;
+
 
 
 
@@ -374,6 +782,9 @@ WHERE items.itemid=315907;
 SELECT COUNT(*),source,object,severity FROM problem GROUP BY 2,3,4 ORDER BY severity;
 
 
+
+
+
 SELECT proxy.host AS Proxy,CASE items.type WHEN 0 THEN 'Passive' WHEN 7 THEN 'Active' END AS type, COUNT(*)
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
@@ -486,18 +897,41 @@ FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 WHERE hosts.status=0
 AND items.status=0
-GROUP BY type
+GROUP BY items.type
 ORDER BY COUNT(*) DESC;
 
 
+
+
 --Zabbix 5.0. List all maintenance windows
-select m.name,case when m.maintenance_type=1 then 'With data collection' else 'No data collection' end Type,FROM_UNIXTIME(m.active_since) Active_since,FROM_UNIXTIME(m.active_till) Active_till,case when m.active_till > m.active_since then 'Active' else 'Expired' end State, m.description, GROUP_CONCAT(DISTINCT hg.name) Hostgroups, count(distinct hg.name) Hostgroups_count, GROUP_CONCAT(DISTINCT h.name) Hosts, count(distinct h.name) Hosts_count
+SELECT m.name,
+CASE WHEN m.maintenance_type=1 THEN 'With data collection' ELSE 'No data collection' END Type,
+FROM_UNIXTIME(m.active_since) Active_since,
+FROM_UNIXTIME(m.active_till) Active_till,
+CASE WHEN m.active_till > m.active_since THEN 'Active' ELSE 'Expired' END State,
+m.description,
+GROUP_CONCAT(DISTINCT hg.name) Hostgroups,
+COUNT(distinct hg.name) Hostgroups_count,
+GROUP_CONCAT(DISTINCT h.name) Hosts,
+COUNT(distinct h.name) Hosts_count
+FROM maintenances m
+LEFT JOIN maintenances_groups mg ON m.maintenanceid=mg.maintenanceid
+LEFT JOIN maintenances_hosts mh ON m.maintenanceid=mh.maintenanceid
+LEFT JOIN hstgrp hg ON mg.groupid=hg.groupid
+LEFT JOIN hosts h ON mh.hostid=h.hostid
+GROUP BY 1,2,3,4,5,6;
+
+
+
+
+
+select m.name, GROUP_CONCAT(DISTINCT hg.name) Hostgroups, count(distinct hg.name) Hostgroups_count, GROUP_CONCAT(DISTINCT h.name) Hosts, count(distinct h.name) Hosts_count
 FROM maintenances m
 LEFT JOIN maintenances_groups mg on m.maintenanceid=mg.maintenanceid
 LEFT JOIN maintenances_hosts mh on m.maintenanceid=mh.maintenanceid
 LEFT JOIN hstgrp hg on mg.groupid=hg.groupid
 LEFT JOIN hosts h on mh.hostid=h.hostid
-GROUP BY 1,2,3,4,5,6;
+GROUP BY 1,2,3,4,5;
 
 
 
@@ -524,19 +958,20 @@ GROUP BY 1,2,3,4,5,6;
 
 
 
---postgres, mysql, Zabbix 5.0, detect incorrect trigger arguments
-SELECT COUNT(*),
-functions.name,
-functions.parameter
+--summary of trigger functions. detect incorrect trigger arguments
+SELECT `functions`.`name`,
+parameter,
+COUNT(*)
 FROM functions
-JOIN triggers ON (triggers.triggerid=functions.triggerid)
-JOIN items ON (items.itemid=functions.itemid)
+JOIN items ON (items.itemid=`functions`.`itemid`)
 JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.status=0
+JOIN triggers ON (triggers.triggerid=functions.triggerid)
+WHERE hosts.status=0
+AND items.status=0
 AND triggers.status=0
-AND hosts.status=0
-GROUP BY 2,3
-ORDER BY functions.name;
+GROUP BY 1,2 
+ORDER BY 1,2;
+
 
 SELECT hosts.host,
 items.name,
@@ -771,7 +1206,15 @@ ORDER BY repercussion.clock ASC
 
 SELECT events.name FROM events JOIN event_recovery ON (event_recovery.eventid=events.eventid) WHERE event_recovery.c_eventid IS NOT NULL;
 
-SELECT events.eventid FROM events JOIN event_recovery ON (event_recovery.eventid=events.eventid) WHERE event_recovery.c_eventid IS NOT NULL;
+--event correlation, delete from events
+SELECT events.eventid,events.name FROM events JOIN event_recovery ON (event_recovery.eventid=events.eventid) WHERE event_recovery.c_eventid IS NOT NULL;
+
+SELECT DISTINCT(events.name),COUNT(*)
+FROM events
+JOIN event_recovery ON (event_recovery.eventid=events.eventid)
+WHERE event_recovery.c_eventid IS NOT NULL
+GROUP BY events.name;
+
 
 --delete the previous output
 DELETE e FROM events e
@@ -860,7 +1303,7 @@ DELETE FROM escalations WHERE actionid=12345;
 DELETE FROM escalations;
 
 
---frequently used count functions 4.0,4.2,4.4,5.0
+--count of frequently used functions. Zabbix 4.0,4.2,4.4,5.0
 SELECT `functions`.`name`,
 parameter,
 COUNT(*)
@@ -1130,6 +1573,9 @@ GROUP BY itemid
 ORDER BY SUM(LENGTH(value)) DESC
 LIMIT 5;
 
+
+
+
 SELECT SUM(LENGTH(value)) AS 'chars',
 CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
 FROM history_log
@@ -1279,28 +1725,13 @@ ORDER BY SUM(LENGTH(history_str.value)) DESC
 LIMIT 10;
 
 
---detect exceptions in update. valuable query
-SELECT h1.host AS exceptionInstalled,
-i1.name,
-i1.key_,
-i1.delay,
-h2.host AS differesFromTemplate,
-i2.name,
-i2.key_,
-i2.delay
-FROM items i1
-JOIN items i2 ON (i2.itemid=i1.templateid)
-JOIN hosts h1 ON (h1.hostid=i1.hostid)
-JOIN hosts h2 ON (h2.hostid=i2.hostid)
-WHERE i1.delay<>i2.delay\G
+--detect differences in update frequency:
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.delay, h2.host AS differesFromTemplate, i2.name, i2.key_, i2.delay FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.delay<>i2.delay;
 
-
-
-
---username
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.username, h2.host AS differesFromTemplate, i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username\G
---password
-SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.password, h2.host AS differesFromTemplate, i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password\G
+--detect differences in username
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.username, h2.host AS differesFromTemplate, i2.username FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.username<>i2.username;
+--detect differences in password
+SELECT h1.host AS exceptionInstalled, i1.name, i1.key_, i1.password, h2.host AS differesFromTemplate, i2.password FROM items i1 JOIN items i2 ON (i2.itemid=i1.templateid) JOIN hosts h1 ON (h1.hostid=i1.hostid) JOIN hosts h2 ON (h2.hostid=i2.hostid) WHERE i1.password<>i2.password;
 
 
 
@@ -1474,13 +1905,6 @@ GROUP BY history_uint.itemid,items.key_,hosts.host,history_uint.value;
 
 
 
-/* which escalation is causing the most trouble */
-SELECT COUNT(*),actions.name,escalations.status
-from escalations
-JOIN actions ON (actions.actionid=escalations.actionid)
-GROUP BY actions.name,escalations.status
-ORDER BY COUNT(*) DESC
-LIMIT 10;
 
 
 
@@ -2622,6 +3046,13 @@ WHERE source=0
   AND object=0
   ORDER BY clock DESC
   LIMIT 10\G
+  
+
+
+  
+
+
+  
 
 --historical events + host name
 SELECT hosts.host,FROM_UNIXTIME(events.clock) AS 'time',
@@ -2677,12 +3108,37 @@ JOIN alerts ON (alerts.eventid=events.eventid)
 JOIN actions ON (actions.actionid=alerts.actionid)
 WHERE events.source=0
 AND events.object=0
-ORDER BY events.clock ASC
+ORDER BY events.clock DESC
 LIMIT 10\G
 
 
-
-
+--zabbix 5.4
+SELECT events.clock AS "time",
+       CASE events.severity
+           WHEN 0 THEN 'NOT_CLASSIFIED'
+           WHEN 1 THEN 'INFORMATION'
+           WHEN 2 THEN 'WARNING'
+           WHEN 3 THEN 'AVERAGE'
+           WHEN 4 THEN 'HIGH'
+           WHEN 5 THEN 'DISASTER'
+       END AS severity,
+	   CASE events.acknowledged
+           WHEN 0 THEN 'NO'
+           WHEN 1 THEN 'YES'
+       END AS acknowledged,
+	   CASE events.value
+           WHEN 0 THEN 'OK'
+           WHEN 1 THEN 'PROBLEM '
+       END AS trigger_status,
+       events.name AS "event",
+	   actions.name AS "action"
+FROM events
+JOIN alerts ON (alerts.eventid=events.eventid)
+JOIN actions ON (actions.actionid=alerts.actionid)
+WHERE events.source=0
+AND events.object=0
+ORDER BY events.clock DESC
+LIMIT 10;
 
 
   
@@ -3271,20 +3727,19 @@ AND items.type IN (0,7)
 
 
 
-
-
-
---show triggers per host and show which template is delivering this trigger
-SELECT DISTINCT triggers.description THEN 'h.host THEN 'htempl.host AS template FROM triggers
+--print triggers. show triggers with template name
+SELECT DISTINCT triggers.description, triggers.expression, h.host, htempl.host AS template FROM triggers
 LEFT JOIN functions ON functions.triggerid=triggers.triggerid
 LEFT JOIN items ON items.itemid=functions.itemid
 LEFT JOIN hosts h ON h.hostid=items.hostid
 LEFT JOIN hosts_templates ht ON ht.hostid=h.hostid
 LEFT JOIN hosts htempl ON htempl.hostid=ht.templateid
-WHERE h.status=0 AND h.flags IN (0,4)
-AND triggers.flags<>2
-AND h.hostid=12025
-\G
+WHERE h.status=0
+AND h.flags IN (0,4)
+AND triggers.flags<>2;
+
+
+
 
 
 --functions which consumes most power of history syncer 
@@ -3768,6 +4223,9 @@ END AS "status"
 FROM items
 GROUP BY type,status
 ORDER BY type DESC;
+
+
+
 
 
 
@@ -5899,7 +6357,12 @@ DELETE FROM sessions WHERE (lastaccess < UNIX_TIMESTAMP(NOW()) - 3600); OPTIMIZE
 --postgres
 DELETE FROM sessions WHERE lastaccess < EXTRACT(EPOCH FROM (NOW() - INTERVAL '1 DAY'));
 
-
+SELECT COUNT(*),users.alias
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+GROUP BY users.alias
+ORDER BY COUNT(*) DESC
+LIMIT 10;
 
 
 SELECT COUNT(u.alias),
