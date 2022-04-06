@@ -3,6 +3,17 @@
 cd /var/lib/mysql/future && watch -n1 'ls -Rltr | tail -10'
 
 
+systemctl status zabbix-server | grep -B30 zabbix_server.conf 
+find /etc -name zabbix-server.service
+grep PIDFile= /path/to/zabbix-service.service
+grep PidFile= /etc/zabbix/zabbix_server.conf
+ls -l /var/run | grep run
+
+
+
+php-fpm -i | grep "Loaded Configuration File"
+
+
 watch -n1 'ps auxww | grep -Eo "[:] trapper #.*"'
 
 watch -n1 'ps auxww | grep -Eo "[:] trapper #.*waiting for connection"' 

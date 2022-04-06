@@ -9,12 +9,13 @@ WHERE state NOT LIKE '%idle%' AND query NOT ILIKE '%pg_stat_activity%'
 ORDER BY query_start desc;
 
 --the same but also includes information about transactions:
+\o /tmp/postgres.processes.txt
 SELECT a.pid, a.state, age(clock_timestamp(), a.query_start), a.usename, l.mode, a.backend_xmin, CHAR_LENGTH(a.query) AS q_len, LEFT(a.query, 200) AS query
 FROM pg_stat_activity a
 JOIN pg_locks l ON l.pid = a.pid
 WHERE a.state NOT LIKE '%idle%' AND a.query NOT ILIKE '%pg_stat_activity%'
 ORDER BY a.query_start desc;
-
+\o
 
 SELECT CONCAT( '/host_discovery.php?form=update&itemid=', itemid) AS "URL" FROM items where flags=1 and delay='1h';
 

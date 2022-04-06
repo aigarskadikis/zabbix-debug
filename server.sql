@@ -13,6 +13,32 @@ select FROM_UNIXTIME(clock), resourceid, resourcename, action from auditlog wher
 select FROM_UNIXTIME(clock), resourceid, resourcename, action from auditlog where action in (2) and resourcetype=4 and from_unixtime(clock) > DATE_SUB(NOW(), INTERVAL 24 HOUR) ORDER BY FROM_UNIXTIME(clock) DESC; 
 
 
+--list all trigger functions with all arguments for all enabled items/triggers/hosts
+--identify possible misconfiguration.
+--for example avg(25), max(25), min(25), nodata(25) is not reliable because function evaluates only every 30s
+SELECT functions.name, functions.parameter,COUNT(*)
+FROM functions
+JOIN items ON (items.itemid = functions.itemid)
+JOIN hosts ON (items.hostid = hosts.hostid)
+JOIN triggers ON (triggers.triggerid=functions.triggerid)
+WHERE hosts.status=0
+AND items.status=0
+AND triggers.status=0
+GROUP BY 1,2
+ORDER BY 1;
+
+
+
+set lines 200;
+set pages 1200;
+col ITEMID format 999999;
+col CLOCK format 9999999999;
+col VALUE format 999999;
+col NS format 99999999;
+SELECT * FROM zabbix.history_uint WHERE itemid=334272  AND clock BETWEEN 1645794480 AND 1645794539;
+quit;
+
+
 
 --When Zabbix ignores actual value of a trigger and do not add new OK event (with value = 0). That means that Zabbix server actually knows that trigger was processed and has OK status. But if DB contains different information, such behaviour can be because of a few reasons:
 --1. DB SQL insert errors (related to events, problem) tables;
