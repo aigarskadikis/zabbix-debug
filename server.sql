@@ -4,6 +4,15 @@
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
 
+--latest 10 values per item
+join (select itemid,MAX(clock) as maxclock from history_str group by itemid) hs1 on hs1.itemid=hs.itemid and hs1.maxclock=hs.clock 
+join items on items.itemid=hs.itemid  
+join hosts on hosts.hostid=items.hostid  
+where items.key_="hostname"  and  hosts.host!=hs.value
+limit 10;
+
+
+
 --check what SQLs are executed at the time when you are waiting for page loading
 --maybe some related SQL is too slow? or other unrelated SQL has hanged and slowing everything down?
 SELECT LEFT(info, 200), LENGTH(info), time, state FROM INFORMATION_SCHEMA.PROCESSLIST where time>0 and command<>"Sleep" ORDER BY time;
