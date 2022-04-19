@@ -11,6 +11,10 @@ ls -l /var/run | grep run
 
 
 
+du -ab /var/lib/mysql > /tmp/size.of.tables.txt
+du -ah /var/lib/mysql > /tmp/size.of.tables.human.readable.txt
+
+
 php-fpm -i | grep "Loaded Configuration File"
 
 
@@ -88,6 +92,9 @@ for i in `seq 1 10`; do date >> /tmp/ss_za2.txt; netstat -tulpan >> /tmp/ss_za2.
 
 
 
+
+# check disk utilization for a specific time frame
+sar -u -f /var/log/sa/sa10 -s 02:30:00 -e 05:00:00
 
 
 

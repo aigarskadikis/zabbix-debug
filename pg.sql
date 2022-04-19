@@ -1,6 +1,20 @@
 
 
 
+
+
+select pid,usename,pg_blocking_pids(pid) as blocked_by,query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;
+
+
+select pid,usename,pg_blocking_pids(pid) as blocked_by,query as blocked_query from pg_stat_activity \gx
+
+
+
+
+
+
+
+
 --should figure out which slow SQLs are originated first, i.e. which one likely causes locks and delays for other queries.
 --Try to use these to show running queries (PG 9.2+):
 SELECT pid, state, age(clock_timestamp(), query_start), usename, CHAR_LENGTH(query) AS q_len, LEFT(query, 200) AS query
@@ -1033,6 +1047,7 @@ FROM
 \gx
 
 --more primitive
+\o /tmp/tables.hypertables.txt
 SELECT table_schema, table_name, table_bytes, pg_size_pretty(total_bytes) AS total 
 FROM
   (SELECT *, total_bytes-index_bytes-coalesce(toast_bytes, 0) AS table_bytes
@@ -1048,7 +1063,7 @@ FROM
       LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE relkind = 'r' ) a) a
 	  ORDER BY 1,2;
-
+\o
 
 --oder by size
 SELECT table_name, table_bytes, pg_size_pretty(total_bytes) AS total 
@@ -1325,6 +1340,12 @@ select name, setting, source, short_desc from pg_settings where name like '%auto
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
 WHERE n_dead_tup > 0
+ORDER BY n_dead_tup DESC;
+\o
+
+\o /tmp/zabbix.autovacuum.txt
+SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_all_tables
 ORDER BY n_dead_tup DESC;
 \o
 
