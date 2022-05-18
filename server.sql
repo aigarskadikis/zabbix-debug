@@ -4,6 +4,445 @@
 --Galera can be used in parallel with GTID based replication THEN 'so after creation of the second cluster THEN 'you can keep data in sync before final migration using GTID async replication between clusters. This will force you to use the same software version on the initial THEN 'but allow you seamless migration.
 
 
+
+--remove interface if no item are installed at the host level. This command works by accident because we cannot delete items in use.
+DELETE FROM interface WHERE type=1 AND hostid IN (SELECT hostid FROM hosts_templates WHERE templateid=<templateid>);
+
+
+--search for ZBX interfaces which does not have agent items, simple check items
+SELECT hosts.host,interface.interfaceid FROM interface 
+JOIN hosts ON hosts.hostid=interface.hostid
+WHERE hosts.hostid NOT IN (
+SELECT h.hostid FROM hosts h,items i
+WHERE h.hostid=i.hostid AND hosts.status=0 AND i.type IN (0,5,7)
+)
+AND interface.type=1;
+
+
+
+
+
+--show active disabled items on proxy
+SELECT items.type,
+CASE items.type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 1 THEN 'SNMPv1 agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 4 THEN 'SNMPv2 agent'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 6 THEN 'SNMPv3 agent'
+WHEN 7 THEN 'Zabbix agent (active)'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'web monitoring scenario'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+END AS "name",
+CASE items.status 
+WHEN 0 THEN 'active' 
+WHEN 1 THEN 'disabled' 
+END AS "status",
+COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+GROUP BY 1,2,3
+ORDER BY 1 ASC;
+
+
+
+
+
+SELECT proxy.host , hosts.host, items.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.type=12;
+
+--show IPMI status
+SELECT hosts.host, items.name
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=12
+
+
+--show IPMI 
+SELECT hosts.host, COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.type=12
+AND hosts.status=0
+GROUP BY hosts.host;
+
+
+
+--The item is not discovered anymore and will be deleted in
+SELECT hosts.host,
+items.key_
+FROM items 
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE item_discovery.ts_delete > 0;
+
+--Zabbix 4.4+ Items printing error. Items not supported unsupported
+SELECT hosts.host,COUNT(*)
+FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE items.flags IN (0,4)
+AND length(item_rtdata.error)>0
+GROUP BY hosts.host;
+
+--unsupported items. Zabbix 4.4+
+SELECT hosts.host,items.key_,items.itemid,item_rtdata.error
+FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE items.flags=0
+AND hosts.status=0
+AND items.status=0
+AND length(item_rtdata.error)>0;
+
+--unsupported items by hostid. Zabbix 4.4+
+SELECT COUNT(*) AS count,hosts.hostid AS hostid
+FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE items.flags=0
+AND hosts.status=0
+AND items.status=0
+AND length(item_rtdata.error)>0
+GROUP BY hosts.hostid;
+
+
+--LLD unsupported items. Zabbix 4.4+
+SELECT hosts.host,items.key_,items.itemid,item_rtdata.error
+FROM hosts
+JOIN items ON (items.hostid=hosts.hostid)
+JOIN item_rtdata ON (item_rtdata.itemid=items.itemid)
+WHERE items.flags=4
+AND hosts.status=0
+AND items.status=0
+AND length(item_rtdata.error)>0;
+
+
+--show difference between nested templates, between host and template OBJECT
+SELECT DISTINCT(triggers.triggerid) AS nested,
+asparent.triggerid AS parent,
+hosts.host AS nestedname,
+hosts2.host AS parentname,
+triggers.description,
+asparent.priority AS parentpriority,
+triggers.priority AS nestedpriority,
+items.itemid, items2.itemid
+FROM triggers
+join triggers asparent ON (asparent.triggerid=triggers.templateid)
+join functions ON (triggers.triggerid=functions.triggerid)
+join items ON (functions.itemid=items.itemid)
+join hosts ON (items.hostid=hosts.hostid)
+join functions functions2 ON (asparent.triggerid=functions2.triggerid)
+join items items2 ON (functions2.itemid=items2.itemid)
+join hosts hosts2 ON (items2.hostid=hosts2.hostid)
+where triggers.templateid IS NOT NULL
+AND asparent.status<>triggers.status;
+
+
+
+
+
+--trigger prototypes and it's relation to LLD rule. Zabbix 5.0
+SELECT prototype_triggers.triggerid,
+prototype_triggers.templateid as trigger_id,
+items.itemid,
+item_discovery.parent_itemid
+FROM triggers prototype_triggers
+JOIN triggers template ON (template.triggerid=prototype_triggers.templateid)
+JOIN functions ON (functions.triggerid=prototype_triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+WHERE prototype_triggers.flags=2
+AND prototype_triggers.templateid IS NOT NULL
+AND prototype_triggers.status<>template.status
+;
+
+--trigger prototype on host level have different "Create enabled" position VS template(parent) object
+SELECT CONCAT( 'https://zbx.aigarskadikis.com/trigger_prototypes.php?form=update&parent_discoveryid=',  item_discovery.parent_itemid, '&triggerid=', prototype_triggers.triggerid ) AS "URL"
+FROM triggers prototype_triggers
+JOIN triggers template ON (template.triggerid=prototype_triggers.templateid)
+JOIN functions ON (functions.triggerid=prototype_triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+WHERE prototype_triggers.flags=2
+AND prototype_triggers.templateid IS NOT NULL
+AND prototype_triggers.status<>template.status;
+
+--trigger prototype on host level have different "Discover" position VS template(parent) object
+SELECT CONCAT( 'https://zbx.aigarskadikis.com/trigger_prototypes.php?form=update&parent_discoveryid=',  item_discovery.parent_itemid, '&triggerid=', prototype_triggers.triggerid ) AS "URL"
+FROM triggers prototype_triggers
+JOIN triggers template ON (template.triggerid=prototype_triggers.templateid)
+JOIN functions ON (functions.triggerid=prototype_triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+WHERE prototype_triggers.flags=2
+AND prototype_triggers.templateid IS NOT NULL
+AND prototype_triggers.status<>template.status;
+
+--trigger prototype on host level have different "Discover" position VS template(parent) object
+SELECT CONCAT( 'https://zbx.aigarskadikis.com/trigger_prototypes.php?form=update&parent_discoveryid=',  item_discovery.parent_itemid, '&triggerid=', prototype_triggers.triggerid ) AS "URL"
+FROM triggers prototype_triggers
+JOIN triggers template ON (template.triggerid=prototype_triggers.templateid)
+JOIN functions ON (functions.triggerid=prototype_triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+WHERE prototype_triggers.flags=2
+AND prototype_triggers.templateid IS NOT NULL
+AND prototype_triggers.status<>template.status;
+
+
+--trigger prototypes have a reverse possition while comparing to template object. also applicable to nested templates
+SELECT CONCAT( 'https://zbx.aigarskadikis.com/trigger_prototypes.php?form=update&parent_discoveryid=',  item_discovery.parent_itemid, '&triggerid=', prototype_triggers.triggerid ) AS "URL"
+FROM triggers prototype_triggers
+JOIN triggers template ON (template.triggerid=prototype_triggers.templateid)
+JOIN functions ON (functions.triggerid=prototype_triggers.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+WHERE prototype_triggers.flags=2
+AND prototype_triggers.templateid IS NOT NULL
+AND prototype_triggers.status<>template.status;
+
+
+FROM triggers
+join triggers asparent ON (asparent.triggerid=triggers.templateid)
+join functions ON (triggers.triggerid=functions.triggerid)
+join items ON (functions.itemid=items.itemid)
+join hosts ON (items.hostid=hosts.hostid)
+join functions functions2 ON (asparent.triggerid=functions2.triggerid)
+join items items2 ON (functions2.itemid=items2.itemid)
+join hosts hosts2 ON (items2.hostid=hosts2.hostid)
+where triggers.templateid IS NOT NULL
+AND (asparent.status<>triggers.status
+OR asparent.discover<>triggers.discover
+OR asparent.priority<>triggers.priority);
+
+
+--disabled/enabled at host level
+SELECT CONCAT( 'https://zbx.aigarskadikis.com/trigger_prototypes.php?form=update&parent_discoveryid=',  hosts.hostid, '&triggerid=', triggers.triggerid ) AS "URL"
+FROM triggers
+join triggers asparent ON (asparent.triggerid=triggers.templateid)
+join functions ON (triggers.triggerid=functions.triggerid)
+join items ON (functions.itemid=items.itemid)
+join hosts ON (items.hostid=hosts.hostid)
+join functions functions2 ON (asparent.triggerid=functions2.triggerid)
+join items items2 ON (functions2.itemid=items2.itemid)
+join hosts hosts2 ON (items2.hostid=hosts2.hostid)
+where triggers.templateid IS NOT NULL
+AND (asparent.status<>triggers.status);
+
+
+
+
+
+
+--show trigger prototypes which are attached to hosts and comes from a template
+SELECT triggers.description,
+triggers.status,
+triggers.templateid
+FROM triggers
+WHERE triggers.flags=2
+AND triggers.templateid IS NOT NULL
+\G
+
+
+--show which trigger prototype have enable/disable in host lavel different from template level
+SELECT triggers.description,
+triggers.status,
+triggers.templateid
+FROM triggers
+JOIN triggers template ON (template.triggerid=triggers.templateid)
+WHERE triggers.flags=2
+AND triggers.templateid IS NOT NULL
+AND triggers.status<>template.status
+\G
+
+--show which trigger prototype have an exception
+SELECT triggers.description,
+triggers.discover,
+triggers.templateid
+FROM triggers
+JOIN triggers template ON (template.triggerid=triggers.templateid)
+WHERE triggers.flags=2
+AND triggers.templateid IS NOT NULL
+AND triggers.discover<>template.discover
+\G
+
+--show trigger prototype relation with LLD rule. Zabbix 5.0
+SELECT
+hosts.host,
+items.itemid as autogenerated_item_id,
+items.key_ as item_key,
+triggers.triggerid as triggerid,
+triggers.description as trigger_title,
+item_discovery.parent_itemid as item_prototype_id_in_host_level,
+item_discovery2.parent_itemid as lld_id_in_host_level,
+trigger_discovery.parent_triggerid as trigger_prototype_id_in_host_level,
+prototype_triggers.description as prototype_triggers_name_at_host_level,
+lld.name as discovery_name_in_host_level
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN item_discovery ON (item_discovery.itemid=items.itemid)
+JOIN items parent_itemid_items ON (parent_itemid_items.itemid=item_discovery.parent_itemid)
+JOIN item_discovery item_discovery2 ON (item_discovery2.itemid=parent_itemid_items.itemid)
+JOIN items lld ON (lld.itemid=item_discovery2.parent_itemid)
+JOIN functions ON (items.itemid=functions.itemid)
+JOIN triggers ON (functions.triggerid=triggers.triggerid)
+JOIN trigger_discovery ON (trigger_discovery.triggerid=triggers.triggerid)
+JOIN triggers prototype_triggers ON (prototype_triggers.triggerid=trigger_discovery.parent_triggerid)
+WHERE prototype_triggers.triggerid=748249
+AND prototype_triggers.flags=2
+\G
+
+
+
+
+
+SELECT triggers.triggerid,
+template.triggerid
+FROM triggers
+JOIN triggers template ON (template.triggerid=triggers.templateid)
+WHERE triggers.flags=2
+AND triggers.templateid IS NOT NULL
+AND triggers.discover<>template.discover
+\G
+
+select * from triggers where triggerid=748249\G
+select * from triggers where triggerid=748236\G
+select * from triggers where triggerid=749149\G
+select * from triggers where triggerid=726334\G
+
+SELECT * FROM trigger_discovery where triggerid=748249\G
+SELECT * FROM trigger_discovery where triggerid=748236\G
+SELECT * FROM trigger_discovery where triggerid=749149\G
+SELECT * FROM trigger_discovery where triggerid=726334\G
+
+SELECT * FROM trigger_discovery where parent_triggerid=748249;
+SELECT * FROM trigger_discovery where parent_triggerid=748236\G
+SELECT * FROM trigger_discovery where parent_triggerid=749149\G
+SELECT * FROM trigger_discovery where parent_triggerid=726334\G
+
+
+--SQL between
+select value from history_uint where clock between 1633921200 and 1636599599;
+
+--items which are gone be deleted
+select hosts.host,items.key_,ts_delete from item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+where ts_delete>0;
+
+--only itemids
+SELECT items.itemid FROM item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+WHERE ts_delete>0;
+
+--item not discovered ts_delete
+SELECT DISTINCT triggers.triggerid,triggers.description FROM triggers
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+WHERE functions.itemid IN (
+SELECT items.itemid FROM item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+WHERE ts_delete>0
+)
+
+--detailed list of triggers which will be disabled
+SELECT DISTINCT triggers.triggerid,triggers.description,hosts.host FROM triggers
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE functions.itemid IN (
+SELECT items.itemid FROM item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+WHERE ts_delete>0
+)
+
+SET SESSION group_concat_max_len = 1000000;
+SELECT GROUP_CONCAT(DISTINCT triggers.triggerid) FROM triggers
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE functions.itemid IN (
+SELECT items.itemid FROM item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+WHERE ts_delete>0
+)\G
+
+
+
+--disable triggers for the items which will will be deleted soon
+UPDATE triggers SET status=1 WHERE triggerid IN (
+SELECT DISTINCT triggers.triggerid FROM triggers
+JOIN functions ON (triggers.triggerid=functions.triggerid)
+JOIN items ON (items.itemid=functions.itemid)
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE functions.itemid IN (
+SELECT items.itemid FROM item_discovery
+JOIN items ON (item_discovery.itemid=items.itemid)
+WHERE ts_delete>0
+)
+)
+
+
+
+--devices and it's status. Zabbix 3.0
+SELECT proxy.host AS "proxy",
+       hosts.host,
+       interface.ip,
+       interface.dns,
+       interface.useip,
+       CASE hosts.available
+           WHEN 0 THEN 'unknown'
+           WHEN 1 THEN 'available'
+           WHEN 2 THEN 'down'
+       END AS "status",
+       CASE interface.type
+           WHEN 1 THEN 'ZBX'
+           WHEN 2 THEN 'SNMP'
+           WHEN 3 THEN 'IPMI'
+           WHEN 4 THEN 'JMX'
+       END AS "type",
+       hosts.error
+FROM hosts
+JOIN interface ON interface.hostid=hosts.hostid
+LEFT JOIN hosts proxy ON hosts.proxy_hostid=proxy.hostid
+WHERE hosts.status=0
+  AND interface.main=1;
+
+
+SELECT hosts.host,interface.type,items.type,COUNT(*)
+FROM interface
+RIGHT JOIN items ON (interface.interfaceid=items.interfaceid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+WHERE hosts.status=0
+GROUP BY 1,2,3;
+
+SELECT hosts.host,COUNT(*)
+FROM interface
+JOIN hosts ON (interface.hostid=hosts.hostid)
+LEFT JOIN items ON (interface.interfaceid=items.interfaceid)
+WHERE interface.type=1
+AND items.itemid IS NULL
+GROUP BY 1
+;
+
+
 --latest 10 values per item
 join (select itemid,MAX(clock) as maxclock from history_str group by itemid) hs1 on hs1.itemid=hs.itemid and hs1.maxclock=hs.clock 
 join items on items.itemid=hs.itemid  
@@ -1334,7 +1773,9 @@ JOIN usrgrp ON (usrgrp.usrgrpid=users_groups.usrgrpid);
 
 SELECT triggerid,actionid FROM escalations;
 DELETE FROM escalations WHERE triggerid=12345;
-DELETE FROM escalations WHERE actionid=12345; 
+
+DELETE FROM escalations WHERE actionid=12345;
+
 DELETE FROM escalations;
 
 
@@ -1694,13 +2135,22 @@ SELECT COUNT(*),source FROM events GROUP BY source;
 
 
 
+--ODBC calls
+SELECT items.key_,hosts.host
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE hosts.status=0
+AND items.status=0
+AND items.type=11;
 
 
 
 
 
 
---The item is not discovered anymore and will be deleted in
+
+
+
 SELECT hosts.host,
 items.key_,
 FROM_UNIXTIME(item_discovery.ts_delete) AS 'willBeDeleted',
@@ -1727,17 +2177,7 @@ LIMIT 10;
 
 
 
-334514&action=showlatest
 
-
---biggest text metrics in database
-SELECT SUM(LENGTH(value)) AS 'chars',
-CONCAT('history.php?itemids%5B0%5D=' THEN 'itemid ,'&action=showlatest' ) AS 'URL'
-FROM history_text
-WHERE clock > UNIX_TIMESTAMP(NOW() - INTERVAL 5 MINUTE)
-GROUP BY itemid
-ORDER BY SUM(LENGTH(value)) DESC
-LIMIT 5;
 
 --biggest log entries
 SELECT hosts.host,hosts.hostid,history_log.itemid,COUNT(*),SUM(LENGTH(history_log.value))
@@ -1840,7 +2280,7 @@ WHERE h.status=0 and h.flags in (0,4);
 
 
 
---live unsupported items
+--live unsupported items. not supported
 SELECT hosts.host,COUNT(*),
 CONCAT('items.php?filter_hostids%5B%5D=' THEN 'hosts.hostid THEN ''&filter_application=&filter_name=&filter_key=&filter_type=-1&filter_delay=&filter_snmp_oid=&filter_value_type=-1&filter_history=&filter_trends=&filter_state=-1&filter_status=-1&filter_with_triggers=-1&filter_templated_items=-1&filter_discovery=-1&subfilter_set=1&subfilter_state%5B1%5D=1' ) AS "check data"
  FROM hosts
@@ -4225,40 +4665,12 @@ mysqldump \
 --no-create-info zabbix events \
 --where='source=3 AND clock >= UNIX_TIMESTAMP("2020-07-30 10:00:00") AND clock < UNIX_TIMESTAMP("2020-07-30 11:00:00")';
 
---show active disabled items on proxy
-SELECT 
-CASE type
-WHEN 0 THEN 'Zabbix agent'
-WHEN 1 THEN 'SNMPv1 agent'
-WHEN 2 THEN 'Zabbix trapper'
-WHEN 3 THEN 'Simple check'
-WHEN 4 THEN 'SNMPv2 agent'
-WHEN 5 THEN 'Zabbix internal'
-WHEN 6 THEN 'SNMPv3 agent'
-WHEN 7 THEN 'Zabbix agent (active)'
-WHEN 8 THEN 'Aggregate'
-WHEN 9 THEN 'web monitoring scenario'
-WHEN 10 THEN 'External check'
-WHEN 11 THEN 'Database monitor'
-WHEN 12 THEN 'IPMI agent'
-WHEN 13 THEN 'SSH agent'
-WHEN 14 THEN 'TELNET agent'
-WHEN 15 THEN 'Calculated'
-WHEN 16 THEN 'JMX agent'
-WHEN 17 THEN 'SNMP trap'
-WHEN 18 THEN 'Dependent item'
-WHEN 19 THEN 'HTTP agent'
-WHEN 20 THEN 'SNMP agent'
-END AS "type",
-COUNT(*),
-CASE status 
-WHEN 0 THEN 'active' 
-WHEN 1 THEN 'disabled' 
-END AS "status"
-FROM items
-GROUP BY type,status
-ORDER BY type DESC;
 
+
+
+SELECT hosts.host, items.item
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
 
 
 
@@ -4914,7 +5326,8 @@ AND hosts.status IN (0,1);
 	
 
 SELECT hosts.host,
-items.url
+proxy.host
+items.name
 FROM items
 JOIN hosts ON (hosts.hostid=items.hostid)
 JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
@@ -7184,10 +7597,9 @@ ORDER BY COUNT(*)\G
 
 
 
-select hosts.host,items.key_,ts_delete from item_discovery
-JOIN items ON (item_discovery.itemid=items.itemid)
-JOIN hosts ON (hosts.hostid=items.hostid)
-where ts_delete<>0;
+
+
+
 
 
 
@@ -7304,17 +7716,29 @@ WHERE u.alias='first';
 
 
 
+--usupported items 2.4 => 4.2
+SELECT COUNT(*) FROM items JOIN hosts ON (hosts.hostid=items.hostid) WHERE items.status=0 AND hosts.status=0 AND items.state=1;
 
 
 
-
-/* show unsupported itmes in 4.4. this query does not work on 4.0 THEN '4.2 */
-select hosts.name THEN 'item_rtdata.state THEN 'items.key_
-from item_rtdata
+--show unsupported itmes in 4.4. this query does not work before 4.2
+SELECT COUNT(*)
+FROM item_rtdata
 JOIN items ON (items.itemid=item_rtdata.itemid)
 JOIN hosts ON (items.hostid=hosts.hostid)
-JOIN interface ON (interface.hostid=hosts.hostid)
-where item_rtdata.state=1\G
+WHERE hosts.status=0
+AND items.status=0
+AND item_rtdata.state=1;
+
+
+SELECT COUNT(*)
+FROM item_rtdata
+JOIN items ON (items.itemid=item_rtdata.itemid)
+JOIN hosts ON (items.hostid=hosts.hostid)
+AND items.status=1
+AND item_rtdata.state=1;
+
+
 
 select hosts.name THEN 'item_rtdata.state THEN 'items.key_
 from item_rtdata

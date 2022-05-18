@@ -1,4 +1,112 @@
 
+--replication status
+SELECT
+client_addr AS client, usename AS user, application_name AS name,
+state, sync_state AS mode,
+(pg_wal_lsn_diff(pg_current_wal_lsn(),sent_lsn) / 1024)::int as pending,
+(pg_wal_lsn_diff(sent_lsn,write_lsn) / 1024)::int as write,
+(pg_wal_lsn_diff(write_lsn,flush_lsn) / 1024)::int as flush,
+(pg_wal_lsn_diff(flush_lsn,replay_lsn) / 1024)::int as replay,
+(pg_wal_lsn_diff(pg_current_wal_lsn(),replay_lsn))::int / 1024 as total_lag
+FROM pg_stat_replication;
+
+
+# show stats per hypertables
+\o /tmp/timescaledb.all.txt
+SELECT * FROM timescaledb_information.chunks;
+\o /tmp/timescaledb.txt
+SELECT hypertable_name,chunk_name,is_compressed FROM timescaledb_information.chunks ORDER BY 1;
+\o
+
+
+
+
+
+--size of postgres
+select relname, pg_size_pretty(pg_relation_size(C.oid)) AS DATA ,
+pg_size_pretty(pg_total_relation_size(C.OID) - pg_relation_size(C.oid)) AS INDEXES ,
+pg_size_pretty(pg_total_relation_size(C.OID)) AS Total from pg_class C
+LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
+WHERE c.relkind = 'r'::"char"
+order by relpages desc limit 20 ;
+
+
+
+
+
+
+
+
+--rename live table to '_old'
+--create back empty table to continue storing data during migration
+--download '_old' to CSV
+--recreate a '_partitioned' table containing hypertables
+--import from CSV to '_partitioned'
+--rename live table to '_recent'
+--rename '_partitioned' table to live
+--copy from '_recent' to live
+--all graphs must be completed in GUI. drop '_recent', drop '_old'
+
+
+
+--size per tables hypertables
+\o /tmp/tables.hypertables.txt
+SELECT table_schema, table_name, table_bytes, pg_size_pretty(total_bytes) AS total 
+FROM
+  (SELECT *, total_bytes-index_bytes-coalesce(toast_bytes, 0) AS table_bytes
+   FROM
+     (SELECT c.oid,
+             nspname AS table_schema,
+             relname AS table_name ,
+             c.reltuples AS row_estimate ,
+             pg_total_relation_size(c.oid) AS total_bytes ,
+             pg_indexes_size(c.oid) AS index_bytes ,
+             pg_total_relation_size(reltoastrelid) AS toast_bytes
+      FROM pg_class c
+      LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE relkind = 'r' ) a) a
+	  ORDER BY 1,2;
+\o
+
+
+--ts 2.6.1 show chunks
+
+\o /tmp/relations.txt
+SELECT show_chunks('history');
+SELECT show_chunks('history_uint');
+SELECT show_chunks('history_text');
+SELECT show_chunks('history_str');
+SELECT show_chunks('history_log');
+SELECT show_chunks('trends');
+SELECT show_chunks('trends_uint');
+\o
+
+SELECT * FROM chunk_compression_stats('history_uint');
+SELECT * FROM chunk_compression_stats('history');
+SELECT * FROM chunk_compression_stats('history_str');
+SELECT * FROM chunk_compression_stats('history_log');
+SELECT * FROM chunk_compression_stats('history_text');
+SELECT * FROM chunk_compression_stats('trends');
+SELECT * FROM chunk_compression_stats('trends_uint');
+
+
+
+--ts 2.6.1. drop history older than 6 days
+SELECT drop_chunks(relation=>'history', older_than=>extract(epoch from now()::DATE - 6)::integer);
+SELECT drop_chunks(relation=>'history_uint', older_than=>extract(epoch from now()::DATE - 6)::integer);
+SELECT drop_chunks(relation=>'history_str', older_than=>extract(epoch from now()::DATE - 6)::integer);
+SELECT drop_chunks(relation=>'history_log', older_than=>extract(epoch from now()::DATE - 6)::integer);
+SELECT drop_chunks(relation=>'history_text', older_than=>extract(epoch from now()::DATE - 6)::integer);
+
+
+SELECT * FROM chunk_compression_stats('history_uint');
+
+
+
+SELECT * FROM timescaledb_information.chunks WHERE hypertable_name = 'hyper_int';
+
+
 
 
 
@@ -1335,13 +1443,24 @@ select name, setting, source, short_desc from pg_settings where name like '%auto
 
 
 
---when the last time the table received a vacuum
-\o /tmp/zabbix.autovacuum.txt
+--autovacuum by dead tuples
+\o /tmp/zabbix.autovacuum.n_dead_tup.txt
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables
 WHERE n_dead_tup > 0
 ORDER BY n_dead_tup DESC;
 \o
+
+--autovacuum by table name
+\o /tmp/zabbix.autovacuum.relname.txt
+SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_all_tables
+WHERE n_dead_tup > 0
+ORDER BY relname DESC;
+\o
+
+
+
 
 \o /tmp/zabbix.autovacuum.txt
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum

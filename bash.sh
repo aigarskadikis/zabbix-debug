@@ -11,6 +11,11 @@ ls -l /var/run | grep run
 
 
 
+ps --no-headers -o "rss,cmd" -C php-fpm | awk '{ sum+=$1 } END { printf ("%d%s\n", sum/NR/1024,"M") }' 
+
+
+
+
 du -ab /var/lib/mysql > /tmp/size.of.tables.txt
 du -ah /var/lib/mysql > /tmp/size.of.tables.human.readable.txt
 
@@ -30,7 +35,11 @@ rpm -qa > /tmp/all.installed.packages.txt
 df -h > /tmp/disk.space.txt
 free -h > /tmp/memory.txt
 ps auxww > /tmp/process.list.txt
+ps auxww > /tmp/process.list.txt
 ipcs -a > /tmp/shared.memory.segments.and.semaphore.arrays.txt
+
+
+tar -zcvf /tmp/zbx_oracle.zbxdb_checks.tar.gz /etc/zabbix/zbx_oracle/zbxdb_checks
 
 
 
@@ -741,6 +750,7 @@ sudo tar -zcvf /tmp/snmpsim.gz /usr/share/snmpsim
 
 sudo tar -zcvf /tmp/log.httpd.tar.gz /var/log/httpd
 sudo tar -zcvf /tmp/log.nginx.tar.gz /var/log/nginx
+sudo tar -zcvf /tmp/log.php-fpm.tar.gz /var/log/php-fpm
 sudo tar -zcvf /tmp/log.apache2.tar.gz /var/log/apache2 
 
 sudo tar -zcvf /tmp/archive.jmxterm.tar.gz /tmp/jmx*
