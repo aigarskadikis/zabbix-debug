@@ -1894,6 +1894,10 @@ AND hosts.host='pg.gnt.ros.do.lan';
 --erase date under Monitoring => Discovery
 --network discovery
 DELETE FROM dhosts;
+--start all discoveries after '3m'
+UPDATE dhosts SET nextcheck=UNIX_TIMESTAMP(NOW()+180);
+
+
 
 
 --discovery feed
