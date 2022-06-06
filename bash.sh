@@ -15,9 +15,16 @@ ps --no-headers -o "rss,cmd" -C php-fpm | awk '{ sum+=$1 } END { printf ("%d%s\n
 
 
 
+grep "query failed" zabbix_server.log | tail -1 | cut -d ':' -f 1 | xargs ps ww
+
+
+
 
 du -ab /var/lib/mysql > /tmp/size.of.tables.txt
 du -ah /var/lib/mysql > /tmp/size.of.tables.human.readable.txt
+
+
+
 
 
 php-fpm -i | grep "Loaded Configuration File"
@@ -37,6 +44,10 @@ free -h > /tmp/memory.txt
 ps auxww > /tmp/process.list.txt
 ps auxww > /tmp/process.list.txt
 ipcs -a > /tmp/shared.memory.segments.and.semaphore.arrays.txt
+
+
+
+GZIP=-9 tar -zcvf /tmp/zabbix-module-minimal-gui.tar.gz /usr/share/zabbix/modules/zabbix-module-minimal-gui
 
 
 tar -zcvf /tmp/zbx_oracle.zbxdb_checks.tar.gz /etc/zabbix/zbx_oracle/zbxdb_checks
@@ -646,6 +657,10 @@ WHERE
 ;
 
 ;
+
+
+grep -Eo "unmatched trap received from \S+" /var/log/zabbix/zabbix_server.log | sort | uniq
+
 
 
 echo 'SELECT sessionid FROM sessions​ WHERE userid IN (SELECT userid FROM users WHERE type=3) AND status=0 LIMIT 1'
