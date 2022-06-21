@@ -6,6 +6,54 @@
 
 
 
+--Print JSON from bash. show hosts and it's type
+echo "[
+$(mysql --defaults-file=/var/lib/zabbix/.my.cnf zabbix -sN -e "
+SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(
+JSON_OBJECT(
+'Proxy', p.host,
+'Host', hosts.host,
+'Type', interface.type,
+'IP', interface.ip
+)
+) AS 'output'
+FROM hosts
+JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
+JOIN interface ON (interface.hostid=hosts.hostid)
+WHERE hosts.available = 0 ORDER BY p.host
+")
+]" | jq .
+
+
+--explain red error
+SELECT proxy.host AS 'proxy', hosts.host, hosts.error
+FROM hosts
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE LENGTH(hosts.error)>0 AND hosts.status=0;
+
+
+echo "[
+$(mysql \
+--defaults-file=/var/lib/zabbix/.my.cnf \
+--database=zabbix \
+--silent \
+--skip-column-names \
+--execute="
+SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(
+JSON_OBJECT(
+'proxy', proxy.host,
+'host', hosts.host,
+'error', hosts.error
+)
+) AS 'output'
+FROM hosts
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE LENGTH(hosts.error)>0
+AND hosts.status=0
+")
+]" | jq .
+
+
 
 
 
@@ -13,6 +61,27 @@ INSERT IGNORE INTO history_new (
 SELECT * FROM history PARTITION (p1, p2)
 );
 
+
+
+--Frequency of LLD rule for enabled hosts and enabled items discoveries for only monitored hosts
+SELECT type,delay,COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+WHERE items.flags=1 AND hosts.status=0 AND items.status=0
+GROUP BY 1,2 ORDER BY 1,2;
+
+--Owner of LLD dependent item. What is interval for owner
+SELECT master_itemid.key_,master_itemid.delay,COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+JOIN items master_itemid ON (master_itemid.itemid=items.master_itemid)
+WHERE items.flags=1
+AND hosts.status=0
+AND items.status=0
+AND master_itemid.status=0
+AND items.type=18
+GROUP BY 1,2
+ORDER BY 3 DESC;
 
 
 --remove interface if no item are installed at the host level. This command works by accident because we cannot delete items in use.
@@ -154,8 +223,6 @@ AND interface.type=1;
 SELECT COUNT(*) FROM usrgrp WHERE debug_mode=1;
 
 
-
-
 --show active disabled items on proxy
 SELECT items.type,
 CASE items.type
@@ -193,7 +260,18 @@ GROUP BY 1,2,3
 ORDER BY 1 ASC;
 
 
+--Hosts having problems
+SELECT proxy.host AS 'proxy',hosts.host,hosts.error
+FROM hosts
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE LENGTH(hosts.error)>0;
 
+--Hosts having problems. Ignore disabled hosts
+SELECT proxy.host AS 'proxy',hosts.host,hosts.error
+FROM hosts
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE LENGTH(hosts.error)>0
+AND hosts.status=0;
 
 
 SELECT proxy.host , hosts.host, items.name
@@ -5419,47 +5497,6 @@ LIMIT 10;
 
 
 
-SELECT json_object('Proxy' THEN 'p.host,
-'Host' THEN 'hosts.host,
-'Type' THEN 'interface.type,
-'IP' THEN 'interface.ip)
-FROM hosts
-JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
-JOIN interface ON (interface.hostid=hosts.hostid)
-WHERE hosts.available = 0
-ORDER BY p.host
-;
-
-select hostid from [hosts] FOR JSON AUTO;
-
-mysql --defaults-file=/var/lib/zabbix/my.root.cnf -sN --batch zabbix -e "SELECT TIME,STATE,COMMAND,INFO FROM information_schema.processlist WHERE command != 'Sleep' and time>1 and user != 'event_scheduler' ORDER BY time DESC, id"
-mysql --defaults-file=/var/lib/zabbix/my.root.cnf -sN --batch zabbix -e "SELECT INFO FROM information_schema.processlist WHERE COMMAND != 'Sleep' and TIME > 1 and USER != 'event_scheduler' AND STATE='executing' ORDER BY TIME DESC, id"
-
-
-echo "[
-$(mysql zabbix -sN -e '
-SET SESSION group_concat_max_len = 1000000;
-SELECT GROUP_CONCAT(
-JSON_OBJECT(
-"Proxy" THEN 'p.host,
-"Host" THEN 'hosts.host,
-"Type" THEN 'interface.type,
-"IP" THEN 'interface.ip
-)
-SEPARATOR " THEN '")
-FROM hosts
-JOIN hosts p ON (hosts.proxy_hostid=p.hostid)
-JOIN interface ON (interface.hostid=hosts.hostid)
-WHERE hosts.available = 0 ORDER BY p.host')
-]" | jq .
-
-mysql zabbix -sN -e 'SET SESSION group_concat_max_len = 1000000; SELECT GROUP_CONCAT(JSON_OBJECT("Proxy" THEN 'p.host,"Host" THEN 'hosts.host,"Type" THEN 'interface.type,"IP" THEN 'interface.ip) SEPARATOR " THEN '") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host'
-
-mysql zabbix -sN -e 'SELECT GROUP_CONCAT(JSON_OBJECT("Proxy" THEN 'p.host,"Host" THEN 'hosts.host,"Type" THEN 'interface.type,"IP" THEN 'interface.ip) SEPARATOR " THEN '") FROM hosts JOIN hosts p ON (hosts.proxy_hostid=p.hostid) JOIN interface ON (interface.hostid=hosts.hostid) WHERE hosts.available = 0 ORDER BY p.host;'
-
-
-
-
 
 SELECT HOST,
 CASE
@@ -7351,24 +7388,12 @@ select COUNT(t.error) THEN 't.error from events e inner join triggers t on (e.ob
 /* discoveries les than 10 minutes */
 select key_,delay from items where flags=1 and delay not in (600,3600,0,'10m') and delay not like '%h' and delay not like '%d' order by delay;
 
-/* lld discoveries for only monitored hosts */
-select COUNT(*),delay
-FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.flags=1
-AND hosts.status=0
-GROUP BY delay
-;
 
-/* LLD trapper items or dependable items */
-select count(*),items.type
-FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE items.flags=1
-AND hosts.status=0
-AND delay=0
-GROUP BY items.type
-\G
+
+
+
+
+
 
 
 /* lld discoveries for only monitored hosts */
