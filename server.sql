@@ -5,6 +5,100 @@
 
 
 
+--data collection. Show information about enabled hosts, enabled items. Zabbix 5.0. active items
+SELECT proxy.host AS 'proxy',
+CASE items.type
+WHEN 0 THEN 'Zabbix agent'
+WHEN 2 THEN 'Zabbix trapper'
+WHEN 3 THEN 'Simple check'
+WHEN 5 THEN 'Zabbix internal'
+WHEN 7 THEN 'Zabbix agent (active) check'
+WHEN 8 THEN 'Aggregate'
+WHEN 9 THEN 'HTTP test (web monitoring scenario step)'
+WHEN 10 THEN 'External check'
+WHEN 11 THEN 'Database monitor'
+WHEN 12 THEN 'IPMI agent'
+WHEN 13 THEN 'SSH agent'
+WHEN 14 THEN 'TELNET agent'
+WHEN 15 THEN 'Calculated'
+WHEN 16 THEN 'JMX agent'
+WHEN 17 THEN 'SNMP trap'
+WHEN 18 THEN 'Dependent item'
+WHEN 19 THEN 'HTTP agent'
+WHEN 20 THEN 'SNMP agent'
+WHEN 21 THEN 'Script item'
+END AS type,COUNT(*)
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE hosts.status=0
+AND items.status=0
+GROUP BY 1,2
+ORDER BY 1,2,3 DESC;
+
+
+--Show how many users are having active sessions at the recent moment,sesitive
+SELECT COUNT(*),
+       users.alias,
+	   users.type,
+	   users.refresh,
+	   users.rows_per_page,
+	   users.autologout
+FROM users
+JOIN sessions ON (users.userid = sessions.userid)
+WHERE (sessions.status=0)
+  AND (sessions.lastaccess > EXTRACT(EPOCH FROM (NOW() - INTERVAL '15 MINUTES')))
+GROUP BY users.userid,users.type,users.refresh,users.rows_per_page,users.autologout
+ORDER BY COUNT(*) ASC; 
+
+
+--min
+SELECT from_unixtime(clock) AS Date, value_min FROM trends_uint WHERE value_min = (SELECT MIN(value_min) FROM trends_uint WHERE itemid=49942 AND clock>=UNIX_TIMESTAMP("2022-06-25 00:00:00") AND clock<UNIX_TIMESTAMP("2022-06-26 00:00:00")) AND itemid=49942 AND clock>=UNIX_TIMESTAMP("2022-06-25 00:00:00") AND clock<UNIX_TIMESTAMP("2022-06-26 00:00:00");
+
+--max
+SELECT from_unixtime(clock) AS Date, value_max FROM trends_uint WHERE value_max = (SELECT MIN(value_max) FROM trends_uint WHERE itemid=49942 AND clock>=UNIX_TIMESTAMP("2022-06-25 00:00:00") AND clock<UNIX_TIMESTAMP("2022-06-26 00:00:00")) AND itemid=49942 AND clock>=UNIX_TIMESTAMP("2022-06-25 00:00:00") AND clock<UNIX_TIMESTAMP("2022-06-26 00:00:00");
+
+--select from partition
+SELECT itemid,COUNT(*) FROM history_uint PARTITION (p202206260000)
+WHERE itemid IN (315941,315942,1315943)
+GROUP BY 1;
+
+
+SELECT source,COUNT(*) FROM events WHERE source IN (0,1,2,3,4) GROUP BY 1;
+
+
+
+--update trends where itemid
+SELECT proxy.host AS 'proxy', hosts.host, items.name, items.key_
+FROM items
+JOIN hosts ON (hosts.hostid=items.hostid)
+LEFT JOIN hosts proxy ON (hosts.proxy_hostid=proxy.hostid)
+WHERE items.itemid=367053;
+
+
+SELECT FROM_UNIXTIME(clock),value_max FROM trends_uint WHERE itemid=305689;
+
+SELECT itemid, MIN(value_min), MAX(value_max), AVG(value_avg) FROM trends_uint WHERE itemid=305689;
+
+SELECT itemid, MIN(value_min), MAX(value_max) FROM trends_uint WHERE itemid=305689;
+
+
+SELECT FROM_UNIXTIME(clock),value_max FROM trends_uint
+WHERE value_max IN (
+SELECT MAX(value_max) FROM trends_uint
+WHERE itemid=305689 
+AND FROM_UNIXTIME(clock)>='2022-06-26' AND FROM_UNIXTIME(clock)<'2022-06-27'
+) AND itemid=305689;
+
+
+
+
+
+SELECT FROM_UNIXTIME(clock),min(value_min) FROM trends_uint WHERE itemid IN (288719) AND FROM_UNIXTIME(clock)>='2022-06-26' AND FROM_UNIXTIME(clock)<'2022-06-27';
+
+SELECT FROM_UNIXTIME(clock),avg(value_avg) FROM trends_uint WHERE itemid IN (288719) AND FROM_UNIXTIME(clock)>='2022-06-26' AND FROM_UNIXTIME(clock)<'2022-06-27';
+
+
 
 --Print JSON from bash. show hosts and it's type
 echo "[
@@ -595,6 +689,17 @@ SELECT * FROM trigger_discovery where parent_triggerid=748249;
 SELECT * FROM trigger_discovery where parent_triggerid=748236\G
 SELECT * FROM trigger_discovery where parent_triggerid=749149\G
 SELECT * FROM trigger_discovery where parent_triggerid=726334\G
+
+--aggregate percentage in MySQL. must change itemid in 2 places. clock in 4 places
+SELECT itemid,
+ROUND(COUNT(itemid) * 100.0 / (SELECT COUNT(itemid) FROM history_uint
+WHERE clock>=UNIX_TIMESTAMP("2022-06-26 00:00:00")
+AND clock<UNIX_TIMESTAMP("2022-06-27 00:00:00")
+AND itemid=288719),2) AS percentage
+FROM history_uint
+WHERE clock>=UNIX_TIMESTAMP("2022-06-26 00:00:00")
+AND clock<UNIX_TIMESTAMP("2022-06-27 00:00:00")
+AND itemid=288719 AND value=1;
 
 
 --SQL between
@@ -1602,35 +1707,6 @@ AND items.status=0
 GROUP BY items.params;
 
 
-
---data collection. Show information about enabled hosts, enabled items. Zabbix 5.0
-SELECT
-CASE items.type
-WHEN 0 THEN 'Zabbix agent'
-WHEN 2 THEN 'Zabbix trapper'
-WHEN 3 THEN 'Simple check'
-WHEN 5 THEN 'Zabbix internal'
-WHEN 7 THEN 'Zabbix agent (active) check'
-WHEN 8 THEN 'Aggregate'
-WHEN 9 THEN 'HTTP test (web monitoring scenario step)'
-WHEN 10 THEN 'External check'
-WHEN 11 THEN 'Database monitor'
-WHEN 12 THEN 'IPMI agent'
-WHEN 13 THEN 'SSH agent'
-WHEN 14 THEN 'TELNET agent'
-WHEN 15 THEN 'Calculated'
-WHEN 16 THEN 'JMX agent'
-WHEN 17 THEN 'SNMP trap'
-WHEN 18 THEN 'Dependent item'
-WHEN 19 THEN 'HTTP agent'
-WHEN 20 THEN 'SNMP agent'
-END as type,COUNT(*)
-FROM items
-JOIN hosts ON (hosts.hostid=items.hostid)
-WHERE hosts.status=0
-AND items.status=0
-GROUP BY items.type
-ORDER BY COUNT(*) DESC;
 
 
 
@@ -5044,6 +5120,23 @@ JOIN hstgrp ON (rights.id=hstgrp.groupid)
 ;
 
 
+SELECT users.alias,
+users_groups.usrgrpid as user_group_id,
+rights.rightid,
+hstgrp.name as host_group_name,
+CASE rights.permission
+WHEN 0 THEN 'DENY'
+WHEN 2 THEN 'READ_ONLY'
+WHEN 3 THEN 'READ_WRITE'
+END AS permission
+FROM users
+JOIN users_groups ON (users.userid = users_groups.userid)
+JOIN usrgrp ON (usrgrp.usrgrpid = users_groups.usrgrpid)
+JOIN rights ON (usrgrp.usrgrpid = rights.groupid)
+JOIN hstgrp ON (rights.id=hstgrp.groupid)
+;
+
+
 WHERE users.userid='1'
 ;
 
@@ -6756,7 +6849,8 @@ END AS flags,
 COUNT(*)
 FROM items
 WHERE TYPE=6
-GROUP BY 1,2,3,4,5,6,7\G
+GROUP BY 1,2,3,4,5,6,7
+\G
 
 
 
@@ -7064,6 +7158,11 @@ WHERE (s.status=0)
 AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300)
 GROUP BY u.alias;
 
+SELECT u.alias
+FROM users u
+INNER JOIN sessions s ON (u.userid = s.userid)
+WHERE (s.status=0)
+AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300);
 
 
 SELECT COUNT(u.alias),u.alias FROM users u INNER JOIN sessions s ON (u.userid = s.userid) WHERE (s.status=0) AND (s.lastaccess > UNIX_TIMESTAMP(NOW()) - 300) GROUP BY u.alias;
@@ -7158,8 +7257,6 @@ select COUNT(*) from zabbix.triggers where priority=1 and value=1;
 select COUNT(*) from zabbix.triggers where priority=0 and value=1;
 
 
-/* max and average value lenght */
-select max(LENGTH (value)) THEN 'avg(LENGTH (value)) from history_text where clock> UNIX_TIMESTAMP (now() - INTERVAL 30 MINUTE);
 
 
 
@@ -8028,10 +8125,6 @@ DELETE FROM events WHERE source>0 LIMIT 10000;
 DELETE FROM events WHERE source>0 LIMIT 100000;
 
 
-/* long queries */
-SELECT HOST THEN 'COMMAND THEN 'TIME THEN 'ID THEN 'ROWS_EXAMINED THEN 'INFO FROM INFORMATION_SCHEMA.PROCESSLIST WHERE TIME > 60 AND COMMAND!='Sleep' AND HOST!='localhost' ORDER BY TIME DESC;
-
-
 select COUNT(*),source from events where eventid in (1,2,3) group by source;
 
 select status THEN 'COUNT(*) from escalations group by status;
@@ -8040,7 +8133,6 @@ select status THEN 'COUNT(*) from escalations group by status;
 truncate table escalations;
 
 
-select status THEN 'COUNT(*) from alerts where status in ('0','1','3') group by status;
 
 
 delete from events where source=3 limit 10000;

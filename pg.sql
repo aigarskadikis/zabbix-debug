@@ -1,4 +1,21 @@
 
+
+
+
+--see if vacuum is in progress
+SELECT * FROM pg_catalog.pg_stat_progress_analyze;
+SELECT * FROM pg_catalog.pg_stat_progress_vacuum;
+
+--show most recent sessions
+SELECT TO_CHAR(DATE(TO_TIMESTAMP(sessions.lastaccess)),'YYYY-MM-DD HH:mm') AS "recent_acccess", users.alias
+FROM sessions
+JOIN users ON (users.userid=sessions.userid)
+ORDER BY sessions.lastaccess;
+
+
+TO_CHAR(DATE(TO_TIMESTAMP(sessions.lastaccess)),'YYYY-MM-DD HH:mm')
+
+
 --replication status
 SELECT
 client_addr AS client, usename AS user, application_name AS name,

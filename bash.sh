@@ -1,13 +1,26 @@
 
 
+
+mysql --host=127.0.0.1 --database=zabbixDB --user=zbx_srv --password='zabbix' --port=3306
+
+
 cd /var/lib/mysql/future && watch -n1 'ls -Rltr | tail -10'
 
+
+watch -n1 'ls -Rltr /var/lib/mysql/zabbix/ | grep "#sql"'
 
 systemctl status zabbix-server | grep -B30 zabbix_server.conf 
 find /etc -name zabbix-server.service
 grep PIDFile= /path/to/zabbix-service.service
 grep PidFile= /etc/zabbix/zabbix_server.conf
 ls -l /var/run | grep run
+
+
+# tar fast
+GZIP=--fast tar cvzf /tmp/var.lib.mysql.tar.gz /var/lib/mysql
+
+
+GZIP=--fast tar cvzf /root/var.lib.rpm.tar.gz /var/lib/rpm
 
 
 
@@ -171,6 +184,9 @@ mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | 
 tar -cvJf debug.log.tar.xz /tmp/zbx
 
 
+tar -cvJf /tmp/var.lib.mysql.tar.xz /var/lib/mysql
+
+
 # gdb backtrace on all zabbix_server processes
 mkdir -p /tmp/zbx; ps -o pid,%mem,pcpu,time,command ax | grep [z]abbix_server | tee /tmp/zbx/gdb.ps.log | awk '{ print "gdb -batch -ex bt -ex q -p "$1" > /tmp/zbx/gdb."$1".log 2>&1 &" }' | sh
 
@@ -199,7 +215,7 @@ do grep "$pid:$(date +%Y%m%d):" zabbix_server.log > /tmp/zabbixServer/$pid.log
 done
 
 
-tail -1000000 /var/log/zabbix/zabbix_server.log | gzip > /tmp/
+tail -1000000 /var/log/zabbix/zabbix_server.log | gzip > /tmp/zabbix_server.log.gz
 
 
 mkdir /tmp/zabbix
@@ -564,7 +580,7 @@ find /var/log/zabbix -type f -name '*.gz' -mtime -5 -exec zcat {} \ | grep house
 find /var/log/zabbix -type f -name '*.gz' -mtime -5 -exec rm {} \;
 
 
-tail -99999
+tail -99999 
 
 zabbix_proxy -R log_level_increase="data sender" 
 zabbix_proxy -R log_level_decrease="data sender" 
@@ -828,11 +844,18 @@ for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print "
 
 
 
-# CPU info:
-cat /proc/cpuinfo >> /tmp/cpu.info.txt
 
+
+# GATHER data for documentation
+# CPU info:
+cat /proc/cpuinfo >> /tmp/$(hostname).cpuinfo.txt
 # Memory:
-cat /proc/meminfo >> /tmp/mem.info.txt
+free -h > /tmp/$(hostname).meminfo.txt
+cat /proc/meminfo >> /tmp/$(hostname).meminfo.txt
+# Disk:
+df -h > /tmp/$(hostname).disk.txt
+
+# sed -i 's|/root/zabbix.conf.backup|/asdf/asdf|g' /usr/local/bin/zabbix_backup_from_slave.sh
 
 # Process list:
 ps auxww >> /tmp/process.list.txt 

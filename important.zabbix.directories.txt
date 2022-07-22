@@ -1,0 +1,10 @@
+yum install tree
+tree -a /etc/zabbix > /tmp/zabbix.files.txt
+tree -a /etc/sudoers.d >> /tmp/zabbix.files.txt
+tree -a /etc/cron.d >> /tmp/zabbix.files.txt
+tree -a /usr/lib/zabbix >> /tmp/zabbix.files.txt
+tree -a /var/lib/zabbix >> /tmp/zabbix.files.txt
+tree -a /etc/nginx/conf.d >> /tmp/zabbix.files.txt
+tree -a /etc/php-fpm.d >> /tmp/zabbix.files.txt
+tree -a /usr/local/bin >> /tmp/zabbix.files.txt
+tree -a /etc/sysctl.d >> /tmp/zabbix.files.txt
