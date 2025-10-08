@@ -124,7 +124,21 @@ ORDER BY 3 DESC;
 
 This will print in human readable form
 
+## rows per table
+
+```sql
+SELECT relname, n_live_tup, n_dead_tup,last_autovacuum FROM pg_stat_all_tables WHERE schemaname='public' ORDER BY 1;
+```
+
 ### TimescaleDB
+
+## Rows per hypertables, empty rows
+
+```sql
+SELECT schemaname,relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_all_tables
+WHERE schemaname IN ('public','_timescaledb_internal') ORDER BY 1,2;
+```
 
 ## Rows per tables/hypertables. Empty rows (dead tuples) per tables. Status of auto vacuum
 
