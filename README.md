@@ -1,4 +1,4 @@
-# Tips and copy and paste commands to troubleshoot Zabbix application layer
+# Troubleshoot performance problems of Zabbix application layer
 
 ## DB performance, performance with "history syncer"
 
@@ -18,7 +18,7 @@ In output, ensure the last column is not having 100% utilization for the mount p
 
 Common mistakes: adding more than one block device into volume group will always cause some degradation (opposite of best practice, how not to do)
 
-### which process consumes disk writes/reads. Fancy method
+### Which process consumes disk writes/reads. Fancy method
 
 ```
 dnf install iostat
@@ -72,8 +72,18 @@ iperf3 -s -p 10050
 From "zabbix-server", push data:
 
 ```
-iperf -c ip.address.of.db -p 10050 -t 10
+iperf3 -c ip.address.of.db -p 10050 -t 10
 ```
 
+
+### TimescaleDB
+
+## There should be not too many hypertables
+
+Ideally one table should contain less than 99 references to hypertables. Bacause selecting data from table need to look on index every time. An index too wide will cost extra CPU time to locate and print data.
+
+## Hypertable too big
+
+If a hypertable gets bigger than 10GB, it will increase the risk for a vaacuum process to lock the table, therefore block the application layer.
 
 
