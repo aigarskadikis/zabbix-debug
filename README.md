@@ -2,7 +2,13 @@
 
 ## DB performance, performance with "history syncer"
 
-Check backlog
+## Swap not used by important components
+
+```yaml
+free -h && for file in /proc/*/status ; do awk '/VmSwap|Name/{printf $2 " " $3}END{ print ""}' $file; done | grep -E "(mysqld|zabbix_server|postgres)"
+```
+
+## Backlog
 
 ```yaml
 zabbix_server -R diaginfo=historycache
