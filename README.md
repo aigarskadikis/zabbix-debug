@@ -1,4 +1,4 @@
-# Performance problems of Zabbix
+# Improve performance of Zabbix
 
 ## DB performance, performance with "history syncer"
 
