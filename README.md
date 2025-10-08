@@ -1,4 +1,4 @@
-# Troubleshoot performance problems of Zabbix application layer
+# Performance problems of Zabbix
 
 ## DB performance, performance with "history syncer"
 
@@ -16,7 +16,7 @@ iostat -x -t 1
 
 In output, ensure the last column is not having 100% utilization for the mount point which is attached to DB server.
 
-Common mistakes: adding more than one block device into volume group will always cause some degradation (opposite of best practice, how not to do)
+Popular mistakes: adding more than one block device into volume group will always cause some degradation (opposite of best practice). Not a big problem if DB server has more than 99GB of memory.
 
 ### Which process consumes disk writes/reads. Fancy method
 
@@ -43,7 +43,6 @@ cat /etc/resolv.conf
 
 ### Latency of DB server
 
-
 ```
 dnf install mtr
 mtr ip.of.db.server
@@ -52,7 +51,6 @@ mtr ip.of.db.server
 There should be no packet loss.
 
 If latency is less than 5ms, that is good
-
 
 
 ### Test throughput from "zabbix-server" to DB (MySQL/PostgreSQL).
@@ -75,6 +73,37 @@ From "zabbix-server", push data:
 iperf3 -c ip.address.of.db -p 10050 -t 10
 ```
 
+### Any DB server
+
+## Size of sessions table:
+
+```
+SELECT COUNT(*) FROM sessions;
+```
+
+Idealy the number should be less than 9999, because Zabbix GUI on every navigation click needs to iterate through ALL sessions just to validate if your session is active.
+
+## Housekeeper
+
+To see what kind of records the application layer deletes
+
+```
+cd /var/log/zabbix && grep housekeeper zabbix_server.log
+```
+
+```
+SELECT COUNT(*) FROM housekeeper;
+```
+
+The table holds the tasks the housekeeper needs to do. Ideally the output should be less than 99999.
+
+Truncating a table is a workaround. If it's done, the relation database will now have orphaned data.
+
+
+### PostgreSQL
+
+
+
 
 ### TimescaleDB
 
@@ -85,5 +114,9 @@ Ideally one table should contain less than 99 references to hypertables. Bacause
 ## Hypertable too big
 
 If a hypertable gets bigger than 10GB, it will increase the risk for a vaacuum process to lock the table, therefore block the application layer.
+
+## The index of hypertables must fit into memory
+
+See the size of tables
 
 
