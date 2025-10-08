@@ -19,6 +19,8 @@ The "values" reported indicate how many values are stored in RAM and not yet syn
 
 ### Disk performance
 
+https://cloud.google.com/compute/docs/disks/benchmarking-pd-performance-linux
+
 ```yaml
 iostat -x -t 1
 ```
