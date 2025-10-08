@@ -4,13 +4,22 @@
 
 Check backlog
 
-```
+```yaml
 zabbix_server -R diaginfo=historycache
 ```
 
-### See if disk is bottleneck
+Watch
 
+```yaml
+watch -n1 'zabbix_server -R diaginfo=historycache | grep -A1 "history cache diagnostic information"'
 ```
+
+The "values" reported indicate how many values are stored in RAM and not yet synhronized with database
+
+
+### Disk performance
+
+```yaml
 iostat -x -t 1
 ```
 
@@ -20,12 +29,12 @@ Popular mistakes: adding more than one block device into volume group will alway
 
 ### Which process consumes disk writes/reads. Fancy method
 
-```
+```yaml
 dnf install iostat
 iostat
 ```
 
-In case of PostgreSQL, ensure no auto vaccuum sits too long
+In case of PostgreSQL, ensure no auto vacuum sits too long
 
 ### Connection to DB via IP/DNS
 
@@ -43,7 +52,7 @@ cat /etc/resolv.conf
 
 ### Latency of DB server
 
-```
+```yaml
 dnf install mtr
 mtr ip.of.db.server
 ```
@@ -57,19 +66,19 @@ If latency is less than 5ms, that is good
 
 On DB server stop agent
 
-```sh
+```yaml
 systemctl stop zabbix-agent
 ```
 
 Set on listening state
 
-```sh
+```yaml
 iperf3 -s -p 10050
 ```
 
 From "zabbix-server", push data:
 
-```sh
+```yaml
 iperf3 -c ip.address.of.db -p 10050 -t 10
 ```
 
@@ -102,15 +111,26 @@ Truncating a table is a workaround. If it's done, the relation database will now
 
 ### PostgreSQL
 
-## Size of tables. Size of hypertables. Status of auto vacuum
+## Size of tables (will count hypertables as a whole)
+
+```sql
+SELECT table_name, pg_size_pretty(pg_total_relation_size(quote_ident(table_name))), pg_total_relation_size(quote_ident(table_name))
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY 3 DESC;
+```
+
+This will print in human readable form
+
+### TimescaleDB
+
+## Rows per tables/hypertables. Empty rows (dead tuples) per tables. Status of auto vacuum
 
 ```sql
 SELECT schemaname, relname, n_live_tup, n_dead_tup, last_autovacuum
 FROM pg_stat_all_tables WHERE n_dead_tup > 0
 ORDER BY n_dead_tup DESC;
 ```
-
-### TimescaleDB
 
 ## There should be not too many hypertables
 
@@ -132,6 +152,20 @@ ORDER BY 2;
 ## Hypertable too big
 
 If a hypertable gets bigger than 10GB, it will increase the risk for a vaacuum process to lock the table, therefore block the application layer.
+
+Most recent hypertables
+
+```sql
+SELECT hypertable_name,
+to_timestamp(range_start_integer) AS range_start,
+to_timestamp(range_end_integer) AS range_end,
+chunk_name,
+(range_end_integer-range_start_integer) AS size
+FROM timescaledb_information.chunks
+WHERE hypertable_name IN ('history','history_uint','history_str','history_log','history_text','history_bin','trends_uint','trends')
+AND range_start_integer > EXTRACT(EPOCH FROM NOW() - INTERVAL '24 hours')
+ORDER BY 1,2;
+```
 
 To change size to 2h hypertables in the future:
 
@@ -167,8 +201,20 @@ pidof zabbix_server
 
 ## Manually drop hypertables (TimescaleDB 2.80)
 
-Drop hypertables older than 90 days
+Drop hypertables (raw data) older than 90 days
 
 ```sql
-SELECT drop_chunks(relation=>'history_log', older_than=>extract(epoch from now()::DATE - 90)::integer); 
+SELECT drop_chunks(relation=>'history_log', older_than=>extract(epoch from now()::DATE - 90)::integer);
+SELECT drop_chunks(relation=>'history_str', older_than=>extract(epoch from now()::DATE - 90)::integer); 
+SELECT drop_chunks(relation=>'history_text', older_than=>extract(epoch from now()::DATE - 90)::integer); 
+SELECT drop_chunks(relation=>'history_uint', older_than=>extract(epoch from now()::DATE - 90)::integer); 
+SELECT drop_chunks(relation=>'history_bin', older_than=>extract(epoch from now()::DATE - 90)::integer); 
+SELECT drop_chunks(relation=>'history', older_than=>extract(epoch from now()::DATE - 90)::integer);
+```
+
+Drop trends older than 1 year
+
+```sql
+SELECT drop_chunks(relation=>'trends_uint', older_than=>extract(epoch from now()::DATE - 365)::integer);
+SELECT drop_chunks(relation=>'trends', older_than=>extract(epoch from now()::DATE - 365)::integer);
 ```
